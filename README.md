@@ -1,7 +1,7 @@
 # PyDetect
 Feature Detection
 
-### Dependancies
+### Dependencies
   - OpenCV - http://docs.opencv.org/3.1.0/df/d65/tutorial_table_of_content_introduction.html#gsc.tab=0
   - Python (3.5.1) - https://www.python.org/downloads/
 
