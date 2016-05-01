@@ -20,7 +20,6 @@ import sys
 class VideoStream(tk.Frame):
     def __init__(self, parent, src):
         self.frame = tk.Frame()
-        self.frame.pack()
         self.manager = Manager()
         self.frames = self.manager.list()
 
@@ -39,7 +38,7 @@ class VideoStream(tk.Frame):
 
         self.initial_im = tk.PhotoImage(file='test.png')
         self.image_label = tk.Label(self.frame, image=self.initial_im, height=self.height, width=self.width)
-        self.image_label.pack(side='top')
+        self.image_label.grid(row=0, column=0, columnspan=6, padx=5, pady=5)
 
         self.pause_button = tk.Button(self.frame, text=u'\u23F8', command=self.pause)
         self.play_button = tk.Button(self.frame, text=u'\u25B6', command=self.play)
@@ -48,12 +47,17 @@ class VideoStream(tk.Frame):
         self.snap_current = tk.Button(self.frame, text='|>', command=self.snap_current)
         self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
 
-        self.snap_start.pack(side='left')
-        self.move_back.pack(side='left')
-        self.pause_button.pack(side='left')
-        self.play_button.pack(side='left')
-        self.move_forward.pack(side='left')
-        self.snap_current.pack(side='left')
+        self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', \
+                                length=250, command=self.slider_move)
+
+        self.snap_start.grid(row=1, column=0)
+        self.move_back.grid(row=1, column=1)
+        self.pause_button.grid(row=1, column=2)
+        self.play_button.grid(row=1, column=3)
+        self.move_forward.grid(row=1, column=4)
+        self.snap_current.grid(row=1, column=5)
+
+        self.slider.grid(row=2, column=0, columnspan=6, sticky='w')
 
     def update_image(self):
         frame = self.frames[self.curr_frame]
@@ -72,11 +76,13 @@ class VideoStream(tk.Frame):
              if not flag:
                 break
              self.frames.append(frame)
+             
           except:
              continue
     
     def play(self):
-        
+        self.slider.config(to=len(self.frames))
+        self.slider.set(self.curr_frame)
         self.update_image()
         self.curr_frame += 1
 
@@ -101,10 +107,12 @@ class VideoStream(tk.Frame):
     def move_start(self): 
         self.curr_frame = 0
 
+    def slider_move(self, new_val):
+        self.curr_frame = self.slider.get()
+
 class MasterControl(tk.Frame):
     def __init__(self, parent, vid1, vid2):
         self.frame = tk.Frame()
-        self.frame.pack()
         tk.Frame.__init__(self)
         
         self.vid1 = vid1
@@ -116,15 +124,19 @@ class MasterControl(tk.Frame):
         self.move_back = tk.Button(self.frame, text='<<', command=self.move_bkwd)
         self.snap_current = tk.Button(self.frame, text='|>', command=self.snap_current)
         self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
-        self.quit_button = tk.Button(self, text='Quit', command=self.quit)
+        self.quit_button = tk.Button(self.frame, text='x', command=self.quit)
 
-        self.snap_start.pack(side='left')
-        self.move_back.pack(side='left')
-        self.pause_button.pack(side='left')
-        self.play_button.pack(side='left')
-        self.move_forward.pack(side='left')
-        self.snap_current.pack(side='left')
-        self.quit_button.pack(side='right')
+        self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', length=200, command=self.slider_move)
+
+        self.snap_start.grid(row=0, column=0)
+        self.move_back.grid(row=0, column=1)
+        self.pause_button.grid(row=0, column=2)
+        self.play_button.grid(row=0, column=3)
+        self.move_forward.grid(row=0, column=4)
+        self.snap_current.grid(row=0, column=5)
+        
+        self.slider.grid(row=0, column=6)
+        self.quit_button.grid(row=0, column=7)
 
     def play(self):
         self.vid1.play()
@@ -150,6 +162,12 @@ class MasterControl(tk.Frame):
         self.vid1.move_start()
         self.vid2.move_start()
 
+    def slider_move(self, val):
+        self.vid1.slider.set(val)
+        self.vid2.slider.set(val)
+        new_to = self.vid1.slider.config()['to'][-1]
+        self.slider.config(to=new_to)
+
     def quit(self):
         root.destroy()
         sys.exit(0)
@@ -166,18 +184,18 @@ class MainApplication(tk.Frame):
         self.video_2.proc.start()
 
         self.master_ctrl = MasterControl(self.parent, self.video_1, self.video_2)
-
         
-        self.video_1.frame.pack(side='left')
-        self.video_2.frame.pack(side='right')
-        self.master_ctrl.frame.pack()
+        self.video_1.frame.grid(row=0, column=0, padx=5, pady=5)
+        self.video_2.frame.grid(row=0, column=1, padx=5, pady=5)
+        self.master_ctrl.frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
         
-        self.pack(side="right", fill="both", expand=True)
+        self.grid(sticky='e')
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    MainApplication(root).pack(side="top", fill="both", expand=True)
+    MainApplication(root).grid()
+    root.resizable(width=False, height=False)
     root.mainloop()
     sys.exit()
 
