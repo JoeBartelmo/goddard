@@ -33,7 +33,7 @@ class VideoStream(tk.Frame):
         
         self.proc = Process(target=self.image_capture)
 
-        self.initial_im = tk.PhotoImage(file='test.png')
+        self.initial_im = tk.PhotoImage(file='blank_256x240.png')
         self.image_label = tk.Label(self.frame, image=self.initial_im, height=self.height, width=self.width)
         self.image_label.grid(row=0, column=0, columnspan=6, padx=5, pady=5)
 
@@ -41,7 +41,7 @@ class VideoStream(tk.Frame):
         self.play_button = tk.Button(self.frame, text=u'\u25B6', command=self.play)
         self.move_forward = tk.Button(self.frame, text='>>', command=self.move_fwd)
         self.move_back = tk.Button(self.frame, text='<<', command=self.move_bkwd)
-        self.snap_current = tk.Button(self.frame, text='|>', command=self.snap_current)
+        self.snap_current = tk.Button(self.frame, text='|>', command=self.move_current)
         self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
 
         self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', \
@@ -107,7 +107,7 @@ class VideoStream(tk.Frame):
         self.update_image()
         self.slider.set(self.curr_frame)
 
-    def snap_current(self): 
+    def move_current(self): 
         self.curr_frame = len(self.frames) - 1
         self.update_image()
         self.slider.set(self.curr_frame)
@@ -133,7 +133,7 @@ class MasterControl(tk.Frame):
         self.play_button = tk.Button(self.frame, text=u'\u25B6', command=self.play)
         self.move_forward = tk.Button(self.frame, text='>>', command=self.move_fwd)
         self.move_back = tk.Button(self.frame, text='<<', command=self.move_bkwd)
-        self.snap_current = tk.Button(self.frame, text='|>', command=self.snap_current)
+        self.snap_current = tk.Button(self.frame, text='|>', command=self.move_current)
         self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
         self.quit_button = tk.Button(self.frame, text='x', command=self.quit)
 
@@ -168,9 +168,9 @@ class MasterControl(tk.Frame):
         self.vid1.move_bkwd()
         self.vid2.move_bkwd()
 
-    def snap_current(self): 
-        self.vid1.snap_current()
-        self.vid2.snap_current()
+    def move_current(self): 
+        self.vid1.move_current()
+        self.vid2.move_current()
 
     def move_start(self): 
         self.vid1.move_start()
