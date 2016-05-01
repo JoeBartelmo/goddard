@@ -28,13 +28,10 @@ class VideoStream(tk.Frame):
         self.width = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
         self.height = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
 
-        self.p = True
         self.curr_frame = 0
+        self.after_id = None
         
         self.proc = Process(target=self.image_capture)
-        self._play = Process(target=self.play)
-
-        self.after_id = None
 
         self.initial_im = tk.PhotoImage(file='test.png')
         self.image_label = tk.Label(self.frame, image=self.initial_im, height=self.height, width=self.width)
@@ -60,14 +57,17 @@ class VideoStream(tk.Frame):
         self.slider.grid(row=2, column=0, columnspan=6, sticky='w')
 
     def update_image(self):
-        frame = self.frames[self.curr_frame]
+        try:
+            frame = self.frames[self.curr_frame]
 
-        im = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        a = Image.fromarray(im)
-        b = ImageTk.PhotoImage(image=a)
-        self.image_label.configure(image=b)
-        self.image_label._image_cache = b  # avoid garbage collection
-        self.frame.update()
+            im = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            a = Image.fromarray(im)
+            b = ImageTk.PhotoImage(image=a)
+            self.image_label.configure(image=b)
+            self.image_label._image_cache = b  # avoid garbage collection
+            self.frame.update()
+        except IndexError:
+            pass
 
     def image_capture(self):
         while True:
@@ -89,26 +89,37 @@ class VideoStream(tk.Frame):
         self.after_id = self.frame.after(33, self.play)
 
     def pause(self):
-        self.frame.after_cancel(self.after_id)
+        if self.after_id is not None:
+            self.frame.after_cancel(self.after_id)
+        self.after_id = None
 
     def move_fwd(self):
         self.curr_frame += 30
         if self.curr_frame >= len(self.frames):
             self.curr_frame = len(self.frames) - 1
+        self.update_image()
+        self.slider.set(self.curr_frame)
 
     def move_bkwd(self):
         self.curr_frame -= 30
         if self.curr_frame <= 0:
             self.curr_frame = 0
+        self.update_image()
+        self.slider.set(self.curr_frame)
 
     def snap_current(self): 
         self.curr_frame = len(self.frames) - 1
+        self.update_image()
+        self.slider.set(self.curr_frame)
 
     def move_start(self): 
         self.curr_frame = 0
+        self.update_image()
+        self.slider.set(0)
 
     def slider_move(self, new_val):
         self.curr_frame = self.slider.get()
+        self.update_image()
 
 class MasterControl(tk.Frame):
     def __init__(self, parent, vid1, vid2):
@@ -139,8 +150,11 @@ class MasterControl(tk.Frame):
         self.quit_button.grid(row=0, column=7)
 
     def play(self):
-        self.vid1.play()
-        self.vid2.play()
+        if self.vid1.after_id is None:
+            self.vid1.play()
+
+        if self.vid2.after_id is None:
+            self.vid2.play()
 
     def pause(self):
         self.vid1.pause()
