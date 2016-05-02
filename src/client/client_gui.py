@@ -1,11 +1,6 @@
 #!/usr/bin/env python
-#
-# @file "client_gui.py"
-# @authors "Joseph Bartelmo"
-# @contact "joebartelmo@gmail.com"
-# @date "4/23/2016"
-# @copyright "MIT"
-#
+# Copyright MIT
+# Primary Author: Nathan Dileas
 
 import Tkinter as tk
 from MasterWidget import MasterWidget
@@ -33,7 +28,7 @@ class MainApplication(tk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    MainApplication(root, 'drop.avi', 'drop.avi').grid()
+    MainApplication(root, 0, 'drop.avi')
     root.resizable(width=False, height=False)
     root.mainloop()
 

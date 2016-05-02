@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# Copyright MIT
+# Primary Author: Nathan Dileas
+
 import Tkinter as tk
 import sys
 

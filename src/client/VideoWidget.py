@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# Copyright MIT
+# Primary Author: Nathan Dileas
+
 from multiprocessing import Process, Queue, Manager
 import cv2
 import cv2.cv as cv
@@ -60,7 +64,10 @@ class VideoWidget(tk.Frame):
         while True:
             flag, frame= self.vidcap.read()
             if not flag:
-                break
+                continue
+#TODO: fix this
+            #if self.vidcap.isClosed():
+            #    break
             self.frames.append(frame)
            
     
@@ -70,7 +77,7 @@ class VideoWidget(tk.Frame):
         self.update_image()
         self.curr_frame += 1
 
-        self.after_id = self.frame.after(33, self.play)
+        self.after_id = self.frame.after(33, self.play)   # TODO make constant
 
     def pause(self):
         if self.after_id is not None:
@@ -106,4 +113,6 @@ class VideoWidget(tk.Frame):
         self.update_image()
 
     def quit(self):
+        self.proc.terminate()
         self.vidcap.release()
+        

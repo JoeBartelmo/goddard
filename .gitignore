@@ -63,3 +63,6 @@ target/
 
 #Stupid PyCharm
 .idea/
+
+# gedit temp files
+*~
