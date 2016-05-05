@@ -6,4 +6,4 @@
 # @date "4/23/2016"
 # @copyright "MIT"
 #
-__all__ = ["client", "client_gui", "pydetect_exception"]
+__all__ = ["client", "client_gui", "pydetect_exception", "main"]
