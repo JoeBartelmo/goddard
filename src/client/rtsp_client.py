@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# @file "client.py"
+# @file "rtsp_client.py"
 # @authors "Joseph Bartelmo"
 # @contact "joebartelmo@gmail.com"
 # @date "4/23/2016"

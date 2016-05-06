@@ -9,15 +9,19 @@
 
 import Tkinter as tk
 import sys
+#TODO: deserialize streams into RTSP clients (assume regular videocapture class for non-rtsp stream types
+from src.client.rtsp_client import RTSPClient
 
 
 class MasterControl(tk.Frame):
-    def __init__(self, parent, vid1, vid2):
+    def __init__(self, parent, streams):
         self.frame = tk.Frame()
         tk.Frame.__init__(self)
 
-        self.vid1 = vid1
-        self.vid2 = vid2
+        if isinstance(streams, list):
+            self.streams = streams
+        else:
+            self.streams = list(streams)
 
         self.pause_button = tk.Button(self.frame, text=u'\u23F8', command=self.pause)
         self.play_button = tk.Button(self.frame, text=u'\u25B6', command=self.play)
@@ -40,37 +44,43 @@ class MasterControl(tk.Frame):
         self.quit_button.grid(row=0, column=7)
 
     def play(self):
-        if self.vid1.after_id is None:
-            self.vid1.play()
-
-        if self.vid2.after_id is None:
-            self.vid2.play()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened() and stream.after_id is None:
+                stream.play()
 
     def pause(self):
-        self.vid1.pause()
-        self.vid2.pause()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened():
+                stream.pause()
 
     def move_fwd(self):
-        self.vid1.move_fwd()
-        self.vid2.move_fwd()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened():
+                stream.move_fwd()
 
     def move_bkwd(self):
-        self.vid1.move_bkwd()
-        self.vid2.move_bkwd()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened():
+                stream.move_bkwd()
 
     def snap_current(self):
-        self.vid1.snap_current()
-        self.vid2.snap_current()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened():
+                stream.snap_current()
 
     def move_start(self):
-        self.vid1.move_start()
-        self.vid2.move_start()
+        for stream in self.streams:
+            if stream is not None and stream.isOpened():
+                stream.move_start()
 
-    def slider_move(self, val):
-        self.vid1.slider.set(val)
-        self.vid2.slider.set(val)
-        new_to = self.vid1.slider.config()['to'][-1]
-        self.slider.config(to=new_to)
+    # def slider_move(self, val):
+    #     self.vid1.slider.set(val)
+    #     self.vid2.slider.set(val)
+    #     new_to = self.vid1.slider.config()['to'][-1]
+    #     self.slider.config(to=new_to)
 
     def quit(self):
+        for stream in self.streams:
+            if stream is not None and stream.after_id is None:
+                stream.pause ()
         sys.exit(0)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# @file "client_gui.py"
+# @file "videostream.py"
 # @authors "Joseph Bartelmo"
 # @contact "joebartelmo@gmail.com"
 # @date "4/23/2016"
@@ -8,19 +8,21 @@
 #
 
 import numpy as np
-from multiprocessing import Process, Queue, Pipe, Manager
-from Queue import Empty
+from multiprocessing import Process, Manager
 import cv2
 from PIL import Image, ImageTk
 import Tkinter as tk
 
-class VideoStream(tk.Frame):
-    def __init__(self, parent, src):
+
+class VideoStream():
+    def __init__(self, videoCaptureSource):
         self.frame = tk.Frame()
         self.manager = Manager()
         self.frames = self.manager.list()
 
-        self.vidcap = cv2.VideoCapture(src)
+        self.vidcap = videoCaptureSource
+        self.vidcap.set(cv2.cv.CV_CAP_PROP_BUFFERSIZE, 3); #internal buffer will now store only 3 frames; adjust as needed
+
         self.fps = self.vidcap.get(cv2.cv.CV_CAP_PROP_FPS)
         self.width = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
         self.height = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
@@ -41,8 +43,7 @@ class VideoStream(tk.Frame):
         self.snap_current = tk.Button(self.frame, text='|>', command=self.snap_current)
         self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
 
-        self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', \
-                                length=250, command=self.slider_move)
+        self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', length=250, command=self.slider_move)
 
         self.snap_start.grid(row=1, column=0)
         self.move_back.grid(row=1, column=1)
@@ -71,14 +72,15 @@ class VideoStream(tk.Frame):
           try:
              flag, frame= self.vidcap.read()
              if not flag:
-                break
+                continue
+                #this we have to adjust -- implement buffer
              self.frames.append(frame)
              
           except:
              continue
     
     def play(self):
-        self.slider.config(to=len(self.frames))
+        #self.slider.config(to=len(self.frames))
         self.slider.set(self.curr_frame)
         self.update_image()
         self.curr_frame += 1
