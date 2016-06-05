@@ -7,8 +7,10 @@ import cv2
 import cv2.cv as cv
 from PIL import Image, ImageTk
 import Tkinter as tk
+import time
 
 class VideoWidget(tk.Frame):
+    vidcap_isClosed = False
     def __init__(self, parent, src):
         self.frame = tk.Frame()
         self.manager = Manager()
@@ -38,6 +40,10 @@ class VideoWidget(tk.Frame):
         self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', \
                                 length=250, command=self.slider_move)
 
+        self.frame_rate_text = tk.StringVar()
+        self.frame_rate_display = tk.Label(self.frame, textvariable=self.frame_rate_text)
+        self.frame_rate_display.grid(row=1, column=6)
+
         self.snap_start.grid(row=1, column=0)
         self.move_back.grid(row=1, column=1)
         self.pause_button.grid(row=1, column=2)
@@ -51,7 +57,10 @@ class VideoWidget(tk.Frame):
         if self.curr_frame < len(self.frames):
             frame = self.frames[self.curr_frame]
         else:
+            if len(self.frames) == 0:
+                return
             frame = self.frames[-1]
+            
 
         im = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         a = Image.fromarray(im)
@@ -61,28 +70,29 @@ class VideoWidget(tk.Frame):
         self.frame.update()
         
     def image_capture(self):
-        while True:
+        while self.vidcap:
             flag, frame= self.vidcap.read()
             if not flag:
                 continue
-#TODO: fix this
-            #if self.vidcap.isClosed():
-            #    break
             self.frames.append(frame)
            
     
-    def play(self):
+    def play(self, t=0):
+        self.frame_rate_text.set('Framerate: %2.0f' % (1 / (100* float(time.clock() - t))))
         self.slider.config(to=len(self.frames))
         self.slider.set(self.curr_frame)
         self.update_image()
         self.curr_frame += 1
-
-        self.after_id = self.frame.after(33, self.play)   # TODO make constant
+        
+        self.after_id = self.frame.after(10, self.play, time.clock())   # TODO make constant
 
     def pause(self):
-        if self.after_id is not None:
-            self.frame.after_cancel(self.after_id)
-        self.after_id = None
+        tic = time.clock()
+        while time.clock() - tic < 5:
+            if self.after_id is not None:
+                self.frame.after_cancel(self.after_id)
+                self.after_id = None
+                break
 
     def move_fwd(self):
         self.curr_frame += 30

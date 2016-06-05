@@ -71,6 +71,6 @@ class MasterWidget(tk.Frame):
     def quit(self):
         self.vid1.quit()
         self.vid2.quit()
-        self.parent.destroy()
+        #self.parent.destroy()
         sys.exit(0)
 
