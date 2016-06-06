@@ -11,3 +11,4 @@ def block_img(img, x_block_size=100, y_block_size=100, x_offset=0, y_offset=0):
             blocks.append(img[i:i+x_block_size,j:j+y_block_size])
 
     return blocks
+
