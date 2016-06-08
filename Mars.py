@@ -1,11 +1,14 @@
-import serial
-import os
-import time
-import re
-import math
-import threading
+import serial #used to communicate with the arduino over a serial bus
+import os 
+import time #used for the runclock and real time integrators
+import re #used primarily to split DAQ strings and generate an array of data
+import math #for math
+import threading #used for multiple tasks.-->Convience not computing necessity
 import numpy as np
-import csv
+import csv #used to generate a machine log
+import pyping #used to ping master controller
+import ConfigParser #used to read the 'settings.cfg' config file
+import socket
 
 
 class Mars(object):
@@ -20,13 +23,28 @@ DESCRIPTION
 	M.A.R.S.(Mechanized Autonomous Rail Scanner) built by RIT Hyperloop Team
 	to scan & identify debris and damage in SpaceX's Hyperloop test track. This 
 	python code talks with an Arduino over a Serial connection to operate the 
-	robot. A four digit *Control Code*, typed in by a human operator, determines 
-	exactly what the robot will do. 
+	robot. A multicharacter *Control Code*, typed in by a human operator, 
+	determines exactly what MARS will do. 
+
+	In addition, this class contains functions to acquire all data sent from the
+	arduino, process it and provide the operator with a variety of telemetry 
+	information.
+
 
 :AUTHOR:
 	Jeff Maggio
-	last updated: May 31, 2016
+	RIT Hyperloop Imaging Team
+	http://hyperloop.rit.edu/team.html
 
+:CONTACT:
+	Feel free to contact this author at any point in time
+	email: jxm9264@rit.edu | jmaggio14@gmail.com
+	phone: 1-513-550-9231
+
+:UPDATED:
+	last updated: June 3, 2016
+
+	
 
 :DISCLAIMER:
 This source code is provided "as is" and without warranties as to performance 
@@ -43,23 +61,51 @@ relying on it. The user must assume the entire risk of using the source code.
 
 
 ________________________________________________________________________________
-	CONTROL CODE CONVENTION--> 'ABCD'
-			-where 'A' is a binary operator to enable the robot
-				(The robot must be enabled to move at all)
-			-where 'B' is a binary operator that defines direction (fwd, rev)
-			-where 'C' is a binary operator to engage the brake
-			-where 'D' is a decimal integer (0-9) that defines the speed
-				(Each integer roughly corresponds to that speed in MPH)
+					-----------------------------------------
+					|        CONTROL CODE CONVENTION        |
+					-----------------------------------------
+		Control codes are broken up into two formats, with each format
+		controlling a different aspect of MARS. These formats are distinquished
+		by an identifer placed at the beginning of the control code.
 
-		eg. 1008 --> foward at 8mph
-		eg. 1105 --> reverse at 5mph
-		eg. 0010 --> motor disabled, brake engaged, full stop
-		eg. 0103 --> motor not enabled, thus there will be no motion
-________________________________________________________________________________
-	
-	In addition, this class contains functions to acquire all data sent from the
-	arduino, process it and provide the operator with a variety of telemetry 
-	information.
+	# MOTION CONTROL
+		-Placing an 'M' at the beginning of a 4 digit control code indicates 
+		that the user wants to control the motion of MARS
+
+		$FORMAT = "MABCD"
+
+		where:
+			'M' is the identifer "M"
+			'A' is a binary operator to enable the Motor
+					'-->(The motor must be enabled to move at all)
+			'B' is a binary operator that defines direction (fwd, rev)
+			'C' is a binary operator to engage the brake
+			'D' is a decimal integer (0-9) that defines the speed
+					'-->(Each integer roughly corresponds 1Mph or .5m/s)
+
+			Examples
+				"M1008" --> foward at 8mph
+				"M1105" --> reverse at 5mph
+				"M0010" --> motor disabled, brake engaged (unconditional stop)
+				"J1108" --> Unknown identifier 'J', code is not processed
+
+	# LED CONTROL
+		-Placing an 'L' at the beginning of a 2 character control code indicates
+		that the user wants to define the luminance of MARS' LEDS
+
+		$FORMAT = "LX"
+
+		where:
+			'L' is the identifier "L"
+			'X' is a decimal integer (0-9) that defines the brightness on a
+			linear scale.
+
+			Examples
+				"L0" --> LEDs off
+				"L3" --> LEDs on 30percent strength
+				"L9" --> LEDs on full strength
+				"Q9" --> Unknown identifier 'Q', code is not processed
+________________________________________________________________________________	
 
 FUNCTIONS
 
@@ -77,7 +123,7 @@ FUNCTIONS
 	============================================================================
 	initalize()::
 		checks if arduino is properly connected, flushes Serial buffers and 
-		starts the clock
+		starts the runClock
 				utilizes:
 					NONE
 				returns:
@@ -189,7 +235,7 @@ FUNCTIONS
 	============================================================================
 	default_backward()::
 		simply sends a control code to the arduino that will make MARS travel
-		forward at 40percent speed
+		backward at 40percent speed
 				utilizes:
 					NONE
 				returns:
@@ -250,14 +296,16 @@ NEED TO ADD::
 	"""
 
 
-	def __init__(self, controller_IP = "129.21.116.121",\
+	def __init__(self, masterIP = None,\
 		arduino = None, tStart = None,initializeOkay = False,\
-		 devicePath = '/dev/ttyACM3',baudRate = 9600, timeout = 5,\
-		   shouldLog = True, logName = 'run1', isConnected = True,\
-		    integrationTime = 0.0, tLastRead = 0, currentBattery = 192.0,\
-		     totalBattery = 192.0, distanceTraveled = 0, currentSpeed = 0):
-		self._controller_IP =  controller_IP #IP address of the control comp
-		self._arduino = arduino #used in initialize(), NoneType now
+		 devicePath = None, baudRate = None, timeout = None,\
+		   shouldLog = None, logName = None, isConnected = True,\
+		    integrationTime = 0.0, tLastRead = 0, currentBattery = None,\
+		     totalBattery = None, distanceTraveled = 0, currentSpeed = 0,\
+		      configFile = 'settings.cfg', recallPercent = None,\
+		       trackLength = None, enableRecall = None):
+		self._masterIP =  masterIP #IP address of the control comp
+		self._arduino = arduino #used in initialize(), NoneType for now
 		self._tStart = tStart #start time for logging purposes
 		self._initializeOkay = initializeOkay #has initiatalization occured?
 		self._devicePath = devicePath #location of control arduino on machine
@@ -271,7 +319,12 @@ NEED TO ADD::
 		self._currentBattery = currentBattery #current updated battery remaining
 		self._totalBattery = totalBattery#original battery size
 		self._distanceTraveled =  distanceTraveled # distance traveled so far
-		self._currentSpeed = currentSpeed
+		self._currentSpeed = currentSpeed # last recorded speed of MARS
+		self._configFile = configFile #name of the settings file
+		self._recallPercent = recallPercent #point at which Mars automatically
+											##recalls itself
+		self._trackLength = trackLength #length of the track, used for recall
+
 
 	def main(self):
 		#run initalize function
@@ -282,35 +335,43 @@ NEED TO ADD::
 		inputThread =  threading.Thread(target = self.repeat_input)
 		pingingThread = threading.Thread(target = self.connection_check)
 
+
 		try:
 			dataThread.start() #rps() thread
 			inputThread.start() #repeat_input() thread
-			# pingingThread.start() #connection_check() thread
+			pingingThread.start() #connection_check() thread
 		except Exception as e:
 			print "error starting Multithreading ({})".format(e)
 			print "program will terminate"
 			raise SystemExit
 
 
-
 	def initalize(self):
 		print "initializing setup"
+
+		print "loading configs from {}".format(self._configFile)
+		self.load_configs() #loading the configurations from settings
+		print ""
+		print "all settings loaded without error"
+		print ""
+
 		print "checking if arduino is connected..."
 		#check if arduino is connected on device path
 		## exit program if connection failure
 		try:
-			# SELF._ARDUINO TYPE CHANGE: None-->Serial Object
+		# SELF._ARDUINO TYPE CHANGE: None-->Serial Object
+			print self._devicePath
+			print self._baudRate
 			self._arduino = serial.Serial(self._devicePath,self._baudRate)
+
 		except serial.serialutil.SerialException:
 			print "arduino not connected or device path wrong" 
-			print "program will terminate"
+			print "check MARS user manual for details" 
+			print "unable to continue, program will now terminate"
 			raise SystemExit
 
 		print "arduino connected"
 
-		#naming the log
-		if self._shouldLog == True:
-			self._logName = raw_input("please input the name for the datalog: ")
 
 		print"flushing serial buffers..."	
 		self._arduino.flushInput() #flushing the serial input buffer
@@ -318,22 +379,68 @@ NEED TO ADD::
 
 		print "Initialization complete"
 		self._initializeOkay = True
+		#BEGINNING RUN CLOCK --> tStart used to calculate runclock
 		self._tStart = time.time()
 
 		print "Starting..."	
 		print ""
 
 
+	def load_configs(self):
+		try:
+			 #THE NAME OF THE CONFIGURATION FILE
+			configParser = ConfigParser.RawConfigParser()
+			configParser.read(self._configFile)
+	
+	###LOADING VARAIABLES FROM CONFIGURATION SETTINGS FILE###
+		#communications section
+			self._devicePath = configParser.get('communications', 'arduinoPath')
+			self._masterIP = configParser.get('communications', 'masterIP')
+			print "arduino path = " + self._devicePath
+			print "masterIP = " + self._masterIP
+		#battery section
+			self._currentBattery = configParser.getfloat('battery',\
+				'currentBattery')
+			self._recallPercent = getfloat('battery', 'recallPercent')
+			print "current battery percentage loaded..."
+			print "recall percentage loaded"
+		#logging section
+			self._shouldLog = configParser.getboolean('logging', 'shouldLog')
+			self._logName = configParser.get('logging','logName')
+			print "shouldLog loaded"
+			print "logName loaded"
+		#DO_NOT_CHANGE section
+			self._baudRate = configParser.getint('DO_NOT_CHANGE', 'baudRate')
+			self._timeout = configParser.getint('DO_NOT_CHANGE', 'timeout')
+			self._totalBattery = configParser.getfloat('DO_NOT_CHANGE', \
+				'totalBattery')
+			self._trackLength = configParser.getfloat('DO_NOT_CHANGE', \
+				'trackLength')
+			print "baudRate loaded"
+			print "timeout time loaded"
+			print "totalBattery loaded"
+
+
+		except Exception as e:
+			print "error loading configs from 'settings.cfg' ({})".format(e)
+			print "----------------------------------------------------------"
+			print "check README or MARS manual for details on config settings"
+			print "----------------------------------------------------------"
+			print "program will now terminate"
+			raise SystemExit
+
+
+
 	def repeat_rps(self):
-		while self._isConnected == True:
+		while True:
 			self.rps()
 
 	def repeat_input(self):
-		while self._isConnected == True:
+		while True:
 			self.controller_input()
 
 	def connection_check(self):
-		ipToCheck = self._controller_IP
+		ipToCheck = self._masterIP
 		while True:
 			time.sleep(5)
 			connectionStatus = self.ping_control(ipToCheck)
@@ -343,7 +450,6 @@ NEED TO ADD::
 				print "engaging autopilot"
 			else: 
 				self.autonomous(engage = False)
-				print "user reconnected, autopilot disengaged"
 
 
 	def ping_control(self, ipToCheck):
@@ -352,15 +458,14 @@ NEED TO ADD::
 		indicating whether or not we are still connected
 
 		"""
-		str(ipToCheck)
-		print type(os.system("ping -c 1 -w2 -t 3" + ipToCheck + " > ip_log.txt"))
-		response = os.system("ping -c 1 -w2 -t 3" + ipToCheck +  " > ip_log.txt")
-		# and then check the response...
-		print response
-		if response == "0":
+		r = pyping.ping(self._masterIP)
+
+		if r.ret_code == 0: 
+			#master is still reachable
 			return True
 		else:
-			return False
+			#master is not reachable, connection is lost
+		    return False
 
 
 	def daq(self):
@@ -370,14 +475,11 @@ NEED TO ADD::
 		rawInput = self.serial_readline() #reading Serialdata
 
 		rawArray = re.split(',',rawInput)
-		
 		#independent data (raw from arduino)
 		rpm = rawArray[0]
 		sysV = rawArray[1]
 		sysI = rawArray[2]
-
-
-
+		sysI = sysI[0:4]
 		#first set dependent (calculated based off of raw data)
 		speed = self.estimated_speed(rpm) #speed in m/s
 		power = self.estimated_power(sysV, sysI) #power in Watts
@@ -394,6 +496,8 @@ NEED TO ADD::
 		#compiling all data for later integration
 		telemetryArray = [runClock,distanceTraveled,speed,power,\
 		batteryRemaining,integrationTime,isConnected, rpm, sysV, sysI]
+
+		# print telemetryArray
 
 		return telemetryArray
 
@@ -477,22 +581,22 @@ NEED TO ADD::
 		daqData = self.daq()
 		operatorString = self.make_pretty(daqData)
 
-		# print operatorString #print to console so operator can interpret
-
+		print operatorString #print to console so operator can interpret
+		print ""
 		#saving to file for logging purposes
 		if self._shouldLog == True:
 		#operator File = console log, easier for a human to interpret
-			operatorFileName = self._logName + '_operator_log.txt'
+			operatorFileName = 'logs/'+ self._logName + '_operator_log.txt'
 			operatorFile = open(operatorFileName,'a')
 			operatorFile.write(operatorString) 
 			operatorFile.close()
 		
 		#raw File - raw DAQ log, easier for a machine to process
-			rawFileName =  self._logName + '_machine_log.csv'
+			rawFileName =  'logs/'+ self._logName + '_machine_log.csv'
 			with open(rawFileName, 'a') as rawFile:
 				rawWriter = csv.writer(rawFile)
 				rawWriter.writerow(daqData)
-			
+		
 		## There are automatically 2 logs saved
 		### One formatted in a more human-friendly way
 		#### and another in a machine-readable '.csv'
@@ -501,19 +605,16 @@ NEED TO ADD::
 
 	def controller_input(self):
 		#ask for control code input from user
-		controlCode = raw_input("4 digit control code: ")
-
+		controlCode = raw_input("LED or motion control code: ")
 		#check if control code is within parameters
 		codeOkay = self.input_check(controlCode)
+
 		if codeOkay == True:
-			self.arduino_write(controlCode)
-			print controlCode
+			self.arduino_write(controlCode) #write code to arduino
+			print controlCode #print control code for reference
 		else: 
-			print "control code must be a 4 digit code"
-			print "with the first 3 digits being binary, the last is decimal"
-			self.controller_input()
-
-
+			print "control code must follow strict convention"
+			print "check MARS user manual for specifics"
 
 	def arduino_write(self, controlCode):
 		#only send code if initialization has occured
@@ -525,65 +626,101 @@ NEED TO ADD::
 
 
 	def input_check(self, userInput):
-		"""
-		This function checks the controlCode input and checks if it is within
-		the convention described above in the docstring.
+# 		"""
+# 		This function checks the controlCode input and checks if it is within
+# 		the convention described above at the begining of the primary docstring.
 
-		This function could probably be remade in a more straightforward manner
-		"""
+# 		It uses a complex series of nested if-statements to check the code.
 
-		#checking the overall length of string. length must = 4
-		if len(userInput) == 4:
-			lengthOkay = True
-		else: 
-			lengthOkay = False
-			print "Control Code must have exactly 4 digits"
+# 		This function could probably be remade in a more straightforward manner,
+# 		an option might be to use dictionaries or nested lambda functions 
+	#			'--> ie. the python equivalent of a switch statement.
 
-		enableInput = userInput[0]
-		directionInput = userInput[1]
-		brakeInput = userInput[2]
-		speedInput = userInput[3]
+# 		possible alternatives:
+# 					https://code.activestate.com/recipes/410692/
+
+# 		"""
+
+# 		codeIdentifier = userInput[0]
+# 		codeIdentifier = codeIdentifier.upper()
+
+# 		#____TESTING IF THE IDENTIFER IS WITHIN PARAMETERS____#
+
+# 	#---------------BEGIN LED CODE CHECK----------------------#
+# 		if codeIdentifier == "L":
+# 			#____testing the length of the input____#	
+# 			if userInput.length() == 2:
+# 				lengthOkay = True
+# 			else:
+# 				lengthOkay = False
+
+# 			#===testing if the second value is a digit===#
+# 			if userInput[1].isdigit() == True:
+# 				valuesOkay = True
+# 			else:
+# 				valuesOkay = False
+# 			#____Compiling the output____#	
+# 			if lengthOkay == True and valuesOkay == True:
+# 				testResult = True
+# 			else:
+# 				testResult = False
+				
+
+# 	#---------------BEGIN MOTOR CODE CHECK----------------------#
+# 		elif codeIdentifier == "M":
+# 		#____testing the length of the input____#	
+# 			if userInput.length() == 5:
+# 				lengthOkay = True
+# 			else:
+# 				return False #--> return false is the input isn't right length
+# 		#____checking if the enable value is binary____#
+# 			if userInput[1] == "0" or userInput[1] == "1":
+# 				enableOkay = True
+# 			else:
+# 				enableOkay =  False
+# 		#____checking if the reverse value is binary____#
+# 			if userInput[2] == "0" or userInput[2] == "1":
+# 				reverseOkay = True
+# 			else:
+# 				reverseOkay =  False
+# 		#____checking if the brake value is binary____#
+# 			if userInput[3] == "0" or userInput[3] == "1":
+# 				brakeOkay = True
+# 			else:
+# 				brakeOkay =  False
+# 		#____checking if the speed value is decimal____#
+# 			speedValue = userInput[4]
+# 			if speedValue.isdigit() == True:
+# 				speedOkay = True
+# 			else:
+# 				speedOkay = False
+
+# 			a = lengthOkay
+# 			b = enableOkay
+# 			c = reverseOkay
+# 			d = brakeOkay
+# 			e = speedOkay
+
+# 			if a==True and b==True and c==True and d==True and e==True:
+# 				testResult = True
+# 			else:
+# 				testResult = False
+
+# 		else:
+# 			print "control code must have an identifier"
+# 			print "check MARS user manual for specifics"
+# #######DEBUGGING CODE ####################
+# 		if testResult == True:
+# 			print "test is positive"
+# 		elif testResult == False:
+# 			print "test is negative"
 
 
-#_______________CHECKING TO SEE IF EACH INPUT MEETS CRITERIA _________________#
-		#CHECKING IF ENABLE INPUT IS BINARY
-		if enableInput == "0" or enableInput == "1":
-			enableOkay = True
-		else:
-			enableOkay = False
-			print "enable digit must be binary"
-
-		#CHECKING IF DIRECTION INPUT IS BINARY
-		if directionInput == "0" or directionInput == "1":
-			directionOkay = True
-		else:
-			directionOkay = False
-			print "direction digit must be binary"
-			
-		#CHECKING IF BRAKE INPUT IS BINARY
-		if brakeInput == "0" or brakeInput == "1":
-			brakeOkay = True
-		else:
-			brakeOkay = False
-			print "direction digit must be binary"
+# 		return testResult
+		return True
 
 
-		#CHECKING TO SEE IF SPEED INPUT IS DECIMAL (0-9)
-		if speedInput.isdigit() == True: #check to see if input is a digit
-			speedOkay = True
-		else:
-			speedOkay = False
-
-
-	############## Returning True/False based on previous tests ##############
-		if enableOkay == True and directionOkay == True and brakeOkay == True\
-		and speedOkay == True:
-			return True #return True if all inputs meet criteria
-		else:
-			return False #return False if otherwise
-
-
-	def flush_buffers():
+	def flush_buffers(self):
 		"""this function just flushes the Serial buffers"""
 		#only attempt to flush if initialization has occured
 		if self._initializeOkay == False: 
@@ -600,8 +737,8 @@ NEED TO ADD::
 		at 40percent speed. This will be the function that autonomous mode will
 		call
 		"""
-		defaultForwardCode = "1004"
-		arduino_write(defaultForwardCode)
+		defaultForwardCode = "M1104"
+		self.arduino_write(defaultForwardCode)
 
 
 
@@ -612,7 +749,7 @@ NEED TO ADD::
 		mode will call
 		"""
 
-		defaultBackwardCode = "1104"
+		defaultBackwardCode = "M1004"
 		self.arduino_write(defaultBackwardCode)
 
 
@@ -621,7 +758,7 @@ NEED TO ADD::
 		This function sends a full stop command to the arduino to stop the Mars
 		"""
 
-		fullStopCode = "0010"
+		fullStopCode = "M0010"
 		self.arduino_write(fullStopCode)
 
 
@@ -647,8 +784,8 @@ NEED TO ADD::
 			speed in m/s ~= (rpm/221)*0.44704
 		"""
 		rpm = float(rpm) #rpm must be a float
-		estMph = rpm/221.0 #SPEED IN MPH - Not sure if this will be used
-		estMps = (rpm/221.0)*0.44704 #SPEED in M/S
+		estMph = rpm/221.0 #estimated SPEED IN MPH - may not be used
+		estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
 
 		returnEstMps = round(estMps, 1)
 		self._currentSpeed = returnEstMps
@@ -665,12 +802,12 @@ NEED TO ADD::
 		sysCurrent = float(sysCurrent)
 		estPower = sysVoltage * sysCurrent
 
-		returnPower = round(estPower, 2)
-		return returnPower
+		powerReturned = round(estPower, 2)
+		return powerReturned
 
 
 
-	def battery_remaining(self,power=0.0, time = None):
+	def battery_remaining(self,power=None, time = None):
 		if time == None:
 			time = self._integrationTime 
 	########^^^^^^^^FIX THIS ONCE DEBUGGING IS COMPLETE^^^^^^^^###########
@@ -683,7 +820,7 @@ NEED TO ADD::
 		capacity
 
 		"""
-		if power != 0.0:
+		if power != None:
 			joulesUsed  = float(power) * time
 			whrUsed = joulesUsed/3600.0 #converting Joules to Watt*hours
 
@@ -691,8 +828,9 @@ NEED TO ADD::
 			#subtracting energy used from battery total
 
 		battPercent = self._currentBattery/self._totalBattery * 100.0
-		returnBattPercent = round(battPercent, 1)
-		return returnBattPercent
+		battPercentReturned = round(battPercent, 1)
+
+		return battPercentReturned
 
 	def distance_traveled(self, speed, time=None):
 		if time == None:
@@ -702,27 +840,32 @@ NEED TO ADD::
 		self._distanceTraveled = self._distanceTraveled + intervalDistance
 		totalDistance = self._distanceTraveled
 		
-		returnIntervalDistance = round(intervalDistance,1)
-		returnTotalDistance = round(totalDistance, 1)
+		intervalDistanceReturned = round(intervalDistance,1)
+		totalDistanceReturned = round(totalDistance, 1)
 
-		return returnIntervalDistance,returnTotalDistance
+		return intervalDistanceReturned,totalDistanceReturned
 
 
-	def autonomous(self, engage = True):
-		if self._currentSpeed > 0.0:
-			self.default_forward()
-		elif self._currentSpeed < 0.0:
-			self.default_backward()
-		else:
-			self.stop()
+	def autonomous_action(self, engage = True):
+		batteryRemaining = self.batteryRemaining
+		if engage == True:
+			if batteryRemaining + 5.0 >= self._recallPercent:
+
+
+			#checking battery percentage. Is automatic Recall needed? 
+
+
+
+
 
 
 
 if __name__ == "__main__":
-	m = Mars(controller_IP = "www.google.com")
-	m.main()
-	# m.arduino_write('0010')
-
+	m = Mars()
+	try:
+		m.main()
+	except KeyboardInterrupt:
+		m.stop()
 
 
 
