@@ -7,8 +7,8 @@ DESCRIPTION
 	M.A.R.S.(Mechanized Autonomous Rail Scanner) built by RIT Hyperloop Team
 	to scan & identify debris and damage in SpaceX's Hyperloop test track. This 
 	python code talks with an Arduino over a Serial connection to operate the 
-	robot. A multidigit *Control Code*, typed in by a human operator, determines 
-	exactly what MARS will do. 
+	robot. A multicharacter *Control Code*, typed in by a human operator, 
+	determines exactly what MARS will do. 
 
 	In addition, this class contains functions to acquire all data sent from the
 	arduino, process it and provide the operator with a variety of telemetry 
@@ -18,11 +18,17 @@ DESCRIPTION
 :AUTHOR:
 	Jeff Maggio
 	RIT Hyperloop Imaging Team
-	http://hyperloop.rit.edu/
+	http://hyperloop.rit.edu/team.html
+
+:CONTACT:
+	Feel free to contact this developer at any point in time
+	email: jxm9264@rit.edu | jmaggio14@gmail.com
+	phone: 1-513-550-9231
 
 :UPDATED:
 	last updated: June 3, 2016
 
+	
 
 :DISCLAIMER:
 This source code is provided "as is" and without warranties as to performance 
@@ -39,18 +45,21 @@ relying on it. The user must assume the entire risk of using the source code.
 
 
 ________________________________________________________________________________
-	CONTROL CODE CONVENTION
+					-----------------------------------------
+					|        CONTROL CODE CONVENTION        |
+					-----------------------------------------
 		Control codes are broken up into two formats, with each format
 		controlling a different aspect of MARS. These formats are distinquished
 		by an identifer placed at the beginning of the control code.
 
-	:::MOTION CONTROL:::
-		Placing an 'M' at the beginning of a 4 digit control code indicates to
-		this software that the user wants to control the motion of MARS
+	# MOTION CONTROL
+		-Placing an 'M' at the beginning of a 4 digit control code indicates 
+		that the user wants to control the motion of MARS
 
-		$FORMAT = 'MABCD'
+		$FORMAT = "MABCD"
 
 		where:
+			'M' is the identifer "M"
 			'A' is a binary operator to enable the Motor
 					'-->(The motor must be enabled to move at all)
 			'B' is a binary operator that defines direction (fwd, rev)
@@ -61,25 +70,31 @@ ________________________________________________________________________________
 			Examples
 				"M1008" --> foward at 8mph
 				"M1105" --> reverse at 5mph
-				"M0010" --> motor disabled, brake engaged
-				"J1108" --> Wrong identifier 'J', code is not processed
+				"M0010" --> motor disabled, brake engaged (unconditional stop)
+				"J1108" --> Unknown identifier 'J', code is not processed
 
-	:::LED CONTROL:::
-		Placing an 'L' at the beginning of a 4 digit control code indicates to
-		this software that the user wants to control the luminance of MARS' LEDS
+	# LED CONTROL
+		-Placing an 'L' at the beginning of a 2 character control code indicates
+		that the user wants to define the luminance of MARS' LEDS
 
-		$FORMAT$ = 'LX'
+		$FORMAT = "LX"
 
 		where:
+			'L' is the identifier "L"
 			'X' is a decimal integer (0-9) that defines the brightness on a
 			linear scale.
-________________________________________________________________________________
-	
+
+			Examples
+				"L0" --> LEDs off
+				"L3" --> LEDs on 30percent strength
+				"L9" --> LEDs on full strength
+				"Q9" --> Unknown identifier 'Q', code is not processed
+________________________________________________________________________________	
 
 FUNCTIONS
 
 	main()::  
-********ONLY FUNCTION THAT NEEDS TO RUN NEEDED WHEN OPERATING M.A.R.S.**********
+		*********PRIMARY FUNCTION WHEN OPERATING M.A.R.S.***********		
 		runs the initiatalization procedure
 		sets up multiple threads to allow simultaneous DAQ, input and reactions
 				utilizes:
@@ -92,7 +107,7 @@ FUNCTIONS
 	============================================================================
 	initalize()::
 		checks if arduino is properly connected, flushes Serial buffers and 
-		starts the clock
+		starts the runClock
 				utilizes:
 					NONE
 				returns:
@@ -251,3 +266,13 @@ FUNCTIONS
 					percentage of battery remaining (float)
 
 --------------------------------------------------------------------------------
+
+NEED TO ADD::
+	autonomous() - sets up an autonomous mode
+	led_brightness() - changes the brightness of the LEDS
+	distance_traveled() - calculated distance traveled
+	sensor_check() - continuously checks sensors, and returns a status code
+	backup_comms() - turn on/off the LEDS to send emergency signals?
+	motion_check() - is Mars still moving? ie. are we stuck?
+
+	FIX DISTANCE TRAVELED AND BATTERY FUNCTIONS
