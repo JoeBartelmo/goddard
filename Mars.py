@@ -3,12 +3,8 @@ import os
 import time #used for the runclock and real time integrators
 import re #used primarily to split DAQ strings and generate an array of data
 import math #for math
-import threading #used for multiple tasks.-->Convience not computing necessity
-import numpy as np
 import csv #used to generate a machine log
 import pyping #used to ping master controller
-import ConfigParser #used to read the 'settings.cfg' config file
-import socket
 
 
 class Mars(object):
@@ -296,26 +292,20 @@ NEED TO ADD::
 	"""
 
 
-	def __init__(self, masterIP = None,\
-		arduino = None, tStart = None,initializeOkay = False,\
-		 devicePath = None, baudRate = None, timeout = None,\
-		   shouldLog = None, logName = None, isConnected = True,\
-		    integrationTime = 0.0, tLastRead = 0, currentBattery = None,\
-		     totalBattery = None, distanceTraveled = 0, currentSpeed = 0,\
-		      configFile = 'settings.cfg', recallPercent = None,\
-		       trackLength = None, enableRecall = None):
+	def __init__(self, masterIP, devicePath, baudRate, timeout,\
+		isLogging, logName, trackLength, configFile, enableRecall,\
+		recallPercent, arduino = None, initializeOkay = None, tStart = None,\
+		 currentBattery = None,	totalBattery = None, distanceTraveled = 0,\
+		  currentSpeed = 0,isConnected=None,):
 		self._masterIP =  masterIP #IP address of the control comp
 		self._arduino = arduino #used in initialize(), NoneType for now
-		self._tStart = tStart #start time for logging purposes
 		self._initializeOkay = initializeOkay #has initiatalization occured?
 		self._devicePath = devicePath #location of control arduino on machine
 		self._baudRate = baudRate #baud rate of serial connectiom, usually 9600
 		self._timeout = timeout #time in sec to listen for telemetry b4 error
-		self._shouldLog = shouldLog #boolean to deterime if telemetry is logged
+		self._isLogging = isLogging #boolean to deterime if telemetry is logged
 		self._logName = logName #name of the log
 		self._isConnected = isConnected #have we lost connection with control?
-		self._integrationTime = integrationTime #time since last recieving data
-		self._tLastRead = tLastRead #time data was last read
 		self._currentBattery = currentBattery #current updated battery remaining
 		self._totalBattery = totalBattery#original battery size
 		self._distanceTraveled =  distanceTraveled # distance traveled so far
@@ -324,44 +314,22 @@ NEED TO ADD::
 		self._recallPercent = recallPercent #point at which Mars automatically
 											##recalls itself
 		self._trackLength = trackLength #length of the track, used for recall
+		self._enableRecall = enableRecall
 
 
-	def main(self):
-		#run initalize function
-		## program should quit if arduino isn't connected
-		self.initalize()
-	#### SETTING UP MULTIPLE THREADS HERE ####
-		dataThread = threading.Thread(target = self.repeat_rps)
-		inputThread =  threading.Thread(target = self.repeat_input)
-		pingingThread = threading.Thread(target = self.connection_check)
-
-
-		try:
-			dataThread.start() #rps() thread
-			inputThread.start() #repeat_input() thread
-			pingingThread.start() #connection_check() thread
-		except Exception as e:
-			print "error starting Multithreading ({})".format(e)
-			print "program will terminate"
-			raise SystemExit
-
-
+	
 	def initalize(self):
-		print "initializing setup"
+		print ""
+		print "beginning initialization..."
 
-		print "loading configs from {}".format(self._configFile)
-		self.load_configs() #loading the configurations from settings
-		print ""
-		print "all settings loaded without error"
-		print ""
+		# print "loading configs from {}".format(self._configFile)
+		# self.load_configs() #loading the configurations from settings
 
 		print "checking if arduino is connected..."
 		#check if arduino is connected on device path
 		## exit program if connection failure
 		try:
 		# SELF._ARDUINO TYPE CHANGE: None-->Serial Object
-			print self._devicePath
-			print self._baudRate
 			self._arduino = serial.Serial(self._devicePath,self._baudRate)
 
 		except serial.serialutil.SerialException:
@@ -380,56 +348,17 @@ NEED TO ADD::
 		print "Initialization complete"
 		self._initializeOkay = True
 		#BEGINNING RUN CLOCK --> tStart used to calculate runclock
-		self._tStart = time.time()
+		global tStart
+		tStart = time.time()
+		global integrationTime
+		integrationTime = 0.0
 
-		print "Starting..."	
+		time.sleep(1)
+		global tLastRead
+		tLastRead = self.time_since_start()
 		print ""
 
-
-	def load_configs(self):
-		try:
-			 #THE NAME OF THE CONFIGURATION FILE
-			configParser = ConfigParser.RawConfigParser()
-			configParser.read(self._configFile)
-	
-	###LOADING VARAIABLES FROM CONFIGURATION SETTINGS FILE###
-		#communications section
-			self._devicePath = configParser.get('communications', 'arduinoPath')
-			self._masterIP = configParser.get('communications', 'masterIP')
-			print "arduino path = " + self._devicePath
-			print "masterIP = " + self._masterIP
-		#battery section
-			self._currentBattery = configParser.getfloat('battery',\
-				'currentBattery')
-			self._recallPercent = getfloat('battery', 'recallPercent')
-			print "current battery percentage loaded..."
-			print "recall percentage loaded"
-		#logging section
-			self._shouldLog = configParser.getboolean('logging', 'shouldLog')
-			self._logName = configParser.get('logging','logName')
-			print "shouldLog loaded"
-			print "logName loaded"
-		#DO_NOT_CHANGE section
-			self._baudRate = configParser.getint('DO_NOT_CHANGE', 'baudRate')
-			self._timeout = configParser.getint('DO_NOT_CHANGE', 'timeout')
-			self._totalBattery = configParser.getfloat('DO_NOT_CHANGE', \
-				'totalBattery')
-			self._trackLength = configParser.getfloat('DO_NOT_CHANGE', \
-				'trackLength')
-			print "baudRate loaded"
-			print "timeout time loaded"
-			print "totalBattery loaded"
-
-
-		except Exception as e:
-			print "error loading configs from 'settings.cfg' ({})".format(e)
-			print "----------------------------------------------------------"
-			print "check README or MARS manual for details on config settings"
-			print "----------------------------------------------------------"
-			print "program will now terminate"
-			raise SystemExit
-
-
+		
 
 	def repeat_rps(self):
 		while True:
@@ -472,32 +401,40 @@ NEED TO ADD::
 		if self._initializeOkay == False:
 			self.initalize()
 
-		rawInput = self.serial_readline() #reading Serialdata
+		try:
+			rawInput = self.serial_readline() #reading Serialdata
+			print rawInput
 
-		rawArray = re.split(',',rawInput)
-		#independent data (raw from arduino)
-		rpm = rawArray[0]
-		sysV = rawArray[1]
-		sysI = rawArray[2]
-		sysI = sysI[0:4]
-		#first set dependent (calculated based off of raw data)
-		speed = self.estimated_speed(rpm) #speed in m/s
-		power = self.estimated_power(sysV, sysI) #power in Watts
+			rawArray = re.split(',',rawInput)
+			#independent data (raw from arduino)
+			rpm = rawArray[0]
+			sysV = rawArray[1]
+			sysI = rawArray[2]
+			sysI = sysI[0:4]
+			#first set dependent (calculated based off of raw data)
+			speed = self.estimated_speed(rpm) #speed in m/s
+			power = self.estimated_power(sysV, sysI) #power in Watts
 
-		#second set dependent (calculated based off of above set)
-		distance, distanceTraveled = self.distance_traveled(speed) #in Meters
-		batteryRemaining = self.battery_remaining(power)
+			#second set dependent (calculated based off of above set)
+			distance, distanceTraveled = self.distance_traveled(speed) #in Meters
+			batteryRemaining = self.battery_remaining(power)
 
-		#TX1-side data
-		integrationTime = self._integrationTime
-		runClock = self.time_since_start()
-		isConnected = self._isConnected
+			#TX1-side data
+			global integrationTime
+			integrationTime2 = round(integrationTime, 4)
+			runClock = round(self.time_since_start(), 4)
+			isConnected = self._isConnected
 
-		#compiling all data for later integration
-		telemetryArray = [runClock,distanceTraveled,speed,power,\
-		batteryRemaining,integrationTime,isConnected, rpm, sysV, sysI]
 
-		# print telemetryArray
+			#compiling all data for later integration
+			telemetryArray = [runClock,distanceTraveled,speed,power,\
+			batteryRemaining,integrationTime2,isConnected, rpm, sysV, sysI]
+
+			# print telemetryArray
+		except Exception as e:
+			print "unable to acquire data due to {}".format(e)
+			print "attemting to correct"
+			self.daq() 
 
 		return telemetryArray
 
@@ -570,8 +507,11 @@ NEED TO ADD::
 #______________________________________________________________________________#
 			#finding integration time
 			##resetting the time since last read
-			self._integrationTime = self.time_since_start() - self._tLastRead
-			self._tLastRead = self.time_since_start() 
+			global integrationTime
+			global tLastRead
+
+			integrationTime = self.time_since_start() - tLastRead
+			tLastRead = self.time_since_start() 
 
 			return serialData
 
@@ -581,14 +521,14 @@ NEED TO ADD::
 		daqData = self.daq()
 		operatorString = self.make_pretty(daqData)
 
-		print operatorString #print to console so operator can interpret
-		print ""
+		# print operatorString #print to console so operator can interpret
+		# print ""
 		#saving to file for logging purposes
-		if self._shouldLog == True:
+		if self._isLogging == True:
 		#operator File = console log, easier for a human to interpret
 			operatorFileName = 'logs/'+ self._logName + '_operator_log.txt'
 			operatorFile = open(operatorFileName,'a')
-			operatorFile.write(operatorString) 
+			operatorFile.write(operatorString+'\r\n') 
 			operatorFile.close()
 		
 		#raw File - raw DAQ log, easier for a machine to process
@@ -626,99 +566,104 @@ NEED TO ADD::
 
 
 	def input_check(self, userInput):
-# 		"""
-# 		This function checks the controlCode input and checks if it is within
-# 		the convention described above at the begining of the primary docstring.
+		"""
+		This function checks the controlCode input and checks if it is within
+		the convention described above at the begining of the primary docstring.
 
-# 		It uses a complex series of nested if-statements to check the code.
+		It uses a complex series of nested if-statements to check the code.
 
-# 		This function could probably be remade in a more straightforward manner,
-# 		an option might be to use dictionaries or nested lambda functions 
-	#			'--> ie. the python equivalent of a switch statement.
+		This function could probably be remade in a more straightforward manner,
+		an option might be to use dictionaries or nested lambda functions 
+				'--> ie. the python equivalent of a switch statement.
 
-# 		possible alternatives:
-# 					https://code.activestate.com/recipes/410692/
+		possible alternatives:
+					https://code.activestate.com/recipes/410692/
 
-# 		"""
+		"""
 
-# 		codeIdentifier = userInput[0]
-# 		codeIdentifier = codeIdentifier.upper()
+		codeIdentifier = userInput[0]
+		codeIdentifier = codeIdentifier.upper()
 
-# 		#____TESTING IF THE IDENTIFER IS WITHIN PARAMETERS____#
+		#____TESTING IF THE IDENTIFER IS WITHIN PARAMETERS____#
 
-# 	#---------------BEGIN LED CODE CHECK----------------------#
-# 		if codeIdentifier == "L":
-# 			#____testing the length of the input____#	
-# 			if userInput.length() == 2:
-# 				lengthOkay = True
-# 			else:
-# 				lengthOkay = False
+	#---------------BEGIN LED CODE CHECK----------------------#
+		if codeIdentifier == "L":
+			#____testing the length of the input____#	
+			if len(userInput) == 2:
+				lengthOkay = True
+			else:
+				lengthOkay = False
 
-# 			#===testing if the second value is a digit===#
-# 			if userInput[1].isdigit() == True:
-# 				valuesOkay = True
-# 			else:
-# 				valuesOkay = False
-# 			#____Compiling the output____#	
-# 			if lengthOkay == True and valuesOkay == True:
-# 				testResult = True
-# 			else:
-# 				testResult = False
+			#===testing if the second value is a digit===#
+			if userInput[1].isdigit() == True:
+				valuesOkay = True
+			else:
+				valuesOkay = False
+			
+
+			#____Compiling the output____#	
+			if lengthOkay == True and valuesOkay == True:
+				testResult = True
+			else:
+				testResult = False
 				
 
-# 	#---------------BEGIN MOTOR CODE CHECK----------------------#
-# 		elif codeIdentifier == "M":
-# 		#____testing the length of the input____#	
-# 			if userInput.length() == 5:
-# 				lengthOkay = True
-# 			else:
-# 				return False #--> return false is the input isn't right length
-# 		#____checking if the enable value is binary____#
-# 			if userInput[1] == "0" or userInput[1] == "1":
-# 				enableOkay = True
-# 			else:
-# 				enableOkay =  False
-# 		#____checking if the reverse value is binary____#
-# 			if userInput[2] == "0" or userInput[2] == "1":
-# 				reverseOkay = True
-# 			else:
-# 				reverseOkay =  False
-# 		#____checking if the brake value is binary____#
-# 			if userInput[3] == "0" or userInput[3] == "1":
-# 				brakeOkay = True
-# 			else:
-# 				brakeOkay =  False
-# 		#____checking if the speed value is decimal____#
-# 			speedValue = userInput[4]
-# 			if speedValue.isdigit() == True:
-# 				speedOkay = True
-# 			else:
-# 				speedOkay = False
+	#---------------BEGIN MOTOR CODE CHECK----------------------#
+		elif codeIdentifier == "M":
+		#____testing the length of the input____#	
+			if len(userInput) == 5:
+				lengthOkay = True
+			else:
+				return False #--> return false is the input isn't right length
+		#____checking if the enable value is binary____#
+			if userInput[1] == "0" or userInput[1] == "1":
+				enableOkay = True
+			else:
+				enableOkay =  False
+		#____checking if the reverse value is binary____#
+			if userInput[2] == "0" or userInput[2] == "1":
+				reverseOkay = True
+			else:
+				reverseOkay =  False
+		#____checking if the brake value is binary____#
+			if userInput[3] == "0" or userInput[3] == "1":
+				brakeOkay = True
+			else:
+				brakeOkay =  False
+		#____checking if the speed value is decimal____#
+			speedValue = userInput[4]
+			if speedValue.isdigit() == True:
+				speedOkay = True
+			else:
+				speedOkay = False
 
-# 			a = lengthOkay
-# 			b = enableOkay
-# 			c = reverseOkay
-# 			d = brakeOkay
-# 			e = speedOkay
+			a = lengthOkay
+			b = enableOkay
+			c = reverseOkay
+			d = brakeOkay
+			e = speedOkay
 
-# 			if a==True and b==True and c==True and d==True and e==True:
-# 				testResult = True
-# 			else:
-# 				testResult = False
+			if a==True and b==True and c==True and d==True and e==True:
+				testResult = True
+			else:
+				testResult = False
 
-# 		else:
-# 			print "control code must have an identifier"
-# 			print "check MARS user manual for specifics"
-# #######DEBUGGING CODE ####################
-# 		if testResult == True:
-# 			print "test is positive"
-# 		elif testResult == False:
-# 			print "test is negative"
+		else:
+			print "control code must have an identifier"
+			print "------------------------------------"
+			print "check MARS user manual for specifics"
+			print "------------------------------------"			
+			testResult = False
+#######DEBUGGING CODE ####################
+		if testResult == True:
+			print "test is positive"
+		elif testResult == False:
+			print "test is negative"
 
 
-# 		return testResult
-		return True
-
+		return testResult
+		# return True
+		
 
 	def flush_buffers(self):
 		"""this function just flushes the Serial buffers"""
@@ -763,9 +708,10 @@ NEED TO ADD::
 
 
 	def time_since_start(self):
+		global tStart
 		currentTime = time.time()
 
-		tSinceStart = currentTime - self._tStart
+		tSinceStart = currentTime - tStart
 		return tSinceStart
 
 
@@ -784,7 +730,6 @@ NEED TO ADD::
 			speed in m/s ~= (rpm/221)*0.44704
 		"""
 		rpm = float(rpm) #rpm must be a float
-		estMph = rpm/221.0 #estimated SPEED IN MPH - may not be used
 		estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
 
 		returnEstMps = round(estMps, 1)
@@ -809,7 +754,7 @@ NEED TO ADD::
 
 	def battery_remaining(self,power=None, time = None):
 		if time == None:
-			time = self._integrationTime 
+			time = integrationTime 
 	########^^^^^^^^FIX THIS ONCE DEBUGGING IS COMPLETE^^^^^^^^###########
 		"""
 		if the user decides to input a power, then this function will 
@@ -834,7 +779,7 @@ NEED TO ADD::
 
 	def distance_traveled(self, speed, time=None):
 		if time == None:
-			time = self._integrationTime
+			time = integrationTime
 
 		intervalDistance = speed * time
 		self._distanceTraveled = self._distanceTraveled + intervalDistance
@@ -846,26 +791,26 @@ NEED TO ADD::
 		return intervalDistanceReturned,totalDistanceReturned
 
 
-	def autonomous_action(self, engage = True):
-		batteryRemaining = self.batteryRemaining
-		if engage == True:
-			if batteryRemaining + 5.0 >= self._recallPercent:
+	# def autonomous_action(self, engage = True):
+	# 	batteryRemaining = self.batteryRemaining
+	# 	if engage == True:
+	# 		if batteryRemaining + 5.0 >= self._recallPercent:
 
 
-			#checking battery percentage. Is automatic Recall needed? 
-
-
-
+	# 		#checking battery percentage. Is automatic Recall needed? 
 
 
 
 
-if __name__ == "__main__":
-	m = Mars()
-	try:
-		m.main()
-	except KeyboardInterrupt:
-		m.stop()
+
+
+
+# if __name__ == "__main__":
+# 	m = Mars()
+# 	try:
+# 		m.main()
+# 	except KeyboardInterrupt:
+# 		m.stop()
 
 
 
