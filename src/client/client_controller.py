@@ -82,5 +82,5 @@ class MasterControl(tk.Frame):
     def quit(self):
         for stream in self.streams:
             if stream is not None and stream.after_id is None:
-                stream.pause ()
+                stream.pause()
         sys.exit(0)

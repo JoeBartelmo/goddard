@@ -4,23 +4,41 @@
 
 import Tkinter as tk
 import sys
+from multiprocessing import Queue
+from VideoWidget import VideoWidget
+
+import img_rms
 
 class MasterWidget(tk.Frame):
-    def __init__(self, parent, vid1, vid2):
+    def __init__(self, parent, videos):
         self.frame = tk.Frame()
         tk.Frame.__init__(self)
         
-        self.vid1 = vid1
-        self.vid2 = vid2
+        do_rms = lambda: img_rms.do(self.raw_vid.queue, self.rms.queue, self.output.queue)
 
+        self.raw_vid.VideoWidget(parent).grid(row=0, column=0)
+        self.output.VideoWidget(parent, get_output).grid(row=0, column=1)
+        self.rms.VideoWidget(parent, do_rms).grid(row=1, column=0)
+        self.pumpkin.VideoWidget(parent, do_pumpkin).grid(row=1, column=1)
+        
         self.parent = parent
+
+        self.vidcap = cv2.VideoCapture(src)
+        #self.vidcap.set(cv2.cv.CV_CAP_PROP_BUFFERSIZE, 3)
+        #internal buffer will now store only 3 frames; adjust as needed
+
+        self.fps = self.vidcap.get(cv2.cv.CV_CAP_PROP_FPS)
+        self.width = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT))
+
+        self.proc = Process(target=self.image_capture)
 
         self.pause_button = tk.Button(self.frame, text=u'\u23F8', command=self.pause)
         self.play_button = tk.Button(self.frame, text=u'\u25B6', command=self.play)
-        self.move_forward = tk.Button(self.frame, text='>>', command=self.move_fwd)
-        self.move_back = tk.Button(self.frame, text='<<', command=self.move_bkwd)
-        self.snap_current = tk.Button(self.frame, text='|>', command=self.move_current)
-        self.snap_start = tk.Button(self.frame, text='<|', command=self.move_start)
+        self.move_forward = tk.Button(self.frame, text='>>', command=lambda:self.move(0))
+        self.move_back = tk.Button(self.frame, text='<<', command=lambda:self.move(0))
+        self.snap_current = tk.Button(self.frame, text='|>', command=lambda:self.move(0))
+        self.snap_start = tk.Button(self.frame, text='<|', command=lambda:self.move(0))
         self.quit_button = tk.Button(self.frame, text='x', command=self.quit)
 
         self.slider = tk.Scale(self.frame, from_=0, to=100, orient='horizontal', length=200, command=self.slider_move)
@@ -35,42 +53,51 @@ class MasterWidget(tk.Frame):
         self.slider.grid(row=0, column=6)
         self.quit_button.grid(row=0, column=7)
 
-    def play(self):
-        if self.vid1.after_id is None:
-            self.vid1.play()
+    def image_capture(self):
+        while self.vidcap:
+            flag, frame= self.vidcap.read()
+            if not flag:
+                break
 
-        if self.vid2.after_id is None:
-            self.vid2.play()
+            img = demosaic(frame)
+            img_col = color_correct(img)
+
+            self.raw_vid.queue.put(frame)  # TODO change to img_col
+
+    def demosaic(input_im):
+        pass
+
+    def color_correct(input_im):
+        return cv2.cvtColor(input_im, cv2.COLOR_BGR2RGB)
+
+    def play(self):
+        #for vid in self.vids:
+        #    vid.update_image()
+
+        self.raw_vid.update_image()
+        self.rms.update_image()
+        self.pumpkin.update_image()
+        self.output.update_image()
+
+        self.after_id = self.frame.after(10, self.play)   # TODO make constant
 
     def pause(self):
-        self.vid1.pause()
-        self.vid2.pause()
+        if self.after_id is not None:
+            self.frame.after_cancel(self.after_id)
+            self.after_id = None
 
-    def move_fwd(self):
-        self.vid1.move_fwd()
-        self.vid2.move_fwd()
+    def move(self, t):
+        pass
 
-    def move_bkwd(self):
-        self.vid1.move_bkwd()
-        self.vid2.move_bkwd()
-
-    def move_current(self): 
-        self.vid1.move_current()
-        self.vid2.move_current()
-
-    def move_start(self): 
-        self.vid1.move_start()
-        self.vid2.move_start()
+    def update_slider(self, new_val):
+        self.slider.config(to=len(self.frames))
+        self.slider.set(self.curr_frame)
 
     def slider_move(self, val):
-        self.vid1.slider.set(val)
-        self.vid2.slider.set(val)
-        new_to = self.vid1.slider.config()['to'][-1]
-        self.slider.config(to=new_to)
+        pass
 
     def quit(self):
-        self.vid1.quit()
-        self.vid2.quit()
-        #self.parent.destroy()
+        for vid in self.vids:
+            vid.quit()
         sys.exit(0)
 

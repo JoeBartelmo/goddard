@@ -75,3 +75,6 @@ class RTSPClient(cv2.VideoCapture):
 			return False
 
 		return True
+
+if __name__=='__main__':
+    RTSPClient(server, port, stream_location)

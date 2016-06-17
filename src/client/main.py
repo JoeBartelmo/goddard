@@ -34,6 +34,10 @@ class MainApplication(Tkinter.Frame):
         self.telemetry_w.frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
 		self.grid(sticky='e')
 
+    def start_streams(self):
+        for stream in serializedClient.streams:
+            stream.start()   # start grabbing frames
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
