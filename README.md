@@ -1,18 +1,16 @@
-DESCRIPTION
-:Name:
-	Mars
-
 :Purpose:	
-	this class was made for the purposes of controlling and operating the
+	this software was made for the purposes of controlling and operating the
 	M.A.R.S.(Mechanized Autonomous Rail Scanner) built by RIT Hyperloop Team
 	to scan & identify debris and damage in SpaceX's Hyperloop test track. This 
-	python code talks with an Arduino over a Serial connection to operate the 
-	robot. A multicharacter *Control Code*, typed in by a human operator, 
-	determines exactly what MARS will do. 
+	python code talks with an Arduino over a Serial connection which in turn
+	controls the motors on Mars. 
 
-	In addition, this class contains functions to acquire all data sent from the
-	arduino, process it and provide the operator with a variety of telemetry 
-	information.
+	In addition, this code includes a data aquistion system which compiles and 
+	processes data sent from the arduino to provide the operator with real-time
+	telemetry on the status of the robot.
+
+	A multicharacter *Control Code*, typed in by a human operator, 
+	determines exactly what MARS will do. 
 
 
 :AUTHOR:
@@ -20,13 +18,13 @@ DESCRIPTION
 	RIT Hyperloop Imaging Team
 	http://hyperloop.rit.edu/team.html
 
-:CONTACT:
 	Feel free to contact this developer at any point in time
 	email: jxm9264@rit.edu | jmaggio14@gmail.com
 	phone: 1-513-550-9231
 
+
 :UPDATED:
-	last updated: June 3, 2016
+	last updated: June 11, 2016
 
 	
 
@@ -56,10 +54,11 @@ ________________________________________________________________________________
 		-Placing an 'M' at the beginning of a 4 digit control code indicates 
 		that the user wants to control the motion of MARS
 
-		$FORMAT = "MABCD"
 
+		$ FORMAT ==> MABCD
+		
 		where:
-			'M' is the identifer "M"
+			'M' is the motion identifer "M" 
 			'A' is a binary operator to enable the Motor
 					'-->(The motor must be enabled to move at all)
 			'B' is a binary operator that defines direction (fwd, rev)
@@ -68,42 +67,119 @@ ________________________________________________________________________________
 					'-->(Each integer roughly corresponds 1Mph or .5m/s)
 
 			Examples
-				"M1008" --> foward at 8mph
-				"M1105" --> reverse at 5mph
-				"M0010" --> motor disabled, brake engaged (unconditional stop)
-				"J1108" --> Unknown identifier 'J', code is not processed
+				M1008 --> foward at 8mph
+				M1105 --> reverse at 5mph
+				M0010 --> motor disabled, brake engaged (unconditional stop)
+				J1108 --> Unknown identifier 'J', code is not processed
 
 	# LED CONTROL
-		-Placing an 'L' at the beginning of a 2 character control code indicates
+		-Placing an 'L' at the beginning of a 1 character control code indicates
 		that the user wants to define the luminance of MARS' LEDS
 
-		$FORMAT = "LX"
+		$ FORMAT ==> LX
 
 		where:
-			'L' is the identifier "L"
+			'L' is the LED identifier "L"
 			'X' is a decimal integer (0-9) that defines the brightness on a
 			linear scale.
 
 			Examples
-				"L0" --> LEDs off
-				"L3" --> LEDs on 30percent strength
-				"L9" --> LEDs on full strength
-				"Q9" --> Unknown identifier 'Q', code is not processed
+				L0 --> LEDs off
+				L3 --> LEDs on 30percent strength
+				L9 --> LEDs on full strength
+				Q9 --> Unknown identifier 'Q', code is not processed
 ________________________________________________________________________________	
+					-----------------------------------------
+					|         DATA ARRAY CONVENTION         |
+					-----------------------------------------
+
+the function 'daq()' in the Mars class compiles and processes data returned from
+the arduino and generates the following telemetry array. 
+
+This telemetry array was built to be used to be sent to the master computer 
+manned by the robot operator which will then display it to the operator and 
+corrolate the data with our FOD detection algorithms. This would allow us to 
+observe trends in FOD detection as a function of speed, distance, time, etc. 
+
+However, this data can also be used interpreted by the reaction and autonomous
+functionality of Mars to enable features such as automatic braking, or automatic
+recall if an appropriate threshold in the data is reached.
+
+An example of this might be having the Mars robot automatically return if it
+loses network connection or if it's battery reaches critical levels. 
+
+
+All telemetry is logged aboard Mars for later reference/analysis
+
+
+.............................  TELEMETRY ARRAY  ................................
+
+[Clock, distance, speed, power, battery, integTime, connection, rpm, sysV, sysI
+   0         1      2      3       4         5           6       7     8     9
+
+motionCommand, ledCommand, streamCommand]
+      10            11           12
+...............................................................................
+
+
+0) Clock: (seconds)
+	Time since the Mars object was substantiated--> usually the time since the 
+run() function was called
+
+1) distance: (meters)
+	Displacement from the point of origin down the tube, this value is
+approximate and may be off by as much as much 30 meters or more.
+
+2) speed (meters/second)
+	Speed of Mars estimated from the rpm date provided by the motor encoder. 
+Expected this value to be within .05 of actual speed, but may be off by much
+more if Mars is stuck or lacks good traction.
+
+3) power (Watts)
+	Power usage of Mars. As of June 11 2016, the accuracy of this measurement 
+has not been determined. However it is expected that it will be within 5%
+
+4) Battery (Percentage)
+	Battery remaining aboard Mars. As of June 11 2016, the accuracy of this 
+measurement has not been determined. However it is reccomended that the operator
+err on the side of caution and not use Mars below 30%.
+			'--> this is calculated by integrating power and subtracting
+			that value from the battery level. NOT BY DIRECT MEASUREMENT
+
+5) Integration Time (seconds)
+	The time between samples from the arduino, this value is used to calculate
+the distance and battery remaining. It is provided in this array for the
+purposes of error checking and ensuring data accuracy
+
+6) Connection status (boolean)
+	a boolean indicating whether or not Mars is still connected to the 
+operator's computer. This can be used to trigger Mars' autonomous actions 
+or simply logged to indicate to the operator 
+
+7) RPM (rpm)
+	Raw data from the motor's encoder indicating the speed of the motor before
+any gearing. This is data is used to calculate linear speed and distance. It is
+provided in this array for the purposes of error checking and ensuring data
+accuracy
+
+8) SysV (Volts)
+	Voltage coming off the batteries. It is currently used to calculate power
+usage, and estimate battery remaining. 
+	This can be used as a direct measurment of battery remaining. However,
+thorough testing must occur before this can accurately be estimated. This
+testing has been planned, but not completed as of June 11, 2016. 
+
+
+9) SysI (Amps)
+	Current currently used by Mars. It is currently used to calculate power
+usage, and thus battery remainging. It could also be used to trigger an over 
+current warning and shutdown or restrict Mars as a safetly feature. 
+
+
+
 
 FUNCTIONS
 
-	main()::  
-		*********PRIMARY FUNCTION WHEN OPERATING M.A.R.S.***********		
-		runs the initiatalization procedure
-		sets up multiple threads to allow simultaneous DAQ, input and reactions
-				utilizes:
-					initialize()
-					repeat_rps()
-					repeat_input()
-					connection_check()
-				returns:
-					NONE
 	============================================================================
 	initalize()::
 		checks if arduino is properly connected, flushes Serial buffers and 
@@ -186,7 +262,6 @@ FUNCTIONS
 					input_check()
 				returns:
 					NONE
-
 	============================================================================
 	arduino_write(controlCode)::
 		writes the controlCode to the arduino over the Serial buffers
@@ -246,11 +321,11 @@ FUNCTIONS
 					NONE
 				returns:
 					estimated speed in m/s (float)
-
 	============================================================================
 	estimated_power()::
 		estimates the current power usage of mars based off of voltage and 
-		current data
+		current data.
+			P = V * I
 				utilizes:
 					NONE
 				returns:
@@ -265,14 +340,3 @@ FUNCTIONS
 				returns:
 					percentage of battery remaining (float)
 
---------------------------------------------------------------------------------
-
-NEED TO ADD::
-	autonomous() - sets up an autonomous mode
-	led_brightness() - changes the brightness of the LEDS
-	distance_traveled() - calculated distance traveled
-	sensor_check() - continuously checks sensors, and returns a status code
-	backup_comms() - turn on/off the LEDS to send emergency signals?
-	motion_check() - is Mars still moving? ie. are we stuck?
-
-	FIX DISTANCE TRAVELED AND BATTERY FUNCTIONS

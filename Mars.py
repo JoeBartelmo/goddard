@@ -5,7 +5,7 @@ import re #used primarily to split DAQ strings and generate an array of data
 import math #for math
 import csv #used to generate a machine log
 import pyping #used to ping master controller
-
+import logging #used to dynamically log and filter the console output
 
 class Mars(object):
 
@@ -32,14 +32,12 @@ DESCRIPTION
 	RIT Hyperloop Imaging Team
 	http://hyperloop.rit.edu/team.html
 
-:CONTACT:
-	Feel free to contact this author at any point in time
+	Feel free to contact me at
 	email: jxm9264@rit.edu | jmaggio14@gmail.com
 	phone: 1-513-550-9231
 
 :UPDATED:
 	last updated: June 3, 2016
-
 	
 
 :DISCLAIMER:
@@ -55,248 +53,17 @@ this source code may be used, no warranty of fitness for a particular purpose
 is offered. The user is advised to test the source code thoroughly before 
 relying on it. The user must assume the entire risk of using the source code.
 
+			------------------------------------------------
+			|  CHECK README OR USER MANUAL FOR MORE INFO   |
+			------------------------------------------------
 
-________________________________________________________________________________
-					-----------------------------------------
-					|        CONTROL CODE CONVENTION        |
-					-----------------------------------------
-		Control codes are broken up into two formats, with each format
-		controlling a different aspect of MARS. These formats are distinquished
-		by an identifer placed at the beginning of the control code.
-
-	# MOTION CONTROL
-		-Placing an 'M' at the beginning of a 4 digit control code indicates 
-		that the user wants to control the motion of MARS
-
-		$FORMAT = "MABCD"
-
-		where:
-			'M' is the identifer "M"
-			'A' is a binary operator to enable the Motor
-					'-->(The motor must be enabled to move at all)
-			'B' is a binary operator that defines direction (fwd, rev)
-			'C' is a binary operator to engage the brake
-			'D' is a decimal integer (0-9) that defines the speed
-					'-->(Each integer roughly corresponds 1Mph or .5m/s)
-
-			Examples
-				"M1008" --> foward at 8mph
-				"M1105" --> reverse at 5mph
-				"M0010" --> motor disabled, brake engaged (unconditional stop)
-				"J1108" --> Unknown identifier 'J', code is not processed
-
-	# LED CONTROL
-		-Placing an 'L' at the beginning of a 2 character control code indicates
-		that the user wants to define the luminance of MARS' LEDS
-
-		$FORMAT = "LX"
-
-		where:
-			'L' is the identifier "L"
-			'X' is a decimal integer (0-9) that defines the brightness on a
-			linear scale.
-
-			Examples
-				"L0" --> LEDs off
-				"L3" --> LEDs on 30percent strength
-				"L9" --> LEDs on full strength
-				"Q9" --> Unknown identifier 'Q', code is not processed
-________________________________________________________________________________	
-
-FUNCTIONS
-
-	main()::  
-		*********PRIMARY FUNCTION WHEN OPERATING M.A.R.S.***********		
-		runs the initiatalization procedure
-		sets up multiple threads to allow simultaneous DAQ, input and reactions
-				utilizes:
-					initialize()
-					repeat_rps()
-					repeat_input()
-					connection_check()
-				returns:
-					NONE
-	============================================================================
-	initalize()::
-		checks if arduino is properly connected, flushes Serial buffers and 
-		starts the runClock
-				utilizes:
-					NONE
-				returns:
-					NONE
-	============================================================================
-	repeat_rps()::
-		continuously runs the rps() function
-				utilizes:
-					rps()
-				returns:
-					NONE
-	============================================================================					
-	repeat_input()::
-		continuously runs the controller_input() function
-				utilizes:
-					controller_input()
-				returns:
-					NONE
-	============================================================================
-	connection_check()::
-		continuously checks the connection with the controller's computer and 
-		tells Mars to initiate autonomous mode if that connection is lost
-				utilizes: 
-					ping_control()
-				returns:
-					NONE
-	============================================================================
-	ping_control()::
-		this function pings the controller's computer once and returns a 
-		boolean value indictating whether connection is still good
-				utilizes:
-					NONE
-				returns:
-					connection status (boolean)					
-	============================================================================
-	daq():: 
-		This function reads data from the arduino and then calculates a variety 
-		of other values derived from it such as speed, power, batteryRemaining. 
-				utilizes: 
-					serial_readline()
-					estimated_speed()
-					estimated_power()
-					distance_traveled()
-					batteryRemaining()
-				returns:
-					telemetry array (list)					
-	============================================================================
-	make_pretty():: 
-		this functions takes the dataArray from daq and returns a string with 
-		all data formatted in a more human-readable manner 
-				utilizes: 
-					NONE
-				returns:
-					human-readable telemetry (string)					
-	============================================================================
-	serial_readline()::
-		Reads the telemetry sent from the arduino
-				utilizes:
-					NONE
-				returns:
-					a single line of data sent from arduino (string)		
-	============================================================================
-	rps()::
-		Reads, Prints and Saves the telemetry sent from the Arduino
-		also displays a human-friendly format in the terminal for an operator
-				utilizes:
-					daq()
-					make_pretty()
-				returns:
-					NONE		
-	============================================================================
-	controller_input()::
-		checks if control code is valid and sends control code to the arduino
-				utilizes:
-					arduino_write()
-					input_check()
-				returns:
-					NONE
-
-	============================================================================
-	arduino_write(controlCode)::
-		writes the controlCode to the arduino over the Serial buffers
-				utilizes:
-					NONE
-				returns:
-					NONE					
-	============================================================================
-	input_check(userInput)::	
-		checks the userInput to see if it follows Control Code Convention
-				utilizes:
-					NONE
-				returns:
-					whether or not user input qualifies (boolean)						
-	============================================================================
-	flush_buffers()::	
-		flushes serial buffers
-				utilizes:
-					NONE
-				returns:
-					NONE						
-	============================================================================
-	default_forward()::
-		simply sends a control code to the arduino that will make MARS travel
-		forward at 40percent speed
-				utilizes:
-					NONE
-				returns:
-					NONE						
-	============================================================================
-	default_backward()::
-		simply sends a control code to the arduino that will make MARS travel
-		backward at 40percent speed
-				utilizes:
-					NONE
-				returns:
-					NONE						
-	============================================================================
-	stop()::
-		simply sends a control code to the arduino that will make MARS stop 
-		unconditionally
-				utilizes:
-					NONE
-				returns:
-					NONE						
-	============================================================================
-	time_since_start()::
-		returns the time since initalization began
-				utilizes:
-					NONE
-				returns:
-					time since initalization (float)						
-	============================================================================
-	estimated_speed()::
-		estimates the current speed of MARS based off of RPM data
-				utilizes:
-					NONE
-				returns:
-					estimated speed in m/s (float)
-
-	============================================================================
-	estimated_power()::
-		estimates the current power usage of mars based off of voltage and 
-		current data
-				utilizes:
-					NONE
-				returns:
-					estimated power usage in Watts (float)	
-	============================================================================
-	battery_remaining(power *optional*, time *optional*)::
-		if the user inputs power or time data, then this function will calculate
-		how much energy remains in the batteries. otherwise ths will return the
-		last calculated battery status
-				utilizes:
-					NONE
-				returns:
-					percentage of battery remaining (float)
-
---------------------------------------------------------------------------------
-
-NEED TO ADD::
-	autonomous() - sets up an autonomous mode
-	led_brightness() - changes the brightness of the LEDS
-	distance_traveled() - calculated distance traveled
-	sensor_check() - continuously checks sensors, and returns a status code
-	backup_comms() - turn on/off the LEDS to send emergency signals?
-	motion_check() - is Mars still moving? ie. are we stuck?
-
-	FIX DISTANCE TRAVELED AND BATTERY FUNCTIONS
-
-	"""
-
-
+"""
 	def __init__(self, masterIP, devicePath, baudRate, timeout,\
 		isLogging, logName, trackLength, configFile, enableRecall,\
 		recallPercent, arduino = None, initializeOkay = None, tStart = None,\
 		 currentBattery = None,	totalBattery = None, distanceTraveled = 0,\
-		  currentSpeed = 0,isConnected=None,):
+		  displacement = 0, currentSpeed = 0, isConnected=None, \
+		   lastMotionCode = None, lastLedCode = None, lastStreamCode = None):
 		self._masterIP =  masterIP #IP address of the control comp
 		self._arduino = arduino #used in initialize(), NoneType for now
 		self._initializeOkay = initializeOkay #has initiatalization occured?
@@ -309,23 +76,39 @@ NEED TO ADD::
 		self._currentBattery = currentBattery #current updated battery remaining
 		self._totalBattery = totalBattery#original battery size
 		self._distanceTraveled =  distanceTraveled # distance traveled so far
+		self._displacement = displacement #the linear displacement down the Tube
 		self._currentSpeed = currentSpeed # last recorded speed of MARS
 		self._configFile = configFile #name of the settings file
 		self._recallPercent = recallPercent #point at which Mars automatically
 											##recalls itself
 		self._trackLength = trackLength #length of the track, used for recall
-		self._enableRecall = enableRecall
+		self._enableRecall = enableRecall #whether or not to enable recall func
+
+
+		self._lastMotionCode = lastMotionCode #the last user input Motion code
+		self._lastLedCode = lastLedCode #the last user input LED code
+		self._lastStreamCode = lastStreamCode #the last user input Stream code
 
 
 	
 	def initalize(self):
-		print ""
-		print "beginning initialization..."
+		"""
+	============================================================================		
+	checks if arduino is properly connected, flushes Serial buffers and 
+	starts the runClock.
 
+	MARS MUST BE INITATLIZED BEFORE ANY ACTION CAN OCCUR!
+			utilizes:
+				NONE
+			returns:
+				NONE
+	============================================================================
+		"""			
+		self.lap("beginning initialization...")
 		# print "loading configs from {}".format(self._configFile)
 		# self.load_configs() #loading the configurations from settings
 
-		print "checking if arduino is connected..."
+		self.lap("checking if arduino is connected...")
 		#check if arduino is connected on device path
 		## exit program if connection failure
 		try:
@@ -333,60 +116,108 @@ NEED TO ADD::
 			self._arduino = serial.Serial(self._devicePath,self._baudRate)
 
 		except serial.serialutil.SerialException:
-			print "arduino not connected or device path wrong" 
-			print "check MARS user manual for details" 
-			print "unable to continue, program will now terminate"
+			self.lap("arduino not connected or device path wrong")
+			self.lap("check MARS user manual for details")
+			self.lap("unable to continue, program will now terminate")
+		
 			raise SystemExit
 
-		print "arduino connected"
+		self.lap("arduino connected")
 
 
-		print"flushing serial buffers..."	
+		self.lap("flushing serial buffers...")
+
 		self._arduino.flushInput() #flushing the serial input buffer
 		self._arduino.flushOutput() #flushing the serial output buffer
 
-		print "Initialization complete"
+		self.lap("Initialization complete")
 		self._initializeOkay = True
+
+
+
 		#BEGINNING RUN CLOCK --> tStart used to calculate runclock
 		global tStart
 		tStart = time.time()
 		global integrationTime
 		integrationTime = 0.0
 
+
 		time.sleep(1)
 		global tLastRead
 		tLastRead = self.time_since_start()
-		print ""
+		self.lap("")
 
 		
 
-	def repeat_rps(self):
+	def repeat_read_print_save(self):
+		"""
+	============================================================================		
+	repeat_read_print_save()::
+		continuously runs the read_print_save() function. Which continuously
+	reads, prints and saves all DAQ system data
+				utilizes:
+					read_print_save()
+				returns:
+					NONE
+	============================================================================
+
+		"""
 		while True:
-			self.rps()
+			self.read_print_save()
+
 
 	def repeat_input(self):
+	"""
+	============================================================================	
+	repeat_input()::
+		continuously runs the controller_input() function
+				utilizes:
+					controller_input()
+				returns:
+					NONE
+	============================================================================
+	"""	
 		while True:
 			self.controller_input()
 
+
 	def connection_check(self):
+	"""
+	============================================================================
+	connection_check()::
+		continuously checks the connection with the controller's computer and 
+		tells Mars to initiate autonomous mode if that connection is lost
+				utilizes: 
+					ping_control()
+				returns:
+					NONE
+	============================================================================
+	"""
 		ipToCheck = self._masterIP
 		while True:
 			time.sleep(5)
 			connectionStatus = self.ping_control(ipToCheck)
 			if connectionStatus == False:
 				self._isConnected = False
-				self.autonomous(engage = True) #if connection is lost, then enter autonomous mode
-				print "engaging autopilot"
+				# self.autonomous(engage = True) #if connection is lost,\
+											   ## then enter autonomous mode
+				# print "engaging autopilot"s
 			else: 
-				self.autonomous(engage = False)
+				# self.autonomous(engage = False)
 
 
 	def ping_control(self, ipToCheck):
-		"""
-		this function pings the controlling computer and returns a boolean
-		indicating whether or not we are still connected
-
-		"""
+	"""
+	============================================================================
+	ping_control()::
+		this function pings the controller's computer once and returns a 
+		boolean value indictating whether connection is still good
+				utilizes:
+					NONE
+				returns:
+					connection status (boolean)					
+	============================================================================
+	"""
 		r = pyping.ping(self._masterIP)
 
 		if r.ret_code == 0: 
@@ -397,62 +228,98 @@ NEED TO ADD::
 		    return False
 
 
+
 	def daq(self):
+	"""
+	============================================================================
+	daq():: 
+		This function reads data from the arduino and then calculates a variety 
+		of other values derived from it such as speed, power, batteryRemaining. 
+				utilizes: 
+					serial_readline()
+					estimated_speed()
+					estimated_power()
+					displacement()
+					distance_traveled()
+					batteryRemaining()
+				returns:
+					telemetry array (list)		
+	============================================================================
+	"""
+	#auto-initialize if initialization has not been completed
 		if self._initializeOkay == False:
-			self.initalize()
+			self.initalize() 
 
 		try:
 			rawInput = self.serial_readline() #reading Serialdata
-			print rawInput
-
 			rawArray = re.split(',',rawInput)
-			#independent data (raw from arduino)
+	#independent data (raw from arduino)
 			rpm = rawArray[0]
 			sysV = rawArray[1]
 			sysI = rawArray[2]
-			sysI = sysI[0:4]
-			#first set dependent (calculated based off of raw data)
+			sysI = sysI[0:len(sysI)-4] # new line characters '\r\n' popped up 
+									   ## this just gets rid of them
+	#first set dependent (calculated based off of raw data)
 			speed = self.estimated_speed(rpm) #speed in m/s
 			power = self.estimated_power(sysV, sysI) #power in Watts
 
-			#second set dependent (calculated based off of above set)
+	#second set dependent (calculated based off of above set)
 			distance, distanceTraveled = self.distance_traveled(speed) #in Meters
-			batteryRemaining = self.battery_remaining(power)
+			displacement, totalDisplacement = self.displacement(speed) #in Meters 
+			batteryRemaining = self.battery_remaining(power) 
 
-			#TX1-side data
-			global integrationTime
-			integrationTime2 = round(integrationTime, 4)
+	#Connection and clock data. Generated on this machine. 
+			global integrationTime 
+			integrationTimeRounded = round(integrationTime, 4)
 			runClock = round(self.time_since_start(), 4)
 			isConnected = self._isConnected
 
 
-			#compiling all data for later integration
-			telemetryArray = [runClock,distanceTraveled,speed,power,\
-			batteryRemaining,integrationTime2,isConnected, rpm, sysV, sysI]
+	#Last commands used for operator reference
+			mCode = self._lastMotionCode
+			lCode = self._lastLedCode
+			sCode = self._lastStreamCode
 
-			# print telemetryArray
+
+	#compiling all data into list for ease of access
+			telemetryArray = [runClock,totalDistplacement, distanceTraveled,\
+			speed,power, batteryRemaining,integrationTimeRounded,isConnected,\
+			rpm, sysV, sysI, mCode, lCode, sCode]
+
 		except Exception as e:
-			print "unable to acquire data due to {}".format(e)
-			print "attemting to correct"
+			self.lap("unable to acquire data due to {}".format(e))
+			self.lap("attemting to correct...")
 			self.daq() 
+
 
 		return telemetryArray
 
-
-	def make_pretty(self, dataArray):
-		"""this function converts the DAQ output to a more convienent format for
-		a human operator"""
-			########### NEED TO SET UP A DATATYPE CHECK ##########
-		runClock = dataArray[0]
-		distance = dataArray[1]
-		speed = dataArray[2]
-		power = dataArray[3]
-		battery = dataArray[4]
-		integTime = dataArray[5]
-		connectionStatus = dataArray[6]
-		motorRpm = dataArray[7]
-		systemVoltage = dataArray[8]
-		systemCurrent = dataArray[9]
+	
+	def make_pretty(self, telemetryArray):
+	"""
+	============================================================================
+	make_pretty():: 
+		this functions takes the telemetryArray from daq and returns a string with 
+		all data formatted in a more human-readable manner 
+				utilizes: 
+					NONE
+				returns:
+					human-readable telemetry (string)					
+	============================================================================
+	"""
+		runClock = telemetryArray[0]
+		distance = telemetryArray[1]
+		speed = telemetryArray[2]
+		power = telemetryArray[3]
+		battery = telemetryArray[4]
+		integTime = telemetryArray[5]
+		connectionStatus = telemetryArray[6]
+		motorRpm = telemetryArray[7]
+		systemVoltage = telemetryArray[8]
+		systemCurrent = telemetryArray[9]
+		mCode = telemetryArray[10]
+		lCode = telemetryArray[11]
+		sCode = telemetryArray[12]
 
 		minutes,seconds = divmod(runClock, 60)
 
@@ -467,19 +334,37 @@ NEED TO ADD::
 		else:
 			connectionString = "Disconnected"
 
+		#raw data off of Arduino
 		rpmString = str(motorRpm) + "rpm, "
 		voltageString = str(systemVoltage) + "V, "
 		currentString = str(systemCurrent) + "A, "
 
+		#last commands set by operator
+		mCodeString = 'motion command: ' + mCode
+		lCodeString = 'led command: ' + lCode
+		sCodeString = 'stream command: ' + sCode
+
+
 		operatorString = minSecString + distanceString + speedString + \
 		powerString + batteryString + rpmString + voltageString + \
-		currentString +connectionString
+		currentString +connectionString + mCodeString + lCodeString + \
+		sCodeString + '\r\n'
 
 		return operatorString
 
 
 
 	def serial_readline(self):
+"""
+	============================================================================
+	serial_readline()::
+		Reads the telemetry sent from the arduino
+				utilizes:
+					NONE
+				returns:
+					a single line of data sent from arduino (string)		
+	============================================================================
+"""
 		#only attempt to read if initialization has occured
 		if self._initializeOkay == False: 
 			self.initalize()
@@ -496,9 +381,9 @@ NEED TO ADD::
 			if waitTime < timeout:
 				waitTime =  time.time() - waitStart
 			elif waitTime >= timeout:
-				print "no data coming from arduino before connection timeout"
-				print "ending program, check arduino code or timeout duration"
-				print "attempting re-initialization..."
+				self.lap("no data coming from arduino before timeout")
+				self.lap("ending program, check arduino or timeout duration")
+				self.lap("attempting re-initialization...")
 				self.initialize()
 		else:
 			time.sleep(.001) #added short delay just in case data was in transit
@@ -517,46 +402,82 @@ NEED TO ADD::
 
 
 
-	def rps(self): #rps: Read, Print and Save
+	def read_print_save(self): #read_print_save: Read, Print and Save
+	"""
+	============================================================================
+	read_print_save()::
+		Reads, Prints and Saves the telemetry sent from the Arduino
+		also displays a human-friendly format in the terminal for an operator
+				utilizes:
+					daq()
+					make_pretty()
+				returns:
+					NONE		
+	============================================================================
+	"""
 		daqData = self.daq()
 		operatorString = self.make_pretty(daqData)
 
-		# print operatorString #print to console so operator can interpret
-		# print ""
-		#saving to file for logging purposes
-		if self._isLogging == True:
-		#operator File = console log, easier for a human to interpret
-			operatorFileName = 'logs/'+ self._logName + '_operator_log.txt'
-			operatorFile = open(operatorFileName,'a')
-			operatorFile.write(operatorString+'\r\n') 
-			operatorFile.close()
-		
-		#raw File - raw DAQ log, easier for a machine to process
-			rawFileName =  'logs/'+ self._logName + '_machine_log.csv'
-			with open(rawFileName, 'a') as rawFile:
-				rawWriter = csv.writer(rawFile)
-				rawWriter.writerow(daqData)
-		
-		## There are automatically 2 logs saved
-		### One formatted in a more human-friendly way
-		#### and another in a machine-readable '.csv'
+		self.lap(daqData,0)
+		self.lap(operatorString,1)
+
 
 
 
 	def controller_input(self):
+	"""
+	============================================================================
+	controller_input()::
+		checks if control code is valid and sends control code to the arduino
+				utilizes:
+					arduino_write()
+					input_check()
+				returns:
+					NONE
+
+	============================================================================
+	"""
 		#ask for control code input from user
 		controlCode = raw_input("LED or motion control code: ")
 		#check if control code is within parameters
-		codeOkay = self.input_check(controlCode)
+		codeOkay,codeType = self.input_check(controlCode)
+
+
+	#RECORDING THE LAST CONTROL CODE COMMAND --> this feeds into telemetry array
+		if codeType == 'M':
+			self._lastMotionCode = controlCode
+		elif codeType == 'L':
+			self._lastLedCode = controlCode
+		elif codeType == 'S':
+			self._lastStreamCode = controlCode
+
 
 		if codeOkay == True:
 			self.arduino_write(controlCode) #write code to arduino
-			print controlCode #print control code for reference
-		else: 
-			print "control code must follow strict convention"
-			print "check MARS user manual for specifics"
+			self.lap("")
+			self.lap(controlCode + " inputed") #print control code for reference
+			self.lap("code is valid")
+			self.lap("")
+		else:
+			self.lap("")
+			self.lap(controlCode + " inputed")
+			self.lap("code is INVALID")
+			self.lap("check MARS user manual for specifics on code convention")
+			self.lap("")
+
+	
 
 	def arduino_write(self, controlCode):
+	"""
+	============================================================================
+	arduino_write(controlCode)::
+		writes the controlCode to the arduino over the Serial buffers
+				utilizes:
+					NONE
+				returns:
+					NONE					
+	============================================================================
+	"""	
 		#only send code if initialization has occured
 		if self._initializeOkay == False:
 			self.initalize()
@@ -565,8 +486,10 @@ NEED TO ADD::
 
 
 
+	
 	def input_check(self, userInput):
 		"""
+	============================================================================
 		This function checks the controlCode input and checks if it is within
 		the convention described above at the begining of the primary docstring.
 
@@ -579,7 +502,9 @@ NEED TO ADD::
 		possible alternatives:
 					https://code.activestate.com/recipes/410692/
 
+	============================================================================
 		"""
+		codeType = None
 
 		codeIdentifier = userInput[0]
 		codeIdentifier = codeIdentifier.upper()
@@ -604,6 +529,7 @@ NEED TO ADD::
 			#____Compiling the output____#	
 			if lengthOkay == True and valuesOkay == True:
 				testResult = True
+				codeType = 'L'
 			else:
 				testResult = False
 				
@@ -645,42 +571,57 @@ NEED TO ADD::
 
 			if a==True and b==True and c==True and d==True and e==True:
 				testResult = True
+				codeType = 'M'
 			else:
 				testResult = False
 
 		else:
-			print "control code must have an identifier"
-			print "------------------------------------"
-			print "check MARS user manual for specifics"
-			print "------------------------------------"			
+			self.lap("control code must have an identifier")
+			self.lap("------------------------------------")
+			self.lap("check MARS user manual for specifics")
+			self.lap("------------------------------------")			
 			testResult = False
 #######DEBUGGING CODE ####################
-		if testResult == True:
-			print "test is positive"
-		elif testResult == False:
-			print "test is negative"
 
-
-		return testResult
+		return testResult,codeType
 		# return True
 		
 
 	def flush_buffers(self):
+	"""
+	============================================================================
+	flush_buffers()::	
+		flushes serial buffers
+				utilizes:
+					NONE
+				returns:
+					NONE						
+	============================================================================
+
+	"""
 		"""this function just flushes the Serial buffers"""
 		#only attempt to flush if initialization has occured
 		if self._initializeOkay == False: 
 			self.initalize()
 
-		print"flushing serial buffers..."	
+		self.lap("flushing serial buffers...")	
 		self._arduino.flushInput() #flushing the serial input buffer
 		self._arduino.flushOutput() #flushing the serial output buffer
 
 
+
 	def default_forward(self):
 		"""
-		This function just sends the control code associated with moving forward
-		at 40percent speed. This will be the function that autonomous mode will
-		call
+	============================================================================
+	default_forward()::
+		simply sends a control code to the arduino that will make MARS travel
+		forward at 40percent speed
+				utilizes:
+					NONE
+				returns:
+					NONE						
+	============================================================================
+
 		"""
 		defaultForwardCode = "M1104"
 		self.arduino_write(defaultForwardCode)
@@ -689,25 +630,55 @@ NEED TO ADD::
 
 	def default_backward(self):
 		"""
-		This function just sends the control code associated with moving 
-		backward at 40percent speed. This will be a function that autonomous
-		mode will call
+	============================================================================
+	default_backward()::
+		simply sends a control code to the arduino that will make MARS travel
+		backward at 40percent speed
+				utilizes:
+					NONE
+				returns:
+					NONE						
+	============================================================================
+
 		"""
 
 		defaultBackwardCode = "M1004"
 		self.arduino_write(defaultBackwardCode)
 
 
+
+	
 	def stop(self):
 		"""
-		This function sends a full stop command to the arduino to stop the Mars
+	============================================================================
+	stop()::
+		simply sends a control code to the arduino that will make MARS stop 
+		unconditionally
+				utilizes:
+					NONE
+				returns:
+					NONE						
+	============================================================================
+
 		"""
 
 		fullStopCode = "M0010"
 		self.arduino_write(fullStopCode)
 
 
+
 	def time_since_start(self):
+	"""
+	============================================================================
+	time_since_start()::
+		returns the time since initalization began. ie the runClock
+				utilizes:
+					NONE
+				returns:
+					time since initalization (float)						
+	============================================================================
+
+	"""
 		global tStart
 		currentTime = time.time()
 
@@ -715,8 +686,10 @@ NEED TO ADD::
 		return tSinceStart
 
 
+
 	def estimated_speed(self, rpm):
 		"""
+	============================================================================		
 		This function guesses how fast Mars is going based on the lastest RPM
 		data from the DAQ. 
 
@@ -725,9 +698,15 @@ NEED TO ADD::
 
 		this conversion is will only work for the current generation of MARS and
 		is a function of this equation
-
 			speed in mph ~= rpm/221
 			speed in m/s ~= (rpm/221)*0.44704
+
+				utilizes:
+					NONE
+				returns:
+				estimated speed in m/s (float)
+	============================================================================
+
 		"""
 		rpm = float(rpm) #rpm must be a float
 		estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
@@ -736,12 +715,22 @@ NEED TO ADD::
 		self._currentSpeed = returnEstMps
 		return returnEstMps
 
+
+
+
 	def estimated_power(self, sysVoltage, sysCurrent):
 		"""
-		This function estimates the power draw of mars based off of the system
-		voltage and current which is collected from the arduino's ammeter
+	============================================================================
+	estimated_power()::
+		estimates the current power usage of mars based off of voltage and 
+		current data.
+			P = V * I
+				utilizes:
+					NONE
+				returns:
+					estimated power usage in Watts (float)	
+	============================================================================
 
-		P = V*I
 		"""
 		sysVoltage = float(sysVoltage)
 		sysCurrent = float(sysCurrent)
@@ -753,18 +742,22 @@ NEED TO ADD::
 
 
 	def battery_remaining(self,power=None, time = None):
+		"""
+	============================================================================
+	battery_remaining(power *optional*, time *optional*)::
+		if the user inputs power or time data, then this function will calculate
+		how much energy remains in the batteries. otherwise ths will return the
+		last calculated battery status
+				utilizes:
+					NONE
+				returns:
+					percentage of battery remaining (float)
+	============================================================================
+	"""
 		if time == None:
 			time = integrationTime 
 	########^^^^^^^^FIX THIS ONCE DEBUGGING IS COMPLETE^^^^^^^^###########
-		"""
-		if the user decides to input a power, then this function will 
-		calculate how much battery power remains given the current
-		integrationTime and returns the new battery percentage
 
-		Otherwise this function simply returns the last calculated battery
-		capacity
-
-		"""
 		if power != None:
 			joulesUsed  = float(power) * time
 			whrUsed = joulesUsed/3600.0 #converting Joules to Watt*hours
@@ -777,18 +770,110 @@ NEED TO ADD::
 
 		return battPercentReturned
 
+
+
 	def distance_traveled(self, speed, time=None):
+	"""
+	============================================================================
+	distance_traveled()::
+		returns the estimated distance traveled by mars. If the user feed this 
+		function a time parameter, then this will calculate the new distance
+		based on the current speed and time given. Otherwise it will return the
+		last calculated distance traveled by Mars.
+				utilizes:
+					NONE
+				returns:
+					distance traveled by Mars in meters (float)
+	============================================================================
+	"""
 		if time == None:
 			time = integrationTime
 
-		intervalDistance = speed * time
+		intervalDistance = abs(speed) * time
 		self._distanceTraveled = self._distanceTraveled + intervalDistance
 		totalDistance = self._distanceTraveled
 		
-		intervalDistanceReturned = round(intervalDistance,1)
-		totalDistanceReturned = round(totalDistance, 1)
+		intervalDistanceRounded = round(intervalDistance,1)
+		totalDistanceRounded = round(totalDistance, 1)
 
-		return intervalDistanceReturned,totalDistanceReturned
+		return intervalDistanceRounded,totalDistanceRounded
+
+
+
+
+	def displacement(self, speed, time=None):
+	"""
+	============================================================================
+	distance_traveled()::
+		returns Mars' estimated displacement down the tube. If the user feeds 
+		this function a time parameter, then this will calculate the new 
+		distance based on the current speed and time given. Otherwise it will 
+		return the last calculated displacement traveled by Mars.
+				utilizes:
+					NONE
+				returns:
+					total linear displacement of Mars in meters (float)
+	============================================================================
+	"""
+		if time == None:
+			time = integrationTime
+
+		intervalDisplacement = speed * time
+		self._displacement= self._displacement + intervalDisplacement
+				# '--> updating the object attribute
+		totalDisplacement = self._displacement
+
+		intervalDisplacement = round(intervalDisplacement,1)
+		totalDisplacement = round(totalDistance, 1)
+		#rounding to make it more human readable--> we don't even have that much
+		##acurracy to begin with
+		return intervalDisplacement,totalDisplacement
+
+
+
+	def lap(self, logData, logType = None, logLevel=None):#lap --> Log And Print
+		# 0 indicates raw telemetry
+		# 1 indicates human readable telemetry
+		# 2 indicates a status log
+		
+		try:
+		 #RAW TELEMETRY
+			if logType == 0: 
+				fileName =  'logs/'+ self._logName + '_machine_log.csv'
+				with open(fileName, 'a') as rawFile:
+					rawWriter = csv.writer(rawFile)
+					rawWriter.writerow(logData)
+			
+			#HUMAN-READABLE TELEMETRY
+			elif logType == 1:
+				fileName = 'logs/'+ self._logName + '_operator_log.txt'
+				with open(fileName,'a') as operatorFile
+					operatorFile.write(logData+'\r\n') 
+
+			#STATUS LOG
+			elif logType == 2:
+				fileName='logs/'+ self._logName+'_status_log.txt'
+				with open(fileName,'a') as statusFile
+					statusFile.write(logData+'\r\n') 
+					print statusMessage
+
+		except Exception as e:
+			print "unable to log data because: \r\n {}".format(e)
+
+	## There are automatically 3 logs saved
+	### One DAQ log formatted in a more human-friendly way
+	#### and another DAQ log in a machine-readable '.csv'
+	##### there is also a status log, but this is saved intermittently 
+	###### as part of self.lap() --> (log and print)
+
+
+
+
+
+
+
+
+
 
 
 	# def autonomous_action(self, engage = True):

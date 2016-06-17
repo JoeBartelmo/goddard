@@ -33,12 +33,12 @@ def run(configFile):
 
 ##----- SETTING UP MULTIPLE THREADS HERE ------##
 
-	dataThread = threading.Thread(target = m.repeat_rps)
+	dataThread = threading.Thread(target = m.repeat_read_print_save)
 	inputThread =  threading.Thread(target = m.repeat_input)
 	# pingingThread = threading.Thread(target = m.connection_check)
 
 	try:
-		dataThread.start() #rps() thread
+		dataThread.start() #read_print_save() thread
 		inputThread.start() #repeat_input() thread
 		# pingingThread.start() #connection_check() thread
 	except Exception as e:
