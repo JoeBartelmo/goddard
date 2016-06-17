@@ -48,10 +48,10 @@ class SerializableClient:
 			if isinstance(data, list):
 				for stream_object in data:
 					self.verify_stream_data(stream_object)
-					self.streams.push(stream_object)
+					self.streams.append(stream_object)
 			else:
 				self.verify_stream_data(data)
-				self.streams.push(data)
+				self.streams.append(data)
 
 	def verify_stream_data(self, data):
 		if data is not None and data.source is not None and data.type is not None:
