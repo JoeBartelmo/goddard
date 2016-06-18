@@ -46,12 +46,12 @@ var closeOpenStreams = function closeOpenstreams() {
 
 
 cli.parse({
-  width: ['w', 'Width of video to streams (default: 640)', 'int', 640],
-  height: ['h', 'Height of the video streams (default: 480)', 'int', 480],
-  bitrate: ['b', 'Requested bitrate from streams (default: 4000)', 'int', 4000],
-  filename: ['f', 'Filename base to write the streams (test#.mp4) (default: test)', 'string', 'test'],
-  fps: ['fps', 'Frames per second that the camera should attempt to capture (default 45)', 'int', 45],
-  port: ['p', 'Default starting port to broadcast over (increments by 1 for each camera)', 'int', 8554],
+  width: ['w', 'Width of video to streams', 'int', 640],
+  height: ['h', 'Height of the video streams', 'int', 480],
+  bitrate: ['b', 'Requested bitrate from streams', 'int', 4000],
+  filename: ['f', 'Filename base to write the streams (test#.mp4)', 'string', 'test'],
+  fps: ['fps', 'Frames per second that the camera should attempt to capture', 'int', 45],
+  port: ['p', 'Default starting port to broadcast over -- increments by 1 for each camera', 'int', 8554],
   verbose: [false, 'If on, will log out all of VLCs garbage', 'bool', false],
   close: [false, 'When a stream is launched the Processs ID is tracked, if there is an interrupt of communication between client and server, this will explicitly close any opened streams']
 });
