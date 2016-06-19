@@ -102,7 +102,7 @@ class Jetson(object):
             print (self.displayStatistics(self._mars._statistics)) #Display human readable statistics
 
             logging.info("Saving statistics...")
-            self.saveStats(self._mars._statistics)
+            #self.saveStats(self._mars._statistics) added this to last line of displayStats for testing
 
             self._mars._integTime = time.time()
 
@@ -142,6 +142,9 @@ class Jetson(object):
         powerString + batteryString + rpmString + voltageString + \
         currentString +connectionString + mCodeString + lCodeString + \
 		sCodeString + '\r\n'
+
+        logging.info("Saving stats.")
+        self.saveStats(operatorString)
 
         return operatorString
 
