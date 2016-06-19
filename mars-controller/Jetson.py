@@ -14,6 +14,8 @@ import pyping
 import csv
 import time
 import sys
+import json
+
 
 class Jetson(object):
     """
@@ -102,44 +104,7 @@ class Jetson(object):
         :param data:
         :return:
         """
-
-        runClock = time.time() - self._arduino._timeInit
-        minutes,seconds = divmod(runClock, 60)
-
-        minSecString = 'Time running: ' + str(int(minutes)) + ":" + str(int(seconds)) + " {  "
-        distanceString = str(data['totDistanceTraveled'])+"meters, "
-        displacementString = str(data['totalDisplacement']) + 'meters, '
-        speedString = str(data['speed']) + "m/s, "
-        powerString = str(data['power']) + "Watts, "
-        batteryString = str(data['batteryRemaining']) + "%, "
-        #integration time isn't needed for operator
-        """
-        if self._connected == True:
-            connectionString = "Connected,  "
-        else:
-            connectionString = "Disconnected, "
-        """
-        connectionString = "Disconnected, "
-        #raw data off of Arduino
-        rpmString = str(data['rpm']) + "rpm, "
-        voltageString = str(data['sysV']) + "V, "
-        currentString = str(data['sysI']) + "A, "
-
-        #last commands set by operator
-        mCodeString = 'motion command: ' + self._lastMotion + ', '
-        lCodeString = 'LED command: ' + self._lastLED + ', '
-        sCodeString = 'stream command: ' + self._lastStream + ' } '
-
-
-        operatorString = minSecString + distanceString + displacementString + speedString + \
-        powerString + batteryString + rpmString + voltageString + \
-        currentString +connectionString + mCodeString + lCodeString + \
-		sCodeString + '\r\n'
-
-        logging.info("Saving stats.")
-        self.saveStats(operatorString)
-
-        return operatorString
+        return json.dumps(data) 
 
 
     def saveStats(self, data):
