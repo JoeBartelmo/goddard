@@ -70,7 +70,7 @@ class Jetson(object):
                 break
 
             #Check for validity
-            if myCodeInput.valid(controlCode):
+            if myCodeInput.valid():
 
                 #Write to Arduino
                 print(controlCode + " inputed succesfully (valid).")
@@ -82,6 +82,8 @@ class Jetson(object):
                     self._lastMotion = controlCode
                 if(myCodeInput._type == 'L'):
                     self._lastLED = controlCode
+                if(myCodeInput._type == 'S'):
+                    self._lastStream = controlCode
 
             else:
                 logging.info("Code is invalid.")

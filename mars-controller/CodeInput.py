@@ -2,6 +2,7 @@
 ark9719
 6/17/2016
 '''
+import logging
 
 class ConcreteMotorInput(object):
     """
@@ -19,22 +20,29 @@ class ConcreteMotorInput(object):
         self._code = code
         self._type = 'M'
 
-    def valid(self, code):
+    def valid(self):
 
-        for c in code[1:4]:
-            binaryBool = (c == 0 or c == 1)
-            if binaryBool == False:
+        #Check for binary inputs at positions A, B, C
+        for c in self._code[1:4]:
+            if int(c) not in (0, 1):
+                logging.warning("Bad motor input entered")
                 print("The second, third, or fourth integer in your code is not binary (0-1)")
                 return False
 
-        if (len(code) != 5):
+        #Check for correct length
+        if (len(self._code) != 5):
+            logging.warning("Bad motor input entered")
             print("Incorrect code length, 1 character and 4 digits please.")
             return False
 
-        if(code[4].isdigit() == False):
+        #Check if D is integer
+        if(not RepresentsInt(self._code[4])):
+            logging.warning("Bad motor input entered")
             print("The last character in the code must be an integer.")
+            return False
 
         return True
+
 
 
 
@@ -51,12 +59,69 @@ class ConcreteLEDInput():
         self._code = code
         self._type = 'L'
 
-    def valid(self, code):
-        if (len(code) == 2 and code[1].isdigit() ):
+    def valid(self):
+
+        #Check for code length and the second character to be int
+        if (len(self._code) == 2 and RepresentsInt(self._code[1]) ):
             return True
         else:
+            logging.warning("Bad LED input entered")
+            print("Code was not length two or the second character was not an integer")
             return False
 
 
+class ConcreteStreamInput():
+    """
+    ConcreteStreamInput is a class for codes intended to dynamically change stream settings
+    """
+
+    def __init__(self, code):
+        self._code = code
+        self._type = 'S'
+
+    def valid(self):
+
+        #Check code length
+        if(len(self._code) != 3 ):
+            logging.warning("Bad stream input entered")
+            print("Code must be 3 characters long.")
+            return False
+
+        #Check first character for 0, 1 or 2
+        if not RepresentsInt(self._code[1]) and not (self._code[1] in (0, 1, 2)):
+            logging.warning("Bad stream input entered")
+            print("Second character must be  0, 1, or 2.")
+            return False
+
+        #Check if 3rd character is int
+        if not RepresentsInt(self._code[2]):
+            logging.warning("Bad stream input entered")
+            print("Third character must be integer (0-9).")
+            return False
+
+        return True
+
+def RepresentsInt(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+"""
+def testing():
+    mCodes = ['M0001', 'M0102', 'M000234', 'M000Q']
+    lCodes = ['L1', 'LA', 'L123']
+    sCodes = ['S123', 'SAB', 'S12345', 'S1A', 'SA1' ]
+
+    for code in sCodes:
+        testCode = ConcreteStreamInput(code)
+
+        print(code + ' evaluates to : ')
+        print(testCode.valid())
+        print("-----------")
 
 
+
+testing()
+"""
