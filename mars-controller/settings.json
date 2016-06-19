@@ -8,7 +8,7 @@
   },
   "autonomous_action" : {
     "enableRecall": true,
-    "recallPercent": 30.0
+    "recallPercent": 97.0
   },
   "logging": {
     "shouldLog": true,

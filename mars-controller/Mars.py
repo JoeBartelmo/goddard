@@ -21,10 +21,10 @@ class Mars(object):
 
         statistics = {}
         self._statistics = statistics
-        statistics.setdefault('totDistanceTraveled', 0)
+        statistics.setdefault('totDistance', 0)
         statistics.setdefault('intDistance', 0)
         statistics.setdefault('intDisplacement', 0)
-        statistics.setdefault('totalDisplacement', 0)
+        statistics.setdefault('totDisplacement', 0)
         statistics.setdefault('batteryRemaining', self._config.battery.remaining)
 
 
@@ -93,17 +93,52 @@ class Mars(object):
         self._statistics['power'] = power
 
 
-        intDistance, totDistanceTraveled = self.distanceTraveled(speed) #in Meters
+        intDistance, totDistanceTraveled = self.distanceTraveled() #in Meters
         self._statistics['intDistance'] = intDistance
-        self._statistics['totDistanceTraveled'] = totDistanceTraveled
+        self._statistics['totDistance'] = totDistanceTraveled
 
-        displacement, totalDisplacement = self.displacement(speed) #in Meters
+        displacement, totalDisplacement = self.displacement() #in Meters
         self._statistics['intDisplacement'] = displacement
-        self._statistics['totalDisplacement'] = totalDisplacement
+        self._statistics['totDisplacement'] = totalDisplacement
 
         batteryRemaining = self.batteryRemaining(power)
         self._statistics['batteryRemaining'] = batteryRemaining
 
+        self.safteyCheck()
+
+    def safteyCheck(self):
+        """
+        Function to check the statistics pulled for any alarming signs (IE low battery)
+        :return:
+        """
+
+        #If recall is enabled
+        if (self._config.autonomous_action.enableRecall):
+
+            #Iff the battery remaining is less than or equal to the configuration recall percent
+            print('Battery remaining:' + str(self._statistics['batteryRemaining']))
+            print('Recall percent:' + str(self._config.autonomous_action.recallPercent))
+            if (float(self._statistics['batteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
+                print("Recalling")
+                self.recall()
+
+
+    def recall(self):
+        """
+        Recall Mars when the battery is below the configuration threshhold
+        :return:
+        """
+        midpoint = self._config.constants.trackLength / 2
+
+        #If Mars is at or past the midpoint
+        if (self._statistics['totDistance'] >= midpoint):
+            print("Past halfway, moving forward")
+            #Move forward at full speed
+            self._arduino.write('M1104')
+        else:
+            print("Not halfway, moving back")
+            #Otherwise go back at full speed
+            self._arduino.write('M1004')
 
 
     def estimatedSpeed(self, rpm):
@@ -123,12 +158,12 @@ class Mars(object):
         :return:
         """
 
-        rpm = float(rpm) #rpm must be a float
+        rpm = float(self._statistics['rpm']) #rpm must be a float
         estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
 
         returnEstMps = round(estMps, 1)
-        self._currentSpeed = returnEstMps
-        return returnEstMps
+        self._statistics['speed'] = returnEstMps
+        return self._statistics['speed']
 
     def estimatedPower(self, sysVoltage, sysCurrent):
         """
@@ -138,14 +173,14 @@ class Mars(object):
         :param sysCurrent:
         :return:
         """
-        sysVoltage = float(sysVoltage)
-        sysCurrent = float(sysCurrent)
+        sysVoltage = float(self._statistics['sysV'])
+        sysCurrent = float(self._statistics['sysI'])
         estPower = sysVoltage * sysCurrent
 
         powerReturned = round(estPower, 2)
         return powerReturned
 
-    def distanceTraveled(self, speed, time=None):
+    def distanceTraveled(self, time=None):
         """
         returns the estimated distance traveled by mars. If the user feed this function a time parameter, then this will
         calculate the new distance based on the current speed and time given. Otherwise it will return the last
@@ -157,17 +192,17 @@ class Mars(object):
         if time == None:
             time = self._integTime
 
-        intervalDistance = abs(speed) * time
-        travAdded = self._statistics['totDistanceTraveled'] + intervalDistance
-        self._statistics['totDistanceTraveled'] = travAdded
+        intervalDistance = abs(self._statistics['speed']) * time
+        travAdded = self._statistics['totDistance'] + intervalDistance
+        self._statistics['totDistance'] = travAdded
         #totalDistance = self._statistics['distanceTraveled']
 
         intervalDistanceRounded = round(intervalDistance,1)
-        totalDistanceRounded = round(self._statistics['totDistanceTraveled'], 1)
+        totalDistanceRounded = round(self._statistics['totDistance'], 1)
 
         return intervalDistanceRounded,totalDistanceRounded
 
-    def displacement(self, speed, time=None):
+    def displacement(self, time=None):
         """
 
         :param speed:
@@ -177,13 +212,13 @@ class Mars(object):
         if time == None:
             time = self._integTime
 
-        intervalDisplacement = speed * time
+        intervalDisplacement = self._statistics['speed'] * time
         self._statistics['intDisplacement'] = self._statistics['intDisplacement'] + intervalDisplacement
             # '--> updating the object attribute
-        totalDisplacement = self._statistics['intDisplacement']
+        totalDisplacement = self._statistics['totDisplacement'] + intervalDisplacement
 
-        intervalDisplacement = round(intervalDisplacement,1) #Rounding for readability
-        totalDisplacement = round(totalDisplacement, 1)
+        intervalDisplacement = abs(round(intervalDisplacement,1)) #Rounding for readability
+        totalDisplacement = abs(round(totalDisplacement, 1))
 
         return intervalDisplacement,totalDisplacement
 
