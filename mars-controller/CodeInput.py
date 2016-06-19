@@ -73,6 +73,11 @@ class ConcreteLEDInput():
 class ConcreteStreamInput():
     """
     ConcreteStreamInput is a class for codes intended to dynamically change stream settings
+
+     FORMAT ==> SAB
+    'S' is the stream code identifier
+    'A' is the resolution changer [ 0 (640x480) or 1 (1280 x 960)]
+    'B' is the bitrate integer (0-9)
     """
 
     def __init__(self, code):
