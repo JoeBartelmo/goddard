@@ -6,6 +6,7 @@ ark9719
 import threading
 from CodeInput import ConcreteLEDInput
 from CodeInput import ConcreteMotorInput
+from CodeInput import ConcreteStreamInput
 import logging
 import pyping
 import csv
@@ -65,8 +66,10 @@ class Jetson(object):
                 myCodeInput = ConcreteMotorInput(controlCode)
             elif controlCode[0] == 'L':
                 myCodeInput = ConcreteLEDInput(controlCode)
+            elif controlCode[0] == 'S':
+                myCodeInput = ConcreteStreamInput(controlCode)
             else:
-                logging.info("Invalid leading character. L or M")
+                logging.info("Invalid leading character. L, M, or S")
                 break
 
             #Check for validity
