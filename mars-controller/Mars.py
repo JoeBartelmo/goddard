@@ -22,8 +22,8 @@ class Mars(object):
         statistics = {}
         self._statistics = statistics
         statistics.setdefault('totDistanceTraveled', 0)
-        statistics.setdefault('distance', 0)
-        statistics.setdefault('displacement', 0)
+        statistics.setdefault('intDistance', 0)
+        statistics.setdefault('intDisplacement', 0)
         statistics.setdefault('totalDisplacement', 0)
         statistics.setdefault('batteryRemaining', self._config.battery.remaining)
 
@@ -98,7 +98,7 @@ class Mars(object):
         self._statistics['totDistanceTraveled'] = totDistanceTraveled
 
         displacement, totalDisplacement = self.displacement(speed) #in Meters
-        self._statistics['displacement'] = displacement
+        self._statistics['intDisplacement'] = displacement
         self._statistics['totalDisplacement'] = totalDisplacement
 
         batteryRemaining = self.batteryRemaining(power)
@@ -178,9 +178,9 @@ class Mars(object):
             time = self._integTime
 
         intervalDisplacement = speed * time
-        self._statistics['displacement'] = self._statistics['displacement'] + intervalDisplacement
+        self._statistics['intDisplacement'] = self._statistics['intDisplacement'] + intervalDisplacement
             # '--> updating the object attribute
-        totalDisplacement = self._statistics['displacement']
+        totalDisplacement = self._statistics['intDisplacement']
 
         intervalDisplacement = round(intervalDisplacement,1) #Rounding for readability
         totalDisplacement = round(totalDisplacement, 1)
