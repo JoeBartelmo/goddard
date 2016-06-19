@@ -7,6 +7,8 @@ import threading
 from CodeInput import ConcreteLEDInput
 from CodeInput import ConcreteMotorInput
 from CodeInput import ConcreteStreamInput
+from Threads import InputThread
+from Threads import StatisticsThread
 import logging
 import pyping
 import csv
@@ -27,28 +29,10 @@ class Jetson(object):
         self._lastStream = 'None yet'
         self._config = config
         self._lastRead = 0.0
-        self._connected = self.connectionPing()
+        #self._connected = self.connectionPing()
 
 
-    def startThreads(self):
-        """
-        This method starts the two threads that will run for the duration of the program. One scanning for input,
-        the other generating, displaying, and saving data.
-        :return:
-        """
-        logging.info("Attempting to start threads")
-        dataThread = threading.Thread(target = self.statisticsController())
-        inputThread =  threading.Thread(target = self.repeatInput())
-        # pingingThread = threading.Thread(target = m.connection_check)
-        #
-        try:
-            dataThread.start() #read_print_save() thread
-            inputThread.start() #repeat_input() thread
-            #pingingThread.start() #connection_check() thread
-        except Exception as e:
-            logging.info("error starting Multithreading ({})".format(e))
-            logging.info("program will terminate")
-            sys.exit()
+
 
     def repeatInput(self):
         """
@@ -57,6 +41,7 @@ class Jetson(object):
 
         :return:
         """
+
         while True:
             #Prompt for input
             controlCode = raw_input("LED or Motion Control code: ")
@@ -127,11 +112,13 @@ class Jetson(object):
         powerString = str(data['power']) + "Watts, "
         batteryString = str(data['batteryRemaining']) + "%, "
         #integration time isn't needed for operator
+        """
         if self._connected == True:
             connectionString = "Connected,  "
         else:
             connectionString = "Disconnected, "
-
+        """
+        connectionString = "Disconnected, "
         #raw data off of Arduino
         rpmString = str(data['rpm']) + "rpm, "
         voltageString = str(data['sysV']) + "V, "
@@ -175,7 +162,7 @@ class Jetson(object):
         :return:
         """
         while True:
-            time.sleep(5)
+            time.sleep(1)
             if (not self.connectionPing()):
                 self._connected = False
                 logging.info("Connection broken")
@@ -188,3 +175,7 @@ class Jetson(object):
         """
         request = pyping.ping(self._config.communications.masterIP)
         return (request.ret_code == 0)
+
+
+
+

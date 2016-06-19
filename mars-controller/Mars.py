@@ -78,7 +78,7 @@ class Mars(object):
         currenttime = time.time()
         self._integTime = currenttime - copy
 
-        print(rawArray)
+        #print(rawArray)
         rpm = rawArray[0]
         self._statistics['rpm'] = rpm
         sysV = rawArray[1]
@@ -203,12 +203,12 @@ class Mars(object):
 
         if power != None:
 
-            print(power)
-            print(time)
+            #print(power)
+            #print(time)
             joulesUsed  = float(power) * time
-            print(joulesUsed)
+            #print(joulesUsed)
             whrUsed = joulesUsed/3600.0 #converting Joules to Watt*hours
-            print(whrUsed)
+            #print(whrUsed)
 
             self._currentBattery = float(self._currentBattery) - whrUsed
             #subtracting energy used from battery total

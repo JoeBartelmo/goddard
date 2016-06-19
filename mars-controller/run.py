@@ -5,6 +5,8 @@ ark9719
 from Arduino import Arduino
 from Jetson import Jetson
 from Mars import Mars
+from Threads import InputThread
+from Threads import StatisticsThread
 import logging
 import sys
 import json
@@ -40,8 +42,29 @@ def run(json_string):
     print("Starting output...")
     #Initilize Jetson
     myJetson = Jetson(myArduino, config, myMars)
-    myJetson.connectionPing()   #Test connection
-    myJetson.startThreads()     #Start threads
+
+    #start threads
+    startThreads(myJetson)
+
+
+def startThreads(jetson):
+        """
+        This method starts the two threads that will run for the duration of the program. One scanning for input,
+        the other generating, displaying, and saving data.
+        :return:
+        """
+        logging.info("Attempting to start threads")
+
+        try:
+            inputT = InputThread(jetson)
+            statsT = StatisticsThread(jetson)
+            inputT.start()
+            statsT.start()
+
+        except Exception as e:
+            logging.info("error starting Multithreading ({})".format(e))
+            logging.info("program will terminate")
+            sys.exit()
 
 def main():
     if len(sys.argv) < 2:
