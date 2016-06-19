@@ -107,7 +107,8 @@ class Jetson(object):
         minutes,seconds = divmod(runClock, 60)
 
         minSecString = 'Time running: ' + str(int(minutes)) + ":" + str(int(seconds)) + " {  "
-        distanceString = str(data['totalDisplacement'])+"meters, "
+        distanceString = str(data['totDistanceTraveled'])+"meters, "
+        displacementString = str(data['totalDisplacement']) + 'meters, '
         speedString = str(data['speed']) + "m/s, "
         powerString = str(data['power']) + "Watts, "
         batteryString = str(data['batteryRemaining']) + "%, "
@@ -130,7 +131,7 @@ class Jetson(object):
         sCodeString = 'stream command: ' + self._lastStream + ' } '
 
 
-        operatorString = minSecString + distanceString + speedString + \
+        operatorString = minSecString + distanceString + displacementString + speedString + \
         powerString + batteryString + rpmString + voltageString + \
         currentString +connectionString + mCodeString + lCodeString + \
 		sCodeString + '\r\n'

@@ -21,7 +21,7 @@ class Mars(object):
 
         statistics = {}
         self._statistics = statistics
-        statistics.setdefault('distanceTraveled', 0)
+        statistics.setdefault('totDistanceTraveled', 0)
         statistics.setdefault('distance', 0)
         statistics.setdefault('displacement', 0)
         statistics.setdefault('totalDisplacement', 0)
@@ -93,9 +93,9 @@ class Mars(object):
         self._statistics['power'] = power
 
 
-        distance, distanceTraveled = self.distanceTraveled(speed) #in Meters
-        self._statistics['distance'] = distance
-        self._statistics['distanceTraveled'] = distanceTraveled
+        intDistance, totDistanceTraveled = self.distanceTraveled(speed) #in Meters
+        self._statistics['intDistance'] = intDistance
+        self._statistics['totDistanceTraveled'] = totDistanceTraveled
 
         displacement, totalDisplacement = self.displacement(speed) #in Meters
         self._statistics['displacement'] = displacement
@@ -158,12 +158,12 @@ class Mars(object):
             time = self._integTime
 
         intervalDistance = abs(speed) * time
-        travAdded = self._statistics['distanceTraveled'] + intervalDistance
-        self._statistics['distanceTraveled'] = travAdded
-        totalDistance = self._statistics['distanceTraveled']
+        travAdded = self._statistics['totDistanceTraveled'] + intervalDistance
+        self._statistics['totDistanceTraveled'] = travAdded
+        #totalDistance = self._statistics['distanceTraveled']
 
         intervalDistanceRounded = round(intervalDistance,1)
-        totalDistanceRounded = round(totalDistance, 1)
+        totalDistanceRounded = round(self._statistics['totDistanceTraveled'], 1)
 
         return intervalDistanceRounded,totalDistanceRounded
 
