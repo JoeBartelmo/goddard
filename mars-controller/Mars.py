@@ -62,7 +62,7 @@ class Mars(object):
 
 
 
-    def generateStatistics(self, integTime):
+    def generateStatistics(self):
         """
         Through raw data and the work of helper functions, this method populates a dictionary stored attribute of Mars,
         statistics, with telemetry data.

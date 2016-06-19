@@ -95,13 +95,11 @@ class Jetson(object):
 
         while True:
 
-            integTime = time.time() - self._arduino._timeInit - self._lastRead #Calculate the timebetween this read and the last
-
             logging.info("Generating Statistics...")
-            self._mars.generateStatistics(integTime)#Perform a statistics read
+            self._mars.generateStatistics()#Perform a statistics read
 
             logging.info("Displaying Statistics...")
-            print self.displayStatistics(self._mars._statistics) #Display human readable statistics
+            print (self.displayStatistics(self._mars._statistics)) #Display human readable statistics
 
             logging.info("Saving statistics...")
             self.saveStats(self._mars._statistics)
