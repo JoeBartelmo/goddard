@@ -1,20 +1,54 @@
 var cli = require('cli');
 var exec = require('child_process').exec;
 var fs = require('fs'); 
+var knownCameras = require('./knownCameras.json');
+var _ = require('underscore');
+var q = require('q');
 
-//I don't like any of this...
-var generateVLCStreamCommands = function generateVLCStreamCommands(options, cameras) {
-  //like srsly kill me
-  var vlcCommands = [];
-  for(var index in cameras) { 
-    vlcCommands.push("cvlc "+ (options.verbose ? '-vvv' : '')+"v4l2://"+cameras[index]+":width="+options.width+":height="+options.height+":fps="+options.fps+" --live-caching 200 --sout '#transcode{vcodec=h264,venc=x264{preset=ultrafast}vb="+options.bitrate+",acodec=none}:duplicate{dst=file{dst=/phobos/stream_archive/"+ options.filename+index +".mp4},dst=rtp{sdp=rtsp://:"+(parseInt(options.port)+parseInt(index))+"/}}'");
-
-  cli.info('Opened New Stream on Port: ' + (parseInt(options.port) + parseInt(index)));
-  }
-  return vlcCommands;
+function getSerialIDForCamera(camera) {
+  var defer  = q.defer();
+  exec('udevadm info --query=all --name='+camera+' | grep ID_SERIAL_SHORT', function (err, result) {
+    if(err) {
+      cli.fatal(err);
+    }
+    if(result.indexOf('ID_SERIAL_SHORT=') > -1) {
+      var justId = (result.match(/ID_SERIAL_SHORT=(.+)/))[1];
+      defer.resolve(_.findWhere(knownCameras, { id: justId }));
+    }
+    else {
+      defer.resolve(undefined);
+    }
+  });
+  return defer.promise;
 }
 
-var killPID = function killPID(pid) {
+//I don't like any of this...
+function generateVLCStreamCommands(options, cameras) {
+  //like srsly kill me
+  var vlcCommands = []
+  cameras.forEach(function (camera) {
+    var defer = q.defer();
+    getSerialIDForCamera(camera).then(function startStream(cameraInfo) {
+      //console.log(cameraInfo);
+      if(cameraInfo && cameraInfo.name) {
+        cli.info(cameraInfo.name + ' recognized with serial ' + cameraInfo.id + '.\n\tOpened on Port: ' + (parseInt(options.port) + cameraInfo.port_increment));
+        var cmd = "cvlc "+ (options.verbose ? '-vvv' : '');
+            cmd += "v4l2://"+camera+":width="+options.width+":height="+options.height+":fps="+options.fps + '--live-caching 200 ';
+            cmd += "--sout '#transcode{vcodec=h264,venc=x264{preset=ultrafast}vb="+options.bitrate + ",acodec=none}:duplicate{dst=file{dst=/phobos/stream_archive/" + options.filename+cameraInfo.port_increment +".mp4},dst=rtp{sdp=rtsp://:";
+            cmd += (parseInt(options.port)+cameraInfo.port_increment)+"/}}'";
+        defer.resolve(cmd);
+      }
+      else {
+        cli.warn('Unknown Camera ' + camera +'. Register in knownCameras.json');
+        defer.resolve(undefined);
+      }
+    });
+    vlcCommands.push(defer.promise);
+  });
+  return q.all(vlcCommands);
+}
+
+function killPID(pid) {
   if(pid.length > 0) {
     var command = 'kill -9 ' + pid;
     exec(command, function callback(err, result) {
@@ -28,7 +62,7 @@ var killPID = function killPID(pid) {
 }
 
 //Manually reads in the pids file and deletes all pids
-var closeOpenStreams = function closeOpenstreams() {
+function closeOpenStreams() {
   var pids = fs.readFileSync('do-not-delete-manually.hyperloop');
   if(pids && pids.length > 1) {
     pids = pids.toString().split("\n");
@@ -71,23 +105,24 @@ cli.main(function mainEntryPoint(args, options) {
         cli.fatal(err);
       }
       var cameras = [];
-      for(var index in files) {
-        if(files[index].indexOf('video') > -1) {
-          cameras.push('/dev/' + files[index]);
+      files.forEach(function (file) {
+        if(file.indexOf('video') > -1) {
+          cameras.push('/dev/' + file);
         }
-      }
+      });
       cli.info('Found Cameras: ' + cameras);
-      var commands = generateVLCStreamCommands(options, cameras);
-    
-      for(var index in commands) {
-        exec(commands[index]);
-      }
-     
-      //just use a pipe so i don't have to launch an fs writer
-      exec('pgrep -f vlc > do-not-delete-manually.hyperloop', function(err, pids, stderr) {
-        if(err) {
-           cli.fatal('Could not obtain the VLC pids');
-        }
+      return generateVLCStreamCommands(options, cameras).then(function runCommands(commands) {
+        commands.forEach(function (command) {
+          exec(command);
+        });
+
+        //just use a pipe so i don't have to launch an fs writer
+        exec('pgrep -f vlc > do-not-delete-manually.hyperloop', function(err, pids, stderr) {
+          if(err) {
+             cli.fatal('Could not obtain the VLC pids');
+          }
+        });
+
       });
     });
   }
