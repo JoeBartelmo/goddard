@@ -13,6 +13,7 @@ import logging
 import pyping
 import csv
 import time
+
 import sys
 import json
 
@@ -23,9 +24,10 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, arduino, config, mars):
+    def __init__(self, arduino, config, mars, timestamp):
         self._arduino = arduino
         self._mars = mars
+        self._timestamp = timestamp
         self._lastMotion = 'None yet'
         self._lastLED = 'None yet'
         self._lastStream = 'None yet'
@@ -114,28 +116,19 @@ class Jetson(object):
         :param data:
         :return:
         """
+        #If the header to the file isn't written, write it.
         if (not self._header ):
-            fileName = 'logs/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = 'output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writeheader()
             self._header = True
 
         try:
-            fileName = 'logs/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = 'output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writerow(data)
-
-
-                #rawWriter.writerow(data['rpm'], data['sysV'], data['sysI'], data['speed'], data['power'], data['intDistance'],
-                #           data['totDistance'], data['intDisplacement'], data['totDisplacement'], data['batteryRemaining'])
-
-
-
-
-
-
 
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))
