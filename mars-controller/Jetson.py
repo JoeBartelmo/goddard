@@ -30,6 +30,7 @@ class Jetson(object):
         self._lastLED = 'None yet'
         self._lastStream = 'None yet'
         self._config = config
+        self._header = False
         self._lastRead = 0.0
         #self._connected = self.connectionPing()
 
@@ -91,12 +92,12 @@ class Jetson(object):
             self._mars.generateStatistics()#Perform a statistics read
 
             logging.info("Displaying Statistics...")
-            print (self.displayStatistics(self._mars._statistics)) #Display human readable statistics
+            print(self.displayStatistics(self._mars._statistics)) #Display human readable statistics
 
             logging.info("Saving statistics...")
-            #self.saveStats(self._mars._statistics) added this to last line of displayStats for testing
+            self.saveStats(self._mars._statistics) #added this to last line of displayStats for testing
 
-            self._mars._integTime = time.time()
+            self._mars._integTime = time.time() #Set the integ time to the time of the last read for calculations
 
     def displayStatistics(self, data):
         """
@@ -113,11 +114,28 @@ class Jetson(object):
         :param data:
         :return:
         """
-        try:
-            fileName =  'logs/'+  self._config.log.name + '_machine_log.csv'
+        if (not self._header ):
+            fileName = 'logs/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
-                rawWriter = csv.writer(rawFile)
+                rawWriter = csv.DictWriter(rawFile, data.keys())
+                rawWriter.writeheader()
+            self._header = True
+
+        try:
+            fileName = 'logs/' + self._config.logging.logName + '_machine_log.csv'
+            with open(fileName, 'a') as rawFile:
+                rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writerow(data)
+
+
+                #rawWriter.writerow(data['rpm'], data['sysV'], data['sysI'], data['speed'], data['power'], data['intDistance'],
+                #           data['totDistance'], data['intDisplacement'], data['totDisplacement'], data['batteryRemaining'])
+
+
+
+
+
+
 
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))

@@ -28,38 +28,6 @@ class Mars(object):
         statistics.setdefault('batteryRemaining', self._config.battery.remaining)
 
 
-    def serial_readline(self):
-        """
-        This method manages pulling the raw data off the arduino.
-        :return:
-        """
-        if (self._arduino._init == False):
-            print("Arduino has not been initialized!")
-
-        waitStart = time.time()
-        waitTime = time.time() - waitStart
-        timeout = self._config.constants.timeout
-
-        while self._arduino._controller.inWaiting() == 0:
-            if waitTime < timeout:
-                waitTime =  time.time() - waitStart
-            elif waitTime >= timeout:
-                logging.info("no data coming from arduino before timeout")
-                logging.info("ending program, check arduino or timeout duration")
-                sys.exit()
-        else:
-
-            #added short delay just in case data was in transit
-            time.sleep(.001)
-
-            #read telemetry sent by Arduino
-            serialData = self._arduino._controller.readline()
-
-            #flushing in case there was a buildup
-            self._arduino._controller.flushInput()
-
-            return serialData
-
 
 
     def generateStatistics(self):
@@ -70,7 +38,7 @@ class Mars(object):
         :return:
         """
 
-        serialData = self.serial_readline()
+        serialData = self._arduino.serial_readline()
         rawArray = re.split(",", serialData)
 
         #Assign integ time for use of helper functions
@@ -87,7 +55,7 @@ class Mars(object):
         sysI = sysI[0:len(sysI)-4]
         self._statistics['sysI'] = sysI
 
-        speed = self.estimatedSpeed(rpm) #speed in m/s
+        speed = self.estimatedSpeed() #speed in m/s
         self._statistics['speed'] = speed
         power = self.estimatedPower(sysV, sysI) #power in Watts
         self._statistics['power'] = power
@@ -115,9 +83,9 @@ class Mars(object):
         #If recall is enabled
         if (self._config.autonomous_action.enableRecall):
 
-            #Iff the battery remaining is less than or equal to the configuration recall percent
-            print('Battery remaining:' + str(self._statistics['batteryRemaining']))
-            print('Recall percent:' + str(self._config.autonomous_action.recallPercent))
+            #If the battery remaining is less than or equal to the configuration recall percent
+            #print('Battery remaining:' + str(self._statistics['batteryRemaining']))
+            #print('Recall percent:' + str(self._config.autonomous_action.recallPercent))
             if (float(self._statistics['batteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
                 print("Recalling")
                 self.recall()
@@ -141,7 +109,7 @@ class Mars(object):
             self._arduino.write('M1004')
 
 
-    def estimatedSpeed(self, rpm):
+    def estimatedSpeed(self):
         """
         This function guesses how fast Mars is going based on the lastest RPM
         data from the DAQ.

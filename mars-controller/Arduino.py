@@ -28,6 +28,37 @@ class Arduino(object):
             print("unable to continue, program will now terminate")
             sys.exit()
 
+    def serial_readline(self):
+        """
+        This method manages pulling the raw data off the arduino.
+        :return:
+        """
+        if (self._init == False):
+            print("Arduino has not been initialized!")
+
+        waitStart = time.time()
+        waitTime = time.time() - waitStart
+        timeout = self._config.constants.timeout
+
+        while self._controller.inWaiting() == 0:
+            if waitTime < timeout:
+                waitTime = time.time() - waitStart
+            elif waitTime >= timeout:
+                logging.info("no data coming from arduino before timeout")
+                logging.info("ending program, check arduino or timeout duration")
+                sys.exit()
+        else:
+
+            # added short delay just in case data was in transit
+            time.sleep(.001)
+
+            # read telemetry sent by Arduino
+            serialData = self._controller.readline()
+
+            # flushing in case there was a buildup
+            self._controller.flushInput()
+
+            return serialData
 
     def flushBuffers(self):
         """
