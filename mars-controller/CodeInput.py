@@ -3,6 +3,7 @@ ark9719
 6/17/2016
 '''
 import logging
+import subprocess
 
 class ConcreteMotorInput(object):
     """
@@ -43,6 +44,10 @@ class ConcreteMotorInput(object):
 
         return True
 
+    def issue(self, arduino):
+        arduino.write(self._code)
+        logging.info("Control code written to Arduino.")
+
 
 
 
@@ -69,6 +74,9 @@ class ConcreteLEDInput():
             print("Code was not length two or the second character was not an integer")
             return False
 
+    def issue(self, arduino):
+        arduino.write(self._code)
+        logging.info("Control code written to Arduino.")
 
 class ConcreteStreamInput():
     """
@@ -92,7 +100,7 @@ class ConcreteStreamInput():
             print("Code must be 3 characters long.")
             return False
 
-        #Check first character for 0, 1 or 2
+        #Check first character for 0, 1
         if not RepresentsInt(self._code[1]) and not (self._code[1] in (0, 1, 2)):
             logging.warning("Bad stream input entered")
             print("Second character must be  0, 1, or 2.")
@@ -105,6 +113,21 @@ class ConcreteStreamInput():
             return False
 
         return True
+
+    def issue(self, arduino):
+        #640x480
+        if int(self._code[1]) == 0:
+            pass
+        #1280x960
+        elif int(self._code[1]) == 2:
+            pass
+
+        bitrate = self._code[2]
+
+        #TODO
+        subprocess.call("Placeholder for stream code syntax ")
+
+
 
 def RepresentsInt(s):
     try:

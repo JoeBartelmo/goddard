@@ -84,10 +84,9 @@ class Mars(object):
         if (self._config.autonomous_action.enableRecall):
 
             #If the battery remaining is less than or equal to the configuration recall percent
-            #print('Battery remaining:' + str(self._statistics['Battery Remaining']))
-            #print('Recall percent:' + str(self._config.autonomous_action.recallPercent))
             if (float(self._statistics['Battery Remaining']) <= float(self._config.autonomous_action.recallPercent)):
                 print("Recalling")
+                logging.warning("Battery low, recall issued")
                 self.recall()
 
 
@@ -96,6 +95,9 @@ class Mars(object):
         Recall Mars when the battery is below the configuration threshhold
         :return:
         """
+
+        print("Recall enabled in settings and ")
+
         midpoint = self._config.constants.trackLength / 2
 
         #If Mars is at or past the midpoint

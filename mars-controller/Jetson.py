@@ -64,18 +64,16 @@ class Jetson(object):
 
             #Check for validity
             if myCodeInput.valid():
-
-                #Write to Arduino
                 print(controlCode + " inputed succesfully (valid).")
-                self._arduino.write(controlCode)
-                logging.info("Control code written to Arduino.")
+                logging.info(controlCode + " inputed succesfully (valid).")
+                myCodeInput.issue(self._arduino) #Write to Arduino
 
                 #Store the last code
                 if(myCodeInput._type == 'M'):
                     self._lastMotion = controlCode
-                if(myCodeInput._type == 'L'):
+                elif(myCodeInput._type == 'L'):
                     self._lastLED = controlCode
-                if(myCodeInput._type == 'S'):
+                elif(myCodeInput._type == 'S'):
                     self._lastStream = controlCode
 
             else:
