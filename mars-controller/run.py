@@ -40,7 +40,7 @@ def initOutput(config):
         print("The output file you specified in the configuration file already exists.\n")
         print("The statistics from the previous reads will be overwritten if you don't specify a new file.")
         print("Do you wish to continue?")
-        answer = raw_input("Y / N")
+        answer = raw_input("Y / N: ")
         if answer.lower() in ('n', 'no'):
             print ("The program will terminate ")
             sys.exit()
