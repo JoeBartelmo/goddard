@@ -21,11 +21,11 @@ class Mars(object):
 
         statistics = {}
         self._statistics = statistics
-        statistics.setdefault('totDistance', 0)
-        statistics.setdefault('intDistance', 0)
-        statistics.setdefault('intDisplacement', 0)
-        statistics.setdefault('totDisplacement', 0)
-        statistics.setdefault('batteryRemaining', self._config.battery.remaining)
+        statistics.setdefault('Total Distance', 0)
+        statistics.setdefault('Interval Distance', 0)
+        statistics.setdefault('Interval Displacement', 0)
+        statistics.setdefault('Total Displacement', 0)
+        statistics.setdefault('Battery Remaining', self._config.battery.remaining)
 
 
 
@@ -48,29 +48,29 @@ class Mars(object):
 
         #print(rawArray)
         rpm = rawArray[0]
-        self._statistics['rpm'] = rpm
+        self._statistics['RPM'] = rpm
         sysV = rawArray[1]
-        self._statistics['sysV'] = sysV
+        self._statistics['System Voltage'] = sysV
         sysI = rawArray[2]
         sysI = sysI[0:len(sysI)-4]
-        self._statistics['sysI'] = sysI
+        self._statistics['System Current'] = sysI
 
         speed = self.estimatedSpeed() #speed in m/s
-        self._statistics['speed'] = speed
+        self._statistics['Speed'] = speed
         power = self.estimatedPower(sysV, sysI) #power in Watts
-        self._statistics['power'] = power
+        self._statistics['Power'] = power
 
 
         intDistance, totDistanceTraveled = self.distanceTraveled() #in Meters
-        self._statistics['intDistance'] = intDistance
-        self._statistics['totDistance'] = totDistanceTraveled
+        self._statistics['Interval Distance'] = intDistance
+        self._statistics['Total Distance'] = totDistanceTraveled
 
         displacement, totalDisplacement = self.displacement() #in Meters
-        self._statistics['intDisplacement'] = displacement
-        self._statistics['totDisplacement'] = totalDisplacement
+        self._statistics['Interval Displacement'] = displacement
+        self._statistics['Total Displacement'] = totalDisplacement
 
         batteryRemaining = self.batteryRemaining(power)
-        self._statistics['batteryRemaining'] = batteryRemaining
+        self._statistics['Battery Remaining'] = batteryRemaining
 
         self.safteyCheck()
 
@@ -84,9 +84,9 @@ class Mars(object):
         if (self._config.autonomous_action.enableRecall):
 
             #If the battery remaining is less than or equal to the configuration recall percent
-            #print('Battery remaining:' + str(self._statistics['batteryRemaining']))
+            #print('Battery remaining:' + str(self._statistics['Battery Remaining']))
             #print('Recall percent:' + str(self._config.autonomous_action.recallPercent))
-            if (float(self._statistics['batteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
+            if (float(self._statistics['Battery Remaining']) <= float(self._config.autonomous_action.recallPercent)):
                 print("Recalling")
                 self.recall()
 
@@ -99,7 +99,7 @@ class Mars(object):
         midpoint = self._config.constants.trackLength / 2
 
         #If Mars is at or past the midpoint
-        if (self._statistics['totDistance'] >= midpoint):
+        if (self._statistics['Total Distance'] >= midpoint):
             print("Past halfway, moving forward")
             #Move forward at full speed
             self._arduino.write('M1104')
@@ -126,12 +126,12 @@ class Mars(object):
         :return:
         """
 
-        rpm = float(self._statistics['rpm']) #rpm must be a float
+        rpm = float(self._statistics['RPM']) #rpm must be a float
         estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
 
         returnEstMps = round(estMps, 1)
-        self._statistics['speed'] = returnEstMps
-        return self._statistics['speed']
+        self._statistics['Speed'] = returnEstMps
+        return self._statistics['Speed']
 
     def estimatedPower(self, sysVoltage, sysCurrent):
         """
@@ -141,8 +141,8 @@ class Mars(object):
         :param sysCurrent:
         :return:
         """
-        sysVoltage = float(self._statistics['sysV'])
-        sysCurrent = float(self._statistics['sysI'])
+        sysVoltage = float(self._statistics['System Voltage'])
+        sysCurrent = float(self._statistics['System Current'])
         estPower = sysVoltage * sysCurrent
 
         powerReturned = round(estPower, 2)
@@ -160,13 +160,13 @@ class Mars(object):
         if time == None:
             time = self._integTime
 
-        intervalDistance = abs(self._statistics['speed']) * time
-        travAdded = self._statistics['totDistance'] + intervalDistance
-        self._statistics['totDistance'] = travAdded
+        intervalDistance = abs(self._statistics['Speed']) * time
+        travAdded = self._statistics['Total Distance'] + intervalDistance
+        self._statistics['Total Distance'] = travAdded
         #totalDistance = self._statistics['distanceTraveled']
 
         intervalDistanceRounded = round(intervalDistance,1)
-        totalDistanceRounded = round(self._statistics['totDistance'], 1)
+        totalDistanceRounded = round(self._statistics['Total Distance'], 1)
 
         return intervalDistanceRounded,totalDistanceRounded
 
@@ -180,10 +180,10 @@ class Mars(object):
         if time == None:
             time = self._integTime
 
-        intervalDisplacement = self._statistics['speed'] * time
-        self._statistics['intDisplacement'] = self._statistics['intDisplacement'] + intervalDisplacement
+        intervalDisplacement = self._statistics['Speed'] * time
+        self._statistics['Interval Displacement'] = self._statistics['Interval Displacement'] + intervalDisplacement
             # '--> updating the object attribute
-        totalDisplacement = self._statistics['totDisplacement'] + intervalDisplacement
+        totalDisplacement = self._statistics['Total Displacement'] + intervalDisplacement
 
         intervalDisplacement = abs(round(intervalDisplacement,1)) #Rounding for readability
         totalDisplacement = abs(round(totalDisplacement, 1))

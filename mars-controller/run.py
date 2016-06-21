@@ -20,8 +20,6 @@ def parseConfig(json_string):
     return config
 
 def initOutput(config):
-
-
     t = time.localtime()
     timestamp = time.strftime('%b-%d-%Y_%H%M', t)
 
@@ -48,8 +46,6 @@ def initOutput(config):
             sys.exit()
 
     return timestamp
-
-
 
 
 def run(json_string):
