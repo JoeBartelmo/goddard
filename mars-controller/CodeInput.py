@@ -115,17 +115,21 @@ class ConcreteStreamInput():
         return True
 
     def issue(self, arduino):
-        #640x480
-        if int(self._code[1]) == 0:
-            pass
-        #1280x960
-        elif int(self._code[1]) == 2:
-            pass
 
         bitrate = self._code[2]
 
-        #TODO
-        subprocess.call("Placeholder for stream code syntax ")
+        #640x480
+        if int(self._code[1]) == 0:
+            #TODO
+            subprocess.call("Placeholder for stream code syntax ")
+        #1280x960
+        elif int(self._code[1]) == 2:
+            #TODO
+            subprocess.call("Placeholder for stream code syntax ")
+
+
+
+
 
 
 
