@@ -13,9 +13,9 @@ import argparse
 
 #from videostream import VideoStream
 #from client_controller import MasterControl
-from json_serializable_object import SerializableClient
-from TelemetryWidget import TelemetryWidget
-from MasterWidget import MasterWidget
+from client.json_serializable_object import SerializableClient
+from client.TelemetryWidget import TelemetryWidget
+from client.MasterWidget import MasterWidget
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, args, **kwargs):
@@ -46,7 +46,7 @@ class MainApplication(tk.Frame):
             b.grid(row=0, column=col, sticky='nw')
             col += 1
 
-        tk.Button(self, text='x', command=self.quit).grid(row=0,column=3, sticky='nw')
+        tk.Button(self, text='x', command=self.quit_).grid(row=0,column=3, sticky='nw')
 
         #self.telemetry_w = TelemetryWidget(self)
         #self.telemetry_w.frame.grid(row=2, column=0, columnspan=4, padx=5, pady=5)
@@ -62,6 +62,11 @@ class MainApplication(tk.Frame):
 
     def show_stream(self):
         self.streams[self.stream_active.get()].tkraise()
+
+    def quit_(self):
+        for stream in self.streams:
+            stream.quit_()
+        self.quit()
 
 def main(args):
     root = tk.Tk()

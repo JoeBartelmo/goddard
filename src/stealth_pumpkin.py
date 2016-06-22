@@ -6,6 +6,7 @@ def stealth_pumpkin(img1, img2):
     return img1.mean() - img2.mean()
 
 def auto_canny(image, sigma=0.33):
+
 	# compute the median of the single channel pixel intensities
 	v = numpy.median(image)
 
@@ -19,14 +20,18 @@ def auto_canny(image, sigma=0.33):
 
 def script(in_q, out_q1, out_q2):
     # load ideal image
-    ideal_image = cv2.imread('frame4_edges.jpg')
+    ideal_image = cv2.imread('/home/nathan/python/PyDetect/src/client/assets/webcam_edges.jpg')
 
     block_size = 8
     ideal_image_blocks = block.block_img(ideal_image, x_block_size=block_size, y_block_size=block_size)
 
     while True:
         q_image = in_q.get()
-        
+
+        if type(q_image) is not numpy.ndarray or q_image is None:
+            print 'wrong type'
+            continue
+ 
         q_image = auto_canny(q_image)   # TODO line detection
         q_img_blocks = block.block_img(q_image, x_block_size=block_size, y_block_size=block_size)
 

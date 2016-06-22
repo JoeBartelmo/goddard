@@ -17,7 +17,7 @@ class VideoWidget:
         self.queue = Queue()
         self.proc = p
 
-        self.initial_im = tk.PhotoImage(file='assets/blank_256x240.png')
+        self.initial_im = tk.PhotoImage(file='client/assets/blank_256x240.png')
         self.image_label = tk.Label(self.frame, image=self.initial_im, height=240, width=256)
         self.image_label.grid(row=0, column=0, padx=5, pady=5)
 

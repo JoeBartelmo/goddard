@@ -41,7 +41,7 @@ class MasterWidget(tk.Frame):
         self.output.proc = Process(target=do_highlight)
         self.proc = Process(target=self.image_capture)
 
-        self.vidcap = cv2.VideoCapture('drop.avi')  # FIXME should be source
+        self.vidcap = cv2.VideoCapture(0)#'/home/nathan/python/PyDetect/src/client/assets/drop.avi')  # FIXME should be source
         #self.vidcap.set(cv2.cv.CV_CAP_PROP_BUFFERSIZE, 3) # TODO check docs on this
 
         self.fps = self.vidcap.get(cv2.cv.CV_CAP_PROP_FPS)
@@ -61,8 +61,6 @@ class MasterWidget(tk.Frame):
         self.pumpkin.frame.grid(row=0, column=2, columnspan=2)
         self.rms.frame.grid(row=0, column=3, columnspan=2)
 
-        self.image_captur = tk.Button(self, text='Image Capture', command=self.image_capture)
-
         self.pause_button = tk.Button(self, text=u'\u23F8', command=self.pause)
         self.play_button = tk.Button(self, text=u'\u25B6', command=self.play)
         self.move_forward = tk.Button(self, text='>>', command=lambda:self.move(0))
@@ -76,62 +74,52 @@ class MasterWidget(tk.Frame):
         self.play_button.grid(row=1, column=3)
         self.move_forward.grid(row=1, column=4)
         self.snap_current.grid(row=1, column=5)
-        self.image_captur.grid(row=1, column=6)
         
-        self.slider = tk.Scale(self, from_=0, to=100, orient='horizontal', length=200, command=self.slider_move)
-
-        self.slider.grid(row=2, column=0)
 
     def start(self):
         self.proc.start()
         self.rms.proc.start()
         self.pumpkin.proc.start()
-        self.output.proc.start()  
+        #self.output.proc.start()  
 
-    def image_capture(self, count=0):
-        flag, frame= self.vidcap.read()
+    def image_capture(self):
+        while True:
+            flag, frame = self.vidcap.read()
 
-        img = demosaic(frame)
-        img_col = color_correct(img)
+            if not flag:
+                break
 
-        self.raw_q_1.put(frame)  # TODO change to img_col 
-        self.raw_q_2.put(frame)   # TODO implement counter
-        self.raw_q_3.put(frame)
-        self.raw_vid.queue.put(frame)
+            img = demosaic(frame)
+            img_col = color_correct(img)
 
-        count += 1
-        self.frame.after(10, self.image_capture, count)
+            self.raw_q_1.put(frame)  # TODO change to img_col 
+            self.raw_q_2.put(frame)   # TODO implement counter
+            self.raw_q_3.put(frame)
+            self.raw_vid.queue.put(frame)
 
     def play(self):
-        #for vid in self.vids:
-        #    vid.update_image()
-
-        #if self.raw_vid.queue.qsize() == self.rms.queue.qsize() ==self.pumpkin.queue.qsize() == self.output.queue.qsize():
-        #print self.raw_vid.queue.qsize(), self.rms.queue.qsize(), self.pumpkin.queue.qsize(), self.output.queue.qsize()
+        print self.raw_vid.queue.qsize(), self.rms.queue.qsize(), self.pumpkin.queue.qsize(), self.output.queue.qsize()
         self.raw_vid.update_image()
         self.rms.update_image()
         self.pumpkin.update_image()
         #self.output.update_image()
 
-        self.frame.after(25, self.play)   # TODO make constant
+        self.after(25, self.play)   # TODO make constant
 
     def pause(self):
         if self.after_id is not None:
-            self.frame.after_cancel(self.after_id)
+            self.after_cancel(self.after_id)
             self.after_id = None
 
     def move(self, t):
         # t in seconds
         self.vidcap.set(0,t*1000)
 
-    def update_slider(self, new_val):
-        self.slider.config(to=len(self.frames))
-        self.slider.set(self.curr_frame)
-
-    def slider_move(self, val):
-        pass
-
-    def quit(self):
-        self.frame.quit()
+    def quit_(self):
+        self.proc.terminate()
+        self.rms.proc.terminate()
+        self.pumpkin.proc.terminate()
+        #self.output.proc.terminate()  
+        self.quit()
         sys.exit(0)
 
