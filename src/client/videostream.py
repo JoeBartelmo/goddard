@@ -13,7 +13,6 @@ import cv2
 from PIL import Image, ImageTk
 import Tkinter as tk
 
-
 class VideoStream():
     def __init__(self, videoCaptureSource):
         self.frame = tk.Frame()

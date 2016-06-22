@@ -43,7 +43,7 @@ class RTSPClient(cv2.VideoCapture):
 		self._buffer = []
 		self._stream_location = stream_location
 		self._verify_rtsp_url ()
-		super(self)
+		cv2.VideoCapture.__init__(self)
 
 	def _verify_rtsp_url(self):
 		if not self._is_valid_ipv4_address(self._server) or not self._is_valid_ipv6_address(self._server):
