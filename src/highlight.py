@@ -15,6 +15,22 @@ def highlight(img, pixels, color, alpha=0.7):
 
     return img
 
+def script(inq1, inq2, outq):
+    # first q is images, second is indices
+    color1 = (0, 255, 0)
+    color2 = (255, 0, 0)
+
+    while True:
+        frame = inq1.get()
+
+        idx_1 = inq2.get()
+        idx_2 = inq2.get()
+
+        ret1 = highlight(frame, idx_1, color1, alpha=0.6)
+        ret2 = highlight(ret1, idx_2, color2, alpha=0.6)
+
+        outq.put(ret2)
+
 if __name__=='__main__':
     img = cv2.imread('test/elon_2_copy2.jpg',1)
 
