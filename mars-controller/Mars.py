@@ -21,11 +21,11 @@ class Mars(object):
 
         statistics = {}
         self._statistics = statistics
-        statistics.setdefault('Total Distance', 0)
-        statistics.setdefault('Interval Distance', 0)
-        statistics.setdefault('Interval Displacement', 0)
-        statistics.setdefault('Total Displacement', 0)
-        statistics.setdefault('Battery Remaining', self._config.battery.remaining)
+        statistics.setdefault('TotalDistance', 0)
+        statistics.setdefault('IntervalDistance', 0)
+        statistics.setdefault('IntervalDisplacement', 0)
+        statistics.setdefault('TotalDisplacement', 0)
+        statistics.setdefault('BatteryRemaining', self._config.battery.remaining)
 
 
 
@@ -50,10 +50,10 @@ class Mars(object):
         rpm = rawArray[0]
         self._statistics['RPM'] = rpm
         sysV = rawArray[1]
-        self._statistics['System Voltage'] = sysV
+        self._statistics['SystemVoltage'] = sysV
         sysI = rawArray[2]
         sysI = sysI[0:len(sysI)-4]
-        self._statistics['System Current'] = sysI
+        self._statistics['SystemCurrent'] = sysI
 
         speed = self.estimatedSpeed() #speed in m/s
         self._statistics['Speed'] = speed
@@ -62,15 +62,15 @@ class Mars(object):
 
 
         intDistance, totDistanceTraveled = self.distanceTraveled() #in Meters
-        self._statistics['Interval Distance'] = intDistance
-        self._statistics['Total Distance'] = totDistanceTraveled
+        self._statistics['IntervalDistance'] = intDistance
+        self._statistics['TotalDistance'] = totDistanceTraveled
 
         displacement, totalDisplacement = self.displacement() #in Meters
-        self._statistics['Interval Displacement'] = displacement
-        self._statistics['Total Displacement'] = totalDisplacement
+        self._statistics['IntervalDisplacement'] = displacement
+        self._statistics['TotalDisplacement'] = totalDisplacement
 
         batteryRemaining = self.batteryRemaining(power)
-        self._statistics['Battery Remaining'] = batteryRemaining
+        self._statistics['BatteryRemaining'] = batteryRemaining
 
         self.safteyCheck()
 
@@ -84,7 +84,7 @@ class Mars(object):
         if (self._config.autonomous_action.enableRecall):
 
             #If the battery remaining is less than or equal to the configuration recall percent
-            if (float(self._statistics['Battery Remaining']) <= float(self._config.autonomous_action.recallPercent)):
+            if (float(self._statistics['BatteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
                 print("Recalling")
                 logging.warning("Battery low, recall issued")
                 self.recall()
@@ -101,7 +101,7 @@ class Mars(object):
         midpoint = self._config.constants.trackLength / 2
 
         #If Mars is at or past the midpoint
-        if (self._statistics['Total Distance'] >= midpoint):
+        if (self._statistics['TotalDistance'] >= midpoint):
             print("Past halfway, moving forward")
             #Move forward at full speed
             self._arduino.write('M1104')
@@ -143,8 +143,8 @@ class Mars(object):
         :param sysCurrent:
         :return:
         """
-        sysVoltage = float(self._statistics['System Voltage'])
-        sysCurrent = float(self._statistics['System Current'])
+        sysVoltage = float(self._statistics['SystemVoltage'])
+        sysCurrent = float(self._statistics['SystemCurrent'])
         estPower = sysVoltage * sysCurrent
 
         powerReturned = round(estPower, 2)
@@ -163,12 +163,12 @@ class Mars(object):
             time = self._integTime
 
         intervalDistance = abs(self._statistics['Speed']) * time
-        travAdded = self._statistics['Total Distance'] + intervalDistance
-        self._statistics['Total Distance'] = travAdded
+        travAdded = self._statistics['TotalDistance'] + intervalDistance
+        self._statistics['TotalDistance'] = travAdded
         #totalDistance = self._statistics['distanceTraveled']
 
         intervalDistanceRounded = round(intervalDistance,1)
-        totalDistanceRounded = round(self._statistics['Total Distance'], 1)
+        totalDistanceRounded = round(self._statistics['TotalDistance'], 1)
 
         return intervalDistanceRounded,totalDistanceRounded
 
@@ -183,9 +183,9 @@ class Mars(object):
             time = self._integTime
 
         intervalDisplacement = self._statistics['Speed'] * time
-        self._statistics['Interval Displacement'] = self._statistics['Interval Displacement'] + intervalDisplacement
+        self._statistics['IntervalDisplacement'] = self._statistics['IntervalDisplacement'] + intervalDisplacement
             # '--> updating the object attribute
-        totalDisplacement = self._statistics['Total Displacement'] + intervalDisplacement
+        totalDisplacement = self._statistics['TotalDisplacement'] + intervalDisplacement
 
         intervalDisplacement = abs(round(intervalDisplacement,1)) #Rounding for readability
         totalDisplacement = abs(round(totalDisplacement, 1))
