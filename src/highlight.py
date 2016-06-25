@@ -1,7 +1,7 @@
 import numpy
 import cv2
 
-def highlight(img, pixels, color, alpha=0.7):
+def highlight(img, pixels, color, alpha=0.5):
     """ highlight pixels in image of channel. """
     # img: numpy or opencv 3 channeled image
     # pixels: 2d boolean or index array

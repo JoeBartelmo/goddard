@@ -4,8 +4,7 @@ import sys
 
 class TelemetryWidget(tk.Frame):
     def __init__(self, parent):
-        self.frame = tk.Frame()
-        tk.Frame.__init__(self)
+        tk.Frame.__init__(self, parent, bd=2, relief='groove')
         self.parent = parent
 
         self.labels = []        
@@ -17,7 +16,7 @@ class TelemetryWidget(tk.Frame):
         self.telem_queue = Queue()
 
         for _text in self.label_text:
-            self.labels.append(tk.Label(master=root, text=_text % ' '))
+            self.labels.append(tk.Label(self, text=_text % ' '))
 
         for label in self.labels:   # put them all in a row
             label.grid(row=0,column=self.labels.index(label) + 1)

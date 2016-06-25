@@ -16,6 +16,7 @@ import argparse
 from client.json_serializable_object import SerializableClient
 from client.TelemetryWidget import TelemetryWidget
 from client.MasterWidget import MasterWidget
+from client.ControlWidget import ControlWidget
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, args, **kwargs):
@@ -48,11 +49,11 @@ class MainApplication(tk.Frame):
 
         tk.Button(self, text='x', command=self.quit_).grid(row=0,column=3, sticky='nw')
 
-        #self.telemetry_w = TelemetryWidget(self)
-        #self.telemetry_w.frame.grid(row=2, column=0, columnspan=4, padx=5, pady=5)
+        self.telemetry_w = TelemetryWidget(self)
+        self.telemetry_w.grid(row=2, column=0, columnspan=4, padx=5, pady=5)
 
-        #self.command_w = CommandWidget(self, )
-        #self.command_w.grid(row=1, column=4, padx=5, pady=5)
+        self.command_w = ControlWidget(self, )
+        self.command_w.grid(row=1, column=4, padx=5, pady=5)
 
         self.grid(sticky='e')
 
@@ -71,7 +72,7 @@ class MainApplication(tk.Frame):
 def main(args):
     root = tk.Tk()
     MainApplication(root, args)
-    root.resizable(width=False, height=False)
+    #root.resizable(width=False, height=False)
     root.mainloop()
     sys.exit()
 
