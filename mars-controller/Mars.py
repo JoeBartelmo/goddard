@@ -18,6 +18,7 @@ class Mars(object):
         self._config = config
         self._integTime = time.time()
         self._currentBattery = self._config.constants.totalBattery
+        self._recallOverride = False
 
         statistics = {}
         self._statistics = statistics
@@ -25,7 +26,7 @@ class Mars(object):
         statistics.setdefault('IntervalDistance', 0)
         statistics.setdefault('IntervalDisplacement', 0)
         statistics.setdefault('TotalDisplacement', 0)
-        statistics.setdefault('BatteryRemaining', self._config.battery.remaining)
+        statistics.setdefault('BatteryRemaining', self._config.battery.currentBattery)
 
 
 
@@ -45,6 +46,7 @@ class Mars(object):
         copy = self._integTime
         currenttime = time.time()
         self._integTime = currenttime - copy
+        self._statistics['RunClock'] = time.time() - self._arduino._timeInit
 
         #print(rawArray)
         rpm = rawArray[0]
@@ -52,8 +54,14 @@ class Mars(object):
         sysV = rawArray[1]
         self._statistics['SystemVoltage'] = sysV
         sysI = rawArray[2]
-        sysI = sysI[0:len(sysI)-4]
         self._statistics['SystemCurrent'] = sysI
+        frontDistance = rawArray[3]
+        self._statistics['FrontDistance'] = frontDistance
+
+        backDistance = rawArray[4]
+        if backDistance != 'out of range':
+            backDistance = backDistance[0:len(sysI)-4]
+        self._statistics['BackDistance'] = backDistance
 
         speed = self.estimatedSpeed() #speed in m/s
         self._statistics['Speed'] = speed
@@ -81,13 +89,18 @@ class Mars(object):
         """
 
         #If recall is enabled
-        if (self._config.autonomous_action.enableRecall):
+        if (self._config.autonomous_action.enableRecall and self._recallOverride == False):
 
             #If the battery remaining is less than or equal to the configuration recall percent
             if (float(self._statistics['BatteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
-                print("Recalling")
-                logging.warning("Battery low, recall issued")
-                self.recall()
+                print("The battery has reached critical levels. Recall is about to be issued, would you like to override? ")
+                print("WARNING : CANNOT BE UNDONE.")
+                answer = raw_input("Y / N: ")
+                if answer.lower() in ('n', 'no'):
+                    logging.warning("Battery low, recall issued")
+                    self.recall()
+                else:
+                    self._recallOverride = True
 
 
     def recall(self):

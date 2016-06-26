@@ -2,17 +2,13 @@
 ark9719
 6/17/2016
 '''
-from Arduino import Arduino
-from Jetson import Jetson
-from Mars import Mars
-from Threads import InputThread
-from Threads import StatisticsThread
 import logging
 import sys
 import time
 import os.path
 import json
 from collections import namedtuple
+from System import System
 
 #Assumes that the server handeled validation
 def parseConfig(json_string):
@@ -26,17 +22,17 @@ def initOutput(config):
     :return:
     """
     t = time.localtime()
-    timestamp = time.strftime('%b-%d-%Y_%H%M', t)
+    timestamp = time.strftime('%b-%d-%Y_%H%M%S', t)
 
-    if not os.path.exists('output/' + timestamp + '/'):
-        os.makedirs('output/' + timestamp + '/')
+    if not os.path.exists(config.logging.outputPath + '/output/' + timestamp + '/'):
+        os.makedirs(config.logging.outputPath + '/output/' + timestamp + '/')
 
     logger = logging.getLogger()
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.INFO)
 
     # create debug file handler and set level to debug
-    handler = logging.FileHandler(os.path.join('output/' + timestamp + '/', "log.txt"),"w")
-    handler.setLevel(logging.WARNING)
+    handler = logging.FileHandler(os.path.join(config.logging.outputPath + '/output/' + timestamp + '/', "log.txt"),"w")
+    handler.setLevel(logging.INFO)
     formatter = logging.Formatter("%(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -63,41 +59,10 @@ def run(json_string):
     logging.info("Preparing output directories")
     timestamp = initOutput(config)
 
-    print("Connecting arduino...")
-    logging.info('Attempting to connect Arduino')
-    myArduino = Arduino(config)
-
-    #Flush buffers
-    myArduino.flushBuffers()
-
-    print("Starting Mars...")
-    myMars = Mars(myArduino, config)
-
-    print("Starting output...")
-    myJetson = Jetson(myArduino, config, myMars, timestamp)
-
-    #start threads
-    time.sleep(1) #Give the arduino time to start
-    startThreads(myJetson)
+    System(config, timestamp)
 
 
-def startThreads(jetson):
-        """
-        This method starts the two threads that will run for the duration of the program. One scanning for input,
-        the other generating, displaying, and saving data.
-        :return:
-        """
-        logging.info("Attempting to start threads")
 
-        try:
-            inputT = InputThread(jetson)
-            statsT = StatisticsThread(jetson)
-            inputT.start()
-            statsT.start()
-        except Exception as e:
-            logging.WARNING("error starting threads ({})".format(e))
-            logging.WARNING("program will terminate")
-            sys.exit()
 
 def main():
     if len(sys.argv) < 2:

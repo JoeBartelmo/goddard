@@ -4,6 +4,7 @@ ark9719
 '''
 import logging
 import subprocess
+import os
 
 class ConcreteMotorInput(object):
     """
@@ -88,9 +89,10 @@ class ConcreteStreamInput():
     'B' is the bitrate integer (0-9)
     """
 
-    def __init__(self, code):
+    def __init__(self, code, config):
         self._code = code
         self._type = 'S'
+        self._config = config
 
     def valid(self):
 
@@ -114,20 +116,28 @@ class ConcreteStreamInput():
 
         return True
 
-    def issue(self, arduino):
+    def issue(self, timestamp):
 
-        bitrate = self._code[2]
+        bitrate = int(self._code[2]) * 1000 #converting Mb/s to Kb/s
+        indexPath = self._config.logging.indexPath
+        logPath = self._config.logging.outputPath + '/output/' + timestamp +'/' + self._config.logging.logName + '.mp4'
+
 
         #640x480
         if int(self._code[1]) == 0:
             #TODO
-            subprocess.call("Placeholder for stream code syntax ")
+            logging.info('closing old stream')
+            subprocess.call(["node " , indexPath , "--close"], shell=True)
+            logging.info('re-initializing steam with new inputs')
+            logging.info("node " + indexPath + " -w 640" + " -h 480" + " -b " + str(bitrate)  + " -f " + logPath)
+            subprocess.call(["sudo node "+ indexPath + " -w 640 " + "-h 480" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
         #1280x960
-        elif int(self._code[1]) == 2:
+        elif int(self._code[1]) == 1:
             #TODO
-            subprocess.call("Placeholder for stream code syntax ")
-
-
+            logging.info('closing old stream')
+            subprocess.call(["node " + indexPath + " --close"], shell=True)
+            logging.info('re-initializing steam with new inputs')
+            subprocess.call(["sudo node " + indexPath + " -w 1280" + " -h 960" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
 
 
 

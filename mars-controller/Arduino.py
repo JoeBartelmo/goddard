@@ -5,6 +5,7 @@ ark9719
 import serial
 import time
 import logging
+import subprocess
 import sys
 
 class Arduino(object):
@@ -102,4 +103,29 @@ class Arduino(object):
         """
         return self._controller.inWaiting()
 
+    def arduino_reset(self):
+        logging.info("shutting down power to arduino")
+        self.arduinoPowerOff()
+        logging.info("standby...")
+        time.sleep(2)
+        logging.info("restarting power")
+        self.arduinoPowerOn()
 
+
+    def arduinoPowerOn(self):
+        logging.info("feeding arduino power")
+
+        powerString = 'sudo echo 1 > /sys/class/gpio/gpio57/value'
+        ## calling Bash process to change
+        subprocess.call([powerString], shell=True)
+        self._arduinoPowerStatus = 1
+
+    def arduinoPowerOff(self):
+        logging.info("cutting arduino power")
+        powerString = 'sudo echo 0 > /sys/class/gpio/gpio57/value'
+        ## calling Bash process to change
+        subprocess.call([powerString], shell=True)
+        self._arduinoPowerStatus = 0
+
+    def brake(self):
+        self._controller.write('M0010')

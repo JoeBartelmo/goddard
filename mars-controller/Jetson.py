@@ -3,19 +3,13 @@ ark9719
 6/17/2016
 '''
 
-import threading
-from CodeInput import ConcreteLEDInput
-from CodeInput import ConcreteMotorInput
-from CodeInput import ConcreteStreamInput
-from Threads import InputThread
-from Threads import StatisticsThread
+from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput
+from Watchdog import Watchdog
 import logging
-import pyping
 import csv
 import time
-
-import sys
 import json
+import subprocess
 
 
 class Jetson(object):
@@ -33,9 +27,8 @@ class Jetson(object):
         self._lastStream = 'None yet'
         self._config = config
         self._header = False
-        self._lastRead = 0.0
-        #self._connected = self.connectionPing()
-
+        self.initCommands()
+        self._watchdog = Watchdog(self)
 
 
 
@@ -57,24 +50,45 @@ class Jetson(object):
             elif controlCode[0] == 'L':
                 myCodeInput = ConcreteLEDInput(controlCode)
             elif controlCode[0] == 'S':
-                myCodeInput = ConcreteStreamInput(controlCode)
+                myCodeInput = ConcreteStreamInput(controlCode, self._config)
+            elif controlCode.lower() in self._sysCommands:
+                self._sysCommands[controlCode]()
+                continue
+            elif controlCode == 'forward':
+                speed = raw_input("How fast?")
+                self._arduino.write("M110" + speed)
+                continue
+            elif controlCode == 'backward':
+                speed = raw_input("How fast?")
+                self._arduino.write("M100" + speed)
+                continue
+
             else:
-                logging.info("Invalid leading character. L, M, or S")
-                break
+                logging.info("Invalid control code.")
+                continue
+
+
 
             #Check for validity
             if myCodeInput.valid():
-                print(controlCode + " inputed succesfully (valid).")
-                logging.info(controlCode + " inputed succesfully (valid).")
-                myCodeInput.issue(self._arduino) #Write to Arduino
 
-                #Store the last code
-                if(myCodeInput._type == 'M'):
-                    self._lastMotion = controlCode
-                elif(myCodeInput._type == 'L'):
+                if myCodeInput._type == 'M':
+                    myCodeInput.issue(self._arduino)                        #Issue the code
+                    self._lastMotion = controlCode                          #Store it
+                    print(controlCode + " inputed succesfully (valid).")
+                    logging.info(controlCode + " inputed succesfully (valid).")
+
+                elif myCodeInput._type == 'L':
+                    myCodeInput.issue(self._arduino)
                     self._lastLED = controlCode
-                elif(myCodeInput._type == 'S'):
+                    print(controlCode + " inputed succesfully (valid).")
+                    logging.info(controlCode + " inputed succesfully (valid).")
+
+                elif myCodeInput._type == 'S':
+                    myCodeInput.issue(self._timestamp)
                     self._lastStream = controlCode
+                    print(controlCode + " inputed succesfully (valid).")
+                    logging.info(controlCode + " inputed succesfully (valid).")
 
             else:
                 logging.info("Code is invalid.")
@@ -98,6 +112,10 @@ class Jetson(object):
             self.saveStats(self._mars._statistics) #added this to last line of displayStats for testing
 
             self._mars._integTime = time.time() #Set the integ time to the time of the last read for calculations
+
+            #self._watchdog.sniffPower()
+            #self._watchdog.sniffUltrasonicDistance()
+            #self._watchdog.react()
 
     def displayStatistics(self, data):
         """
@@ -131,26 +149,41 @@ class Jetson(object):
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))
 
-    def connectionMonitor(self):
-        """
-        This method is intended to monitor the connection with the controller.
-        :return:
-        """
-        while True:
-            time.sleep(1)
-            if (not self.connectionPing()):
-                self._connected = False
-                logging.info("Connection broken")
+
+    def system_restart(self):
+        logging.info("initiating safe restart")
+        logging.info("shutting down arduino")
+        self._arduino.arduinoPowerOff()
+        ### add functionality to cut power to motor controller
+        logging.info("restarting this computer")
+        logging.info("this connection will be lost")
+        time.sleep(1)
+        subprocess.call(['sudo reboot'], shell=True)
 
 
-    def connectionPing(self):
-        """
-        This method performs a simple ping to the controller.
-        :return:
-        """
-        request = pyping.ping(self._config.communications.masterIP)
-        return (request.ret_code == 0)
+    def system_shutdown(self):
+        logging.info("initiating safe shutdown")
+        logging.info("shutting down arduino")
+        self._arduino.arduinoPowerOff()
+        ### add functionality to cut power to motor controller
+        logging.info("shutting downn this computer")
+        logging.info("this connection will be lost")
+        time.sleep(1)
+        subprocess.call(['sudo poweroff'], shell=True)
 
+    def initCommands(self):
+        self._sysCommands = {'sys-shutdown': self.system_shutdown,
+                                'sys-restart': self.system_restart,
+                                'a-poweron': self._arduino.arduinoPowerOn,
+                                'a-poweroff': self._arduino.arduinoPowerOff,
+                                'a-restart': self._arduino.arduino_reset,
+                                'recall': self._mars.recall,
+                                # 'break': system.break_all_circuits(), \
+                                'stream': self.defaultStreamIssue,
+                                'brake': self._arduino.brake}
+
+    def defaultStreamIssue(self):
+        ConcreteStreamInput('S04',self._config).issue(self._timestamp)
 
 
 
