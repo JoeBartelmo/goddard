@@ -63,21 +63,23 @@ function killPID(pid) {
 
 //Manually reads in the pids file and deletes all pids
 function closeOpenStreams() {
-  var pids = fs.readFileSync('do-not-delete-manually.hyperloop');
-  if(pids && pids.length > 1) {
-    pids = pids.toString().split("\n");
-    //cli.info('Manually Kiling the following pids: ' + pids);
-    for(var index in pids) {
-      killPID(pids[index]);
+  var file = 'do-not-delete-manually.hyperloop';
+  if(fs.existsSync(file)) {
+    var pids = fs.readFileSync('do-not-delete-manually.hyperloop');
+    if(pids && pids.length > 1) {
+      pids = pids.toString().split("\n");
+      //cli.info('Manually Kiling the following pids: ' + pids);
+      for(var index in pids) {
+        killPID(pids[index]);
+      }
     }
-  }
-  else {
-    cli.info('Could not read pids file (do-not-delete-manually)');
+    else {
+      cli.info('Could not read pids file (do-not-delete-manually)');
+    } 
   }
 
   return 0;  
 }
-
 
 cli.parse({
   width: ['w', 'Width of video to streams', 'int', 640],
