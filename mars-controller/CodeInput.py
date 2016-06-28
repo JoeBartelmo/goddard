@@ -120,24 +120,33 @@ class ConcreteStreamInput():
 
         bitrate = int(self._code[2]) * 1000 #converting Mb/s to Kb/s
         indexPath = self._config.logging.indexPath
-        logPath = self._config.logging.outputPath + '/output/' + timestamp +'/' + self._config.logging.logName + '.mp4'
+        logPath = self._config.logging.outputPath + '/output/' + timestamp +'/ewoifjsfe'
 
 
         #640x480
         if int(self._code[1]) == 0:
             #TODO
-            logging.info('closing old stream')
-            subprocess.call(["node " , indexPath , "--close"], shell=True)
+            logging.info('closing stream')
+            subprocess.call(["node " + indexPath + " --close"], shell=True)
             logging.info('re-initializing steam with new inputs')
             logging.info("node " + indexPath + " -w 640" + " -h 480" + " -b " + str(bitrate)  + " -f " + logPath)
-            subprocess.call(["sudo node "+ indexPath + " -w 640 " + "-h 480" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
+            subprocess.call(["node "+ indexPath + " -w 640 " + "-h 480" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
         #1280x960
         elif int(self._code[1]) == 1:
             #TODO
-            logging.info('closing old stream')
+            logging.info('closing stream')
             subprocess.call(["node " + indexPath + " --close"], shell=True)
             logging.info('re-initializing steam with new inputs')
-            subprocess.call(["sudo node " + indexPath + " -w 1280" + " -h 960" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
+            subprocess.call(["node " + indexPath + " -w 1280" + " -h 960" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
+        #close
+        elif int(self._code[1]) == 2:
+            #TODO
+            logging.info('closing stream')
+            subprocess.call(["node " + indexPath + " --close"], shell=True)
+
+    def close(self):
+        logging.info('closing stream')
+        subprocess.call(["node " + self._config.logging.indexPath + " --close"], shell=True)
 
 
 

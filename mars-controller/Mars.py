@@ -46,7 +46,7 @@ class Mars(object):
         copy = self._integTime
         currenttime = time.time()
         self._integTime = currenttime - copy
-        self._statistics['RunClock'] = time.time() - self._arduino._timeInit
+        self._statistics['RunClock'] = round(time.time() - self._arduino._timeInit, 4)
 
         #print(rawArray)
         rpm = rawArray[0]

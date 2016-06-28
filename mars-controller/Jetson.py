@@ -112,6 +112,7 @@ class Jetson(object):
             self.saveStats(self._mars._statistics) #added this to last line of displayStats for testing
 
             self._mars._integTime = time.time() #Set the integ time to the time of the last read for calculations
+            print("-------------------------------")
 
             #self._watchdog.sniffPower()
             #self._watchdog.sniffUltrasonicDistance()
@@ -180,10 +181,26 @@ class Jetson(object):
                                 'recall': self._mars.recall,
                                 # 'break': system.break_all_circuits(), \
                                 'stream': self.defaultStreamIssue,
-                                'brake': self._arduino.brake}
+                                'stream close': self.closeStream,
+                                'brake': self._arduino.brake,
+                                'exit': self.exit
+                             }
+
+
+
+    def exit(self):
+        self._sysCommands['brake']()
+        #self._sysCommands['a-poweroff']()
+        self._sysCommands['stream close']()
+
 
     def defaultStreamIssue(self):
         ConcreteStreamInput('S04',self._config).issue(self._timestamp)
+
+    def closeStream(self):
+        ConcreteStreamInput('S20', self._config).close()
+
+
 
 
 

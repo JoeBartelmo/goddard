@@ -12,7 +12,7 @@ from System import System
 
 #Assumes that the server handeled validation
 def parseConfig(json_string):
-    config = json.loads(json_string, object_hook=lambda configObject: namedtuple('X', configObject.keys())(*configObject.values()));
+    config = json.loads(json_string, object_hook=lambda configObject: namedtuple('X', configObject.keys())(*configObject.values()))
     return config
 
 def initOutput(config):
@@ -52,8 +52,7 @@ def initOutput(config):
 def run(json_string):
     print("Starting...")
 
-    print("Loading configurations...")
-    logging.info('Reading in settings configurations')
+    logging.info('Reading in settings and configurations')
     config = parseConfig(json_string)
 
     logging.info("Preparing output directories")
@@ -68,10 +67,10 @@ def main():
     if len(sys.argv) < 2:
         print('To few arguments, please specify a json string with which to load configuration')
         print('\tUsage: run.py json_string')
-        return;
+        return
     print ('\ntest\n\n')
-    print(sys.argv);
-    sys.argv.pop(0);
+    print(sys.argv)
+    sys.argv.pop(0)
     json_string = ''.join(sys.argv)
     print('\n\n\n' + json_string)
     run(json_string)

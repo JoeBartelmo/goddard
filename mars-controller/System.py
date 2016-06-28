@@ -13,28 +13,34 @@ class System(object):
         #Init devices
         self._jetson, self._arduino, self._mars = self.initDevices(config, timestamp)
 
-        #start threads
-        time.sleep(1) #Give the arduino time to start
+        logging.info("System initialized.")
+
+        logging.info("Starting threads...")
         self.startThreads()
 
-        logging.info("System initialized.")
+
 
 
 
     def initDevices(self, config, timestamp):
 
-        print("Connecting arduino...")
+        #self._arduino.arduinoPowerOn()
+
+        logging.info("Connecting arduino...")
         logging.info('Attempting to connect Arduino')
         myArduino = Arduino(config)
+        time.sleep(1)
 
         #Flush buffers
         myArduino.flushBuffers()
 
-        print("Starting Mars...")
+        logging.info("Starting Mars...")
         myMars = Mars(myArduino, config)
+        time.sleep(1)
 
-        print("Starting output...")
+        logging.info("Connecting to Jetson")
         myJetson = Jetson(myArduino, config, myMars, timestamp)
+        time.sleep(1)
 
 
         return myJetson, myArduino, myMars
