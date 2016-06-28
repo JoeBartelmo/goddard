@@ -183,7 +183,7 @@ class Jetson(object):
                                 'stream': self.defaultStreamIssue,
                                 'stream close': self.closeStream,
                                 'brake': self._arduino.brake,
-                                'exit': self.exit
+                                #'exit': self.exit
                              }
 
 
