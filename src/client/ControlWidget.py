@@ -24,3 +24,14 @@ class ControlWidget(tk.Frame):
             self.log.set(self.log.get() + '\nCMD SENT: '+ cmd)
             self.cmd.set('')
             pass # FIXME substitute joe's code here
+
+    def log(self, item):
+        if type(item) is str:
+            self.log.set(self.log.get() + '\nLOG: '+ item)
+
+if __name__=='__main__':
+    root = tk.Tk()
+    ControlWidget(root).grid()
+    root.update()
+    print root.winfo_height(), root.winfo_width()
+    root.mainloop()

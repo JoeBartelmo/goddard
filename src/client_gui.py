@@ -33,7 +33,7 @@ class MainApplication(tk.Frame):
         for stream in self.serializedClient.streams:
 
             s = MasterWidget(self, stream)
-            s.grid(row=1,column=0, columnspan=3, padx=5, pady=5)
+            s.grid(row=1,column=0, padx=5, pady=5)
             self.streams.append(s)
             s.start()
 
@@ -50,10 +50,10 @@ class MainApplication(tk.Frame):
         tk.Button(self, text='x', command=self.quit_).grid(row=0,column=3, sticky='nw')
 
         self.telemetry_w = TelemetryWidget(self)
-        self.telemetry_w.grid(row=2, column=0, columnspan=4, padx=5, pady=5)
+        self.telemetry_w.grid(row=0, column=1, padx=5, pady=5)
 
-        self.command_w = ControlWidget(self, )
-        self.command_w.grid(row=1, column=4, padx=5, pady=5)
+        self.command_w = ControlWidget(self)
+        self.command_w.grid(row=1, column=1, padx=5, pady=5)
 
         self.grid(sticky='e')
 
@@ -72,7 +72,7 @@ class MainApplication(tk.Frame):
 def main(args):
     root = tk.Tk()
     MainApplication(root, args)
-    #root.resizable(width=False, height=False)
+    root.resizable(width=False, height=False)
     root.mainloop()
     sys.exit()
 

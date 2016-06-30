@@ -10,12 +10,14 @@ import Tkinter as tk
 import time
 
 class VideoWidget(tk.Frame):
-    def __init__(self, parent, p=None):
-        tk.Frame.__init__(self, parent,width=500,height=300, bd=2, relief='groove')
+    def __init__(self, parent, p=None, frame_size=(500,300)):
+        tk.Frame.__init__(self, parent,width=500,height=375, bd=2, relief='groove')
         self.parent = parent
 
         self.queue = Queue()
         self.proc = p
+
+	self.frame_size = frame_size
 
         self.initial_im = tk.PhotoImage(file='client/assets/blank_256x240.png')
         self.image_label = tk.Label(self, image=self.initial_im, height=300, width=500)
@@ -24,7 +26,7 @@ class VideoWidget(tk.Frame):
     def update_image(self):
         frame = self.queue.get()
 
-        frame_resized = cv2.resize(frame, (500,300))
+        frame_resized = cv2.resize(frame, self.frame_size)
         a = Image.fromarray(frame_resized)
         b = ImageTk.PhotoImage(image=a)
         self.image_label.configure(image=b, height=300, width=500)

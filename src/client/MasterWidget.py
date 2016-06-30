@@ -23,19 +23,15 @@ def color_correct(input_im):
 
 class MasterWidget(tk.Frame):
     def __init__(self, parent, source):
-        tk.Frame.__init__(self, parent,width=1020, height=700, bd=2, relief='groove')
+        tk.Frame.__init__(self, parent,width=650, height=750, bd=2, relief='groove')
         self.parent = parent
 
         self.init_ui()
         
         self.raw_q_1 = Queue()
-        self.raw_q_2 = Queue()
-        self.highlight_q = Queue()
 
-        do_rms = lambda: img_rms.script(self.raw_q_1, self.rms.queue)
-        do_pump = lambda: stealth_pumpkin.script(self.raw_q_2, self.pumpkin.queue)
+        do_pump = lambda: stealth_pumpkin.script(self.raw_q_1, self.pumpkin.queue)
 
-        self.rms.proc = Process(target=do_rms)
         self.pumpkin.proc = Process(target=do_pump)
         self.proc = Process(target=self.image_capture)
 
@@ -53,12 +49,10 @@ class MasterWidget(tk.Frame):
 
     def init_ui(self):
         self.raw_vid = VideoWidget(self)
-        self.rms = VideoWidget(self)
         self.pumpkin = VideoWidget(self)
 
-        self.raw_vid.grid(row=0, column=0, columnspan=3, sticky='nw')
-        self.pumpkin.grid(row=1, column=0, columnspan=3, sticky='sw')
-        self.rms.grid(row=0, column=4, columnspan=3, sticky='se')
+        self.raw_vid.grid(row=0, column=0, columnspan=6, sticky='nw')
+        self.pumpkin.grid(row=1, column=0, columnspan=6, sticky='sw')
 
         self.pause_button = tk.Button(self, text=u'\u23F8', command=self.pause)
         self.play_button = tk.Button(self, text=u'\u25B6', command=self.play)
@@ -76,12 +70,11 @@ class MasterWidget(tk.Frame):
         
     def start(self):
         self.proc.start()
-        #self.rms.proc.start()
         self.pumpkin.proc.start()
 
     def image_capture(self): 
         while True:
-            while self.raw_q_1.qsize() < 100:
+            while self.raw_vid.queue.qsize() < 100:
                 flag, frame = self.vidcap.read()
 
                 if not flag:
@@ -91,7 +84,6 @@ class MasterWidget(tk.Frame):
                 img_col = color_correct(img)
 
                 self.raw_q_1.put(frame)
-                self.raw_q_2.put(frame)
                 self.raw_vid.queue.put(frame)  # TODO save also
                 #self.vidout.write(frame)
 
@@ -102,7 +94,6 @@ class MasterWidget(tk.Frame):
             return
 
         self.raw_vid.update_image()
-        #self.rms.update_image()
         self.pumpkin.update_image()
 
         self.after_id = self.after(25, self.play)   # TODO make constant
@@ -114,7 +105,6 @@ class MasterWidget(tk.Frame):
                 self.after_id = None
 
     def move(self, t):
-        # t in seconds
         self.vidcap.set(0,t*1000)
 
     def quit_(self):
@@ -122,7 +112,6 @@ class MasterWidget(tk.Frame):
         self.proc.terminate()
         self.vidcap.release()
         self.vidout.release()
-        self.rms.proc.terminate()
         self.pumpkin.proc.terminate()
         self.quit()
         sys.exit(0)
