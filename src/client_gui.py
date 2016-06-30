@@ -33,7 +33,7 @@ class MainApplication(tk.Frame):
         for stream in self.serializedClient.streams:
 
             s = MasterWidget(self, stream)
-            s.grid(row=1,column=0, padx=5, pady=5)
+            s.grid(row=1,column=0, columnspan=2, padx=5, pady=5)
             self.streams.append(s)
             s.start()
 
@@ -44,16 +44,16 @@ class MainApplication(tk.Frame):
         for text in buttons:
             b = tk.Radiobutton(self, text=text, variable=self.stream_active, value=col,\
                          command=self.show_stream)
-            b.grid(row=0, column=col, sticky='nw')
+            b.grid(row=3, column=col, sticky='nw')
             col += 1
 
         tk.Button(self, text='x', command=self.quit_).grid(row=0,column=3, sticky='nw')
 
         self.telemetry_w = TelemetryWidget(self)
-        self.telemetry_w.grid(row=0, column=1, padx=5, pady=5)
+        self.telemetry_w.grid(row=1, column=2, padx=5, pady=5)
 
         self.command_w = ControlWidget(self)
-        self.command_w.grid(row=1, column=1, padx=5, pady=5)
+        self.command_w.grid(row=2, column=2, columnspan=2, padx=5, pady=5)
 
         self.grid(sticky='e')
 
