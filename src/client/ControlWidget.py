@@ -32,5 +32,6 @@ class ControlWidget(tk.Frame):
 if __name__=='__main__':
     root = tk.Tk()
     ControlWidget(root).grid()
-    root.resizable(width=False, height=False)
+    root.update()
+    print root.winfo_height(), root.winfo_width()
     root.mainloop()
