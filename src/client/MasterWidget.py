@@ -8,9 +8,7 @@ from VideoWidget import VideoWidget
 import cv2
 import time
 
-import img_rms
 import stealth_pumpkin
-import highlight
 
 def demosaic(input_im):
     #orig_gray = cv2.cvt2Color(input_im, cv2.COLOR_RGB2GRAY)  # THIS STEP IS NECESARY, check w/ kristina
@@ -108,7 +106,7 @@ class MasterWidget(tk.Frame):
         self.vidcap.set(0,t*1000)
 
     def quit_(self):
-        
+
         self.proc.terminate()
         self.vidcap.release()
         self.vidout.release()

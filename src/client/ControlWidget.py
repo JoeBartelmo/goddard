@@ -9,14 +9,14 @@ class ControlWidget(tk.Frame):
 
     def init_ui(self):
         self.cmd = tk.StringVar()
-        e = tk.Entry(self, textvariable=self.cmd, width=22)
+        e = tk.Entry(self, textvariable=self.cmd, width=40)
         e.grid(row=1,column=0)
         e.bind("<Return>", self.send_command)
 
         tk.Button(self, text='SEND', command=self.send_command).grid(row=1,column=1, padx=5, pady=5)
 
         self.log = tk.StringVar()
-        tk.Label(self, textvariable=self.log, bg='white', width=30, height=20, anchor='sw', justify='left').grid(row=0,column=0, columnspan=2, sticky='w', padx=5, pady=5)
+        tk.Label(self, textvariable=self.log, bg='white', width=50, height=20,anchor='sw', justify='left').grid(row=0,column=0, columnspan=2, sticky='w', padx=5, pady=5)
 
     def send_command(self, event=None):
         cmd = self.cmd.get()
