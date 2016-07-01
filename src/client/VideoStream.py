@@ -20,11 +20,14 @@ def color_correct(input_im):
     return input_im
 
 class VideoStream(tk.Frame):
-    def __init__(self, parent, source, name, frame_size=(320, 240)):
-        tk.Frame.__init__(self, parent, padx=3, pady=3, bd=2, relief='groove')
+    def __init__(self, parent, source, name, frame_size=(320, 240), num=0):
+        tk.Frame.__init__(self, parent, padx=3, pady=3, bd=2, relief='groove', takefocus=1)
         self.parent = parent
 
+        self.num = num
         self.frame_size = frame_size
+        self.focus_set()
+        self.bind("<Button-1>", self.focus)
         self.name = name
         self.init_ui()
         
@@ -46,7 +49,6 @@ class VideoStream(tk.Frame):
         self.vidout = cv2.VideoWriter('output.avi',fourcc, 45.0, (self.fheight,self.fwidth))
 
         self.after_id = None
-        self.proc.start()
 
     def init_ui(self):
         self.raw_vid = VideoWidget(self, self.frame_size)
@@ -59,6 +61,11 @@ class VideoStream(tk.Frame):
 
         tk.Checkbutton(self, text="Pumpkin", variable=self.show_pump, command=self.show).grid(row=1,column=1, sticky='se')
         tk.Label(self, text=self.name, justify='left').grid(row=1, column=0, sticky='sw')
+
+    def focus(self, event):
+        self.focus_set()
+        self.parent.stream_active.set(self.num)
+        self.parent.show_stream()
 
     def show(self):
         if self.show_pump.get() == 0:
@@ -86,7 +93,7 @@ class VideoStream(tk.Frame):
                 #self.vidout.write(frame)
 
     def play(self):
-        print self.raw_vid.queue.qsize(), self.rms.queue.qsize(), self.pumpkin.queue.qsize()#, self.output.queue.qsize()
+        #print self.raw_vid.queue.qsize(), self.pumpkin.queue.qsize()
 
         if self.raw_vid.queue.qsize() == 0:
             return
@@ -103,7 +110,10 @@ class VideoStream(tk.Frame):
                 self.after_id = None
 
     def move(self, t):
-        self.vidcap.set(0,t*1000)
+        if mode == 0:
+            self.vidcap.set(0,t*1000)
+        if mode == 1:
+            self.vidcap.set(0,t*1000)
 
     def quit_(self):
         
