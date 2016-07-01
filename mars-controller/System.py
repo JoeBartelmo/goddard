@@ -4,6 +4,7 @@ import sys
 from Arduino import Arduino
 from Jetson import Jetson
 from Mars import Mars
+from Stream import Stream
 from Threads import InputThread, StatisticsThread
 
 class System(object):
@@ -11,8 +12,14 @@ class System(object):
     def __init__(self, config, timestamp):
 
         #Init devices
-        self._jetson, self._arduino, self._mars = self.initDevices(config, timestamp)
+        self._arduino, self._mars = self.initDevices(config)
 
+        #Prepare stream
+        self._stream = Stream(config, timestamp)
+
+        logging.info("Connecting Jetson")
+        self._jetson = Jetson(self._arduino, config, self._mars, timestamp, self._stream)
+        time.sleep(.5)
         logging.info("System initialized.")
 
         logging.info("Starting threads...")
@@ -21,29 +28,23 @@ class System(object):
 
 
 
-
-    def initDevices(self, config, timestamp):
+    def initDevices(self, config):
 
         #self._arduino.arduinoPowerOn()
-
         logging.info("Connecting arduino...")
         logging.info('Attempting to connect Arduino')
         myArduino = Arduino(config)
-        time.sleep(1)
+        time.sleep(.5)
 
         #Flush buffers
         myArduino.flushBuffers()
 
         logging.info("Starting Mars...")
         myMars = Mars(myArduino, config)
-        time.sleep(1)
-
-        logging.info("Connecting to Jetson")
-        myJetson = Jetson(myArduino, config, myMars, timestamp)
-        time.sleep(1)
+        time.sleep(.5)
 
 
-        return myJetson, myArduino, myMars
+        return myArduino, myMars
 
 
 

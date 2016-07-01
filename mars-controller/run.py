@@ -37,8 +37,8 @@ def initOutput(config):
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    if (os.path.isfile('output/' + timestamp + '/' + config.logging.logName + '_machine_log.csv')):
-        print("The output file you specified in the configuration file already exists.\n")
+    if (os.path.isfile(config.logging.outputPath + '/output/' + timestamp + '/' + config.logging.logName + '_machine_log.csv')):
+        print("The telemetry output file you specified in the configuration file already exists.\n")
         print("The statistics from the previous reads will be overwritten if you don't specify a new file.")
         print("Do you wish to continue?")
         answer = raw_input("Y / N: ")

@@ -46,6 +46,8 @@ class Mars(object):
         copy = self._integTime
         currenttime = time.time()
         self._integTime = currenttime - copy
+
+        print("Integ time:" + str(self._integTime))
         self._statistics['RunClock'] = round(time.time() - self._arduino._timeInit, 4)
 
         #print(rawArray)
@@ -200,8 +202,8 @@ class Mars(object):
             # '--> updating the object attribute
         totalDisplacement = self._statistics['TotalDisplacement'] + intervalDisplacement
 
-        intervalDisplacement = abs(round(intervalDisplacement,1)) #Rounding for readability
-        totalDisplacement = abs(round(totalDisplacement, 1))
+        intervalDisplacement = round(intervalDisplacement,1) #Rounding for readability
+        totalDisplacement = round(totalDisplacement, 1)
 
         return intervalDisplacement,totalDisplacement
 

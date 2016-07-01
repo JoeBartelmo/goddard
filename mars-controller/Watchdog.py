@@ -26,7 +26,13 @@ class Watchdog(object):
         sysI = self._jetson._mars._statistics['SystemCurrent']
         levels = self._config.constants
 
+        self.testOverCurrent(sysI, levels)
+        self.testOverVoltage(sysV, levels)
+        self.testUnderVoltage(sysV, levels)
 
+        return self._electricStatistics
+
+    def testOverVoltage(self, sysV, levels):
         #testing for overVoltage
         if sysV > levels.overVoltageCritical:
             self._electricStatistics['overVoltage'] = 3 #overVoltage is at critical level
@@ -41,6 +47,7 @@ class Watchdog(object):
             self._electricStatistics['overVoltage'] = 0
             logging.info("")
 
+    def testUnderVoltage(self, sysV, levels):
         #testing for underVoltage
         if sysV < levels.underVoltageCritical:
             self._electricStatistics['underVoltage'] = 3 #underVoltage is at critical level
@@ -54,6 +61,7 @@ class Watchdog(object):
             self._electricStatistics['underVoltage'] = 0
             logging.info("battery voltage is too low, recommend ending run soon")
 
+    def testOverCurrent(self, sysI, levels):
         #testing for overCurrent
         if sysI > levels.overCurrentCritical:
             self._electricStatistics['overCurrent'] = 3 #overCurrent is at critical level
@@ -67,13 +75,8 @@ class Watchdog(object):
         elif sysI < levels._overCurrentAlert:
             self._electricStatistics['overCurrent'] = 0
 
-        return self._electricStatistics
-
-
-
     def sniffUltrasonicDistance(self):
         return self._distanceFromObject
-
 
 
     def react(self):

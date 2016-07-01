@@ -3,7 +3,7 @@ ark9719
 6/17/2016
 '''
 
-from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput
+from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput, ConcreteSystemInput
 from Watchdog import Watchdog
 import logging
 import csv
@@ -18,13 +18,11 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, arduino, config, mars, timestamp):
+    def __init__(self, arduino, config, mars, timestamp, stream):
         self._arduino = arduino
+        self._stream = stream
         self._mars = mars
         self._timestamp = timestamp
-        self._lastMotion = 'None yet'
-        self._lastLED = 'None yet'
-        self._lastStream = 'None yet'
         self._config = config
         self._header = False
         self.initCommands()
@@ -36,62 +34,41 @@ class Jetson(object):
         """
         Continuesly scans for controller input first identifying the type of command then checking validity
         before writing to the arduino and storing the last command.
-
         :return:
         """
 
         while True:
             #Prompt for input
-            controlCode = raw_input("LED or Motion Control code: ")
-
-            #Create a Motor or LED code object
-            if controlCode[0] == 'M':
-                myCodeInput = ConcreteMotorInput(controlCode)
-            elif controlCode[0] == 'L':
-                myCodeInput = ConcreteLEDInput(controlCode)
-            elif controlCode[0] == 'S':
-                myCodeInput = ConcreteStreamInput(controlCode, self._config)
-            elif controlCode.lower() in self._sysCommands:
-                self._sysCommands[controlCode]()
-                continue
-            elif controlCode == 'forward':
-                speed = raw_input("How fast?")
-                self._arduino.write("M110" + speed)
-                continue
-            elif controlCode == 'backward':
-                speed = raw_input("How fast?")
-                self._arduino.write("M100" + speed)
-                continue
-
-            else:
-                logging.info("Invalid control code.")
-                continue
-
-
-
-            #Check for validity
+            controlCode = raw_input("LED, motion, stream, or control code: \n")
+            myCodeInput = self.recieveInput(controlCode)
+            if myCodeInput == None: continue
             if myCodeInput.valid():
-
-                if myCodeInput._type == 'M':
-                    myCodeInput.issue(self._arduino)                        #Issue the code
-                    self._lastMotion = controlCode                          #Store it
-                    print(controlCode + " inputed succesfully (valid).")
-                    logging.info(controlCode + " inputed succesfully (valid).")
-
-                elif myCodeInput._type == 'L':
-                    myCodeInput.issue(self._arduino)
-                    self._lastLED = controlCode
-                    print(controlCode + " inputed succesfully (valid).")
-                    logging.info(controlCode + " inputed succesfully (valid).")
-
-                elif myCodeInput._type == 'S':
-                    myCodeInput.issue(self._timestamp)
-                    self._lastStream = controlCode
-                    print(controlCode + " inputed succesfully (valid).")
-                    logging.info(controlCode + " inputed succesfully (valid).")
-
+                myCodeInput.issue()
             else:
-                logging.info("Code is invalid.")
+                logging.info("Invalid code.")
+                continue
+
+
+    def recieveInput(self, controlCode):
+        """
+        Decipher the type of input. Motor, LED, Stream or System
+        :param controlCode:
+        :return: Return specialized command object
+        """
+        print("Control code: " + controlCode)
+
+        if controlCode[0] == 'M':
+            return ConcreteMotorInput(controlCode, self._arduino)
+        elif controlCode[0] == 'L':
+            return ConcreteLEDInput(controlCode, self._arduino)
+        elif controlCode[0] == 'S':
+            return ConcreteStreamInput(controlCode, self._stream)
+        elif controlCode in (self._sysCommands):
+            return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
+        elif controlCode in ('forward', 'backward'):
+            return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
+        else:
+            return logging.info("Invalid control code. Check documentation for command syntax.")
 
 
     def statisticsController(self):
@@ -103,15 +80,16 @@ class Jetson(object):
         while True:
 
             logging.info("Generating Statistics...")
-            self._mars.generateStatistics()#Perform a statistics read
+            self._mars.generateStatistics()
 
             logging.info("Displaying Statistics...")
-            print(self.displayStatistics(self._mars._statistics)) #Display human readable statistics
+            print(self.displayStatistics(self._mars._statistics))
 
             logging.info("Saving statistics...")
-            self.saveStats(self._mars._statistics) #added this to last line of displayStats for testing
+            self.saveStats(self._mars._statistics)
 
-            self._mars._integTime = time.time() #Set the integ time to the time of the last read for calculations
+            #Set the integ time to the time of the last read for calculations
+            self._mars._integTime = time.time()
             print("-------------------------------")
 
             #self._watchdog.sniffPower()
@@ -135,14 +113,14 @@ class Jetson(object):
         """
         #If the header to the file isn't written, write it.
         if (not self._header ):
-            fileName = 'output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.outputPath + '/output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writeheader()
             self._header = True
 
         try:
-            fileName = 'output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.outputPath + '/output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writerow(data)
@@ -151,10 +129,10 @@ class Jetson(object):
             logging.info("unable to log data because: \r\n {}".format(e))
 
 
-    def system_restart(self):
+    def systemRestart(self):
         logging.info("initiating safe restart")
         logging.info("shutting down arduino")
-        self._arduino.arduinoPowerOff()
+        self._arduino.powerOff()
         ### add functionality to cut power to motor controller
         logging.info("restarting this computer")
         logging.info("this connection will be lost")
@@ -162,10 +140,10 @@ class Jetson(object):
         subprocess.call(['sudo reboot'], shell=True)
 
 
-    def system_shutdown(self):
+    def systemShutdown(self):
         logging.info("initiating safe shutdown")
         logging.info("shutting down arduino")
-        self._arduino.arduinoPowerOff()
+        self._arduino.powerOff()
         ### add functionality to cut power to motor controller
         logging.info("shutting downn this computer")
         logging.info("this connection will be lost")
@@ -173,15 +151,15 @@ class Jetson(object):
         subprocess.call(['sudo poweroff'], shell=True)
 
     def initCommands(self):
-        self._sysCommands = {'sys-shutdown': self.system_shutdown,
-                                'sys-restart': self.system_restart,
-                                'a-poweron': self._arduino.arduinoPowerOn,
-                                'a-poweroff': self._arduino.arduinoPowerOff,
-                                'a-restart': self._arduino.arduino_reset,
+        self._sysCommands = {'sys-shutdown': self.systemShutdown,
+                                'sys-restart': self.systemRestart,
+                                'a-poweron': self._arduino.powerOn,
+                                'a-poweroff': self._arduino.powerOff,
+                                'a-restart': self._arduino.reset,
                                 'recall': self._mars.recall,
                                 # 'break': system.break_all_circuits(), \
-                                'stream': self.defaultStreamIssue,
-                                'stream close': self.closeStream,
+                                'stream open': self._stream.open,
+                                'stream close': self._stream.close,
                                 'brake': self._arduino.brake,
                                 #'exit': self.exit
                              }
@@ -193,12 +171,6 @@ class Jetson(object):
         #self._sysCommands['a-poweroff']()
         self._sysCommands['stream close']()
 
-
-    def defaultStreamIssue(self):
-        ConcreteStreamInput('S04',self._config).issue(self._timestamp)
-
-    def closeStream(self):
-        ConcreteStreamInput('S20', self._config).close()
 
 
 

@@ -14,6 +14,9 @@ class Arduino(object):
         self._config = config
         self._init = False #False until initialized
         self._timeInit = time.time()
+        self._lastLED = 'None yet'
+        self._lastMotor = 'None yet'
+
 
         try:
             print("Attempting to connect Arduino")
@@ -21,7 +24,7 @@ class Arduino(object):
             self._init = True
             logging.info('Arduino connected')
             print("Arduino connected.")
-
+            time.sleep(.1)
         except serial.serialutil.SerialException:
             logging.info("Arduino didn't connect.")
             print("arduino not connected or device path wrong")
@@ -103,29 +106,29 @@ class Arduino(object):
         """
         return self._controller.inWaiting()
 
-    def arduino_reset(self):
+    def reset(self):
         logging.info("shutting down power to arduino")
-        self.arduinoPowerOff()
+        self.powerOff()
         logging.info("standby...")
         time.sleep(2)
         logging.info("restarting power")
-        self.arduinoPowerOn()
+        self.powerOn()
 
 
-    def arduinoPowerOn(self):
+    def powerOn(self):
         logging.info("feeding arduino power")
-
         powerString = 'sudo echo 1 > /sys/class/gpio/gpio57/value'
         ## calling Bash process to change
         subprocess.call([powerString], shell=True)
-        self._arduinoPowerStatus = 1
+        self._powerStatus = 1
 
-    def arduinoPowerOff(self):
+    def powerOff(self):
         logging.info("cutting arduino power")
         powerString = 'sudo echo 0 > /sys/class/gpio/gpio57/value'
         ## calling Bash process to change
         subprocess.call([powerString], shell=True)
-        self._arduinoPowerStatus = 0
+        self._powerStatus = 0
 
     def brake(self):
         self._controller.write('M0010')
+        logging.info("Arduino braking...")
