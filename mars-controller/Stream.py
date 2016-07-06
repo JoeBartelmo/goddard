@@ -70,6 +70,7 @@ class Stream (object):
         if (self._init):
             logging.info('closing stream')
             subprocess.call(["node " + self._indexPath + " --close"], shell=True)
+            self._init = False
         else:
             print("Stream not running")
             logging.info("Stream not running")
