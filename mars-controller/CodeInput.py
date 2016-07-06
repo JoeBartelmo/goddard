@@ -144,7 +144,7 @@ class ConcreteSystemInput():
     def valid(self):
         if self._code.lower() in (self._sysCommands):
             return True
-        elif self._code in ('forward', 'backward'):
+        elif self._code in ('forward', 'backward', 'LED'):
             return True
         else:
             return False
@@ -161,6 +161,10 @@ class ConcreteSystemInput():
         elif self._code.lower() == 'backward':
             speed = raw_input("How fast?")
             self._arduino.write("M100" + speed)
+            return
+        elif self._code.lower() == 'LED':
+            bright = raw_input("How bright?")
+            self._arduino.write("L" + bright)
             return
         elif self._code.lower() in self._sysCommands:
             self._sysCommands[self._code]()
