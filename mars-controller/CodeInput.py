@@ -151,7 +151,7 @@ class ConcreteSystemInput():
 
     def issue(self):
         """
-        Forward, backward, or in the dictionary
+        Forward, backward, LED, or in the dictionary
         :return:
         """
         if self._code.lower() == 'forward':
