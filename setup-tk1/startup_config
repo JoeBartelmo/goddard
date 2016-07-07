@@ -12,15 +12,18 @@
 # By default this script does nothing.
 
 #enable performace mode and all cores
+
+chmod 777 -R "/sys/class/gpio"
+echo "57" > "/sys/class/gpio/export"
+echo "out" > "/sys/class/gpio/gpio57/direction"
+echo "1" > "/sys/class/gpio/gpio57/value"
+
 echo "0" > "/sys/devices/system/cpu/cpuquiet/tegra_cpuquiet/enable"
 echo "1" > "/sys/devices/system/cpu/cpu0/online"
 echo "1" > "/sys/devices/system/cpu/cpu1/online"
 echo "1" > "/sys/devices/system/cpu/cpu2/online"
 echo "1" > "/sys/devices/system/cpu/cpu3/online"
-echo "performance" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+echo "performance" > "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
 
-#enable gpio pins
-echo 57 > /sys/class/gpio/export
-echo out > /sys/class/gpio/gpio57/direction
-echo 1 > /sys/class/gpio/gpio57/value
+exit 0
 
