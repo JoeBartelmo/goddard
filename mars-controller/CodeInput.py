@@ -3,8 +3,6 @@ ark9719
 6/17/2016
 '''
 import logging
-import subprocess
-import os
 
 class ConcreteMotorInput(object):
     """
@@ -18,9 +16,10 @@ class ConcreteMotorInput(object):
     'C' is a binary operator to engage the brake
     'D' is a decimal integer (0-9) that defines the speed(Each integer roughly corresponds 1Mph or .5m/s)
     """
-    def __init__(self, code):
+    def __init__(self, code, arduino):
         self._code = code
         self._type = 'M'
+        self._arduino = arduino
 
     def valid(self):
 
@@ -45,9 +44,10 @@ class ConcreteMotorInput(object):
 
         return True
 
-    def issue(self, arduino):
-        arduino.write(self._code)
-        logging.info("Control code written to Arduino.")
+    def issue(self):
+        self._arduino.write(self._code)
+        self._arduino._lastMotor = self
+        logging.info("Motor code written to Arduino.")
 
 
 
@@ -61,8 +61,9 @@ class ConcreteLEDInput():
     FORMAT ==> 'LX'
     L identifies LED, X is an integer (0-9) defining brightness
     """
-    def __init__(self, code):
+    def __init__(self, code, arduino):
         self._code = code
+        self._arduino = arduino
         self._type = 'L'
 
     def valid(self):
@@ -75,9 +76,10 @@ class ConcreteLEDInput():
             print("Code was not length two or the second character was not an integer")
             return False
 
-    def issue(self, arduino):
-        arduino.write(self._code)
-        logging.info("Control code written to Arduino.")
+    def issue(self):
+        self._arduino.write(self._code)
+        self._arduino._lastLED = self
+        logging.info("LED code written to Arduino.")
 
 class ConcreteStreamInput():
     """
@@ -86,13 +88,14 @@ class ConcreteStreamInput():
      FORMAT ==> SAB
     'S' is the stream code identifier
     'A' is the resolution changer [ 0 (640x480) or 1 (1280 x 960)]
-    'B' is the bitrate integer (0-9)
+    'B' is the bitrate integer (1-9)
     """
 
-    def __init__(self, code, config):
+    def __init__(self, code, stream):
         self._code = code
         self._type = 'S'
-        self._config = config
+        self._bitrate = code[2]
+        self._stream = stream
 
     def valid(self):
 
@@ -111,43 +114,59 @@ class ConcreteStreamInput():
         #Check if 3rd character is int
         if not RepresentsInt(self._code[2]):
             logging.warning("Bad stream input entered")
-            print("Third character must be integer (0-9).")
+            print("Third character must be integer (1-9).")
+            return False
+
+        if (int(self._code[2] == 0)):
+            logging.warning("Bad stream input entered")
+            print("Third character must be atleast 1")
             return False
 
         return True
 
-    def issue(self, timestamp):
-
-        bitrate = int(self._code[2]) * 1000 #converting Mb/s to Kb/s
-        indexPath = self._config.logging.indexPath
-        logPath = self._config.logging.outputPath + '/output/' + timestamp +'/ewoifjsfe'
+    def issue(self):
+        self._stream.issue(self)
 
 
-        #640x480
-        if int(self._code[1]) == 0:
-            #TODO
-            logging.info('closing stream')
-            subprocess.call(["node " + indexPath + " --close"], shell=True)
-            logging.info('re-initializing steam with new inputs')
-            logging.info("node " + indexPath + " -w 640" + " -h 480" + " -b " + str(bitrate)  + " -f " + logPath)
-            subprocess.call(["node "+ indexPath + " -w 640 " + "-h 480" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
-        #1280x960
-        elif int(self._code[1]) == 1:
-            #TODO
-            logging.info('closing stream')
-            subprocess.call(["node " + indexPath + " --close"], shell=True)
-            logging.info('re-initializing steam with new inputs')
-            subprocess.call(["node " + indexPath + " -w 1280" + " -h 960" + " -b " + str(bitrate) + " -f " + logPath], shell=True)
-        #close
-        elif int(self._code[1]) == 2:
-            #TODO
-            logging.info('closing stream')
-            subprocess.call(["node " + indexPath + " --close"], shell=True)
 
-    def close(self):
-        logging.info('closing stream')
-        subprocess.call(["node " + self._config.logging.indexPath + " --close"], shell=True)
+class ConcreteSystemInput():
+    """
+    Specialized system commands - shutdown, restart, etc
+    """
 
+    def __init__(self, code, jetson, arduino, mars, sysCommands):
+        self._code = code
+        self._jetson = jetson
+        self._arduino = arduino
+        self._mars = mars
+        self._sysCommands = sysCommands
+
+    def valid(self):
+        if self._code.lower() in (self._sysCommands):
+            return True
+        elif self._code in ('forward', 'backward'):
+            return True
+        else:
+            return False
+
+    def issue(self):
+        """
+        Forward, backward, or in the dictionary
+        :return:
+        """
+        if self._code.lower() == 'forward':
+            speed = raw_input("How fast?")
+            self._arduino.write("M110" + speed)
+            return
+        elif self._code.lower() == 'backward':
+            speed = raw_input("How fast?")
+            self._arduino.write("M100" + speed)
+            return
+        elif self._code.lower() in self._sysCommands:
+            self._sysCommands[self._code]()
+            return
+        else:
+            logging.info("Unrecognizable code.")
 
 
 

@@ -14,9 +14,8 @@
   "logging": {
     "shouldLog": true,
     "logName": "Test3",
-    "indexPath":"/phobos/vlc_streamer/index.js",
-    "outputPath":"/home/ubuntu/hyperloop/control/Refactor-Test/Command test"
-
+    "indexPath":"/home/ubuntu/mars-PyDetect/PyDetect/serverSide-stream/index.js",
+    "outputPath":"/home/ubuntu/mars-PyDetect/PyDetect/mars-controller"
   },
   "constants": {
     "baudRate": 9600,
