@@ -20,10 +20,14 @@ class System(object):
         logging.info("Connecting Jetson")
         self._jetson = Jetson(self._arduino, config, self._mars, timestamp, self._stream)
         time.sleep(.5)
+        logging.info("All devices connected")
         logging.info("System initialized.")
+        answer = raw_input("Would you like to start? Y/N: ")
+        if answer.lower() in ('y', 'yes'):
+            print ("The threads will start. ")
+            self._jetson.start()
 
-        logging.info("Starting threads...")
-        self.startThreads()
+
 
 
 
@@ -49,23 +53,7 @@ class System(object):
 
 
 
-    def startThreads(self):
-            """
-            This method starts the two threads that will run for the duration of the program. One scanning for input,
-            the other generating, displaying, and saving data.
-            :return:
-            """
-            logging.info("Attempting to start threads")
 
-            try:
-                inputT = InputThread(self._jetson)
-                statsT = StatisticsThread(self._jetson)
-                inputT.start()
-                statsT.start()
-            except Exception as e:
-                logging.WARNING("error starting threads ({})".format(e))
-                logging.WARNING("program will terminate")
-                sys.exit()
 
 
 
