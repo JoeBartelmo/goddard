@@ -6,8 +6,10 @@ ark9719
 from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput, ConcreteSystemInput
 from GpioPin import GpioPin
 from Watchdog import Watchdog
+from Threads import InputThread, StatisticsThread
 import logging
 import csv
+import sys
 import time
 import json
 import subprocess
@@ -32,26 +34,16 @@ class Jetson(object):
 
     def initPins(self):
         """
-        Create 8 pin objects:
-        reset pin (166)
-        connection LED (163)
-        warning LED (164)
-        batt LED (165)
-        relay 1 (57)
-        relay 2 (160)
-        relay 3 (161)
-        relay 4 (162)
-
-
+        Create 8 pin objects
         """
 
         pinHash = {'resetArduino': GpioPin(166),
                     'connectionLED': GpioPin(163),
                     'warningLED': GpioPin(164),
                     'batteryLED': GpioPin(165),
-                    'relay1': GpioPin(57),
-                    'relay2': GpioPin(160),
-                    'relay3': GpioPin(161),
+                    'motorRelay': GpioPin(57),
+                    'ledRelay': GpioPin(160),
+                    'laserRelay': GpioPin(161),
                     'relay4': GpioPin(162)
                  }
 
@@ -157,6 +149,24 @@ class Jetson(object):
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))
 
+    def startThreads(self):
+            """
+            This method starts the two threads that will run for the duration of the program. One scanning for input,
+            the other generating, displaying, and saving data.
+            :return:
+            """
+            logging.info("Attempting to start threads")
+
+            try:
+                inputT = InputThread(self)
+                statsT = StatisticsThread(self)
+                inputT.start()
+                statsT.start()
+            except Exception as e:
+                logging.WARNING("error starting threads ({})".format(e))
+                logging.WARNING("program will terminate")
+                sys.exit()
+
 
     def systemRestart(self):
         logging.info("initiating safe restart")
@@ -186,19 +196,43 @@ class Jetson(object):
                                 'a-poweroff': self._arduino.powerOff,
                                 'a-restart': self._arduino.reset,
                                 'recall': self._mars.recall,
-                                # 'break': system.break_all_circuits(), \
                                 'stream open': self._stream.open,
                                 'stream close': self._stream.close,
                                 'brake': self._arduino.brake,
-                                #'exit': self.exit
+                                'motors off': self._pinHash['motorRelay'].toggleOn ,
+                                'lasers off': self._pinHash['laserRelay'].toggleOn,
+                                'led off': self._pinHash['ledRelay'].toggleOn,
+                                'hibernate': self.hibernate,
+                                'start': self.start,
+                                'exit': self.exit
                              }
 
 
+
+    def start(self):
+        self._pinHash['motorRelay'].changeState(0)
+        logging.info("Motor relay started")
+        self._pinHash['ledRelay'].changeState(0)
+        logging.info("LED relay started")
+        self._pinHash['laserRelay'].changeState(0)
+        logging.info("Laser relay started")
+
+        logging.info("Starting threads...")
+        self.startThreads()
 
     def exit(self):
         self._sysCommands['brake']()
         #self._sysCommands['a-poweroff']()
         self._sysCommands['stream close']()
+
+    def hibernate(self):
+        self._pinHash['motorRelay'].changeState(1)
+        logging.info("Motor relay ended")
+        self._pinHash['ledRelay'].changeState(1)
+        logging.info("LED relay ended")
+        self._pinHash['laserRelay'].changeState(1)
+        logging.info("Laser relay ended")
+        self._stream.close()
 
 
 
