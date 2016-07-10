@@ -21,9 +21,10 @@ class Stream (object):
         if (self._init):
             self.close()
         logging.info('re-initializing steam with new inputs')
-        newCall = "node "+ self._indexPath + " -w "  + self._resolution[0] + " -h " + self._resolution[1] + " -b " \
-                  + str(self._bitrate) + " -f " + self._logPath
+        newCall = 'nohup' + ' node '+ self._indexPath + ' -w '  + self._resolution[0] + ' -h ' + self._resolution[1] + ' -b ' \
+                  + str(self._bitrate) + ' -f ' + self._logPath + ' &'
         logging.info(newCall)
+
         subprocess.call([newCall], shell=True)
 
         #p = subprocess.Popen(["node" , self._indexPath , "-w", self._resolution[0], "-h", self._resolution[1], "-b", str(self._bitrate), "-f", self._logPath], shell=True)

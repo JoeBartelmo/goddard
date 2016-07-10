@@ -1,6 +1,6 @@
 {
   "communications" : {
-    "arduinoPath":"/dev/ttyACM0",
+    "arduinoPath":"/dev/ttyACM3",
     "masterIP":"129.21.56.78"
   },
   "battery" : {
