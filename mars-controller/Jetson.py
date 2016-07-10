@@ -4,6 +4,7 @@ ark9719
 '''
 
 from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput, ConcreteSystemInput
+from GpioPin import GpioPin
 from Watchdog import Watchdog
 import logging
 import csv
@@ -19,6 +20,7 @@ class Jetson(object):
     """
 
     def __init__(self, arduino, config, mars, timestamp, stream):
+        self._pinHash = self.initPins()
         self._arduino = arduino
         self._stream = stream
         self._mars = mars
@@ -27,6 +29,34 @@ class Jetson(object):
         self._header = False
         self.initCommands()
         self._watchdog = Watchdog(self)
+
+    def initPins(self):
+        """
+        Create 8 pin objects:
+        reset pin (166)
+        connection LED (163)
+        warning LED (164)
+        batt LED (165)
+        relay 1 (57)
+        relay 2 (160)
+        relay 3 (161)
+        relay 4 (162)
+
+
+        """
+
+        pinHash = {'resetArduino': GpioPin(166),
+                    'connectionLED': GpioPin(163),
+                    'warningLED': GpioPin(164),
+                    'batteryLED': GpioPin(165),
+                    'relay1': GpioPin(57),
+                    'relay2': GpioPin(160),
+                    'relay3': GpioPin(161),
+                    'relay4': GpioPin(162)
+                 }
+
+        return pinHash
+
 
 
 
