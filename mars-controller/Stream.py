@@ -26,6 +26,8 @@ class Stream (object):
         logging.info(newCall)
         subprocess.call([newCall], shell=True)
 
+        #p = subprocess.Popen(["node" , self._indexPath , "-w", self._resolution[0], "-h", self._resolution[1], "-b", str(self._bitrate), "-f", self._logPath], shell=True)
+
 
     def issue(self, myCode):
         """
