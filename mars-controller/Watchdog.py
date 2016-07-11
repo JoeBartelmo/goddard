@@ -36,7 +36,7 @@ class Watchdog(object):
         self._levels = jetson._config.watchdog
 
 
-    def watch():
+    def watch(self):
         if self._enableWatchdog == True:
             self.sniff()
             self.react()
@@ -58,9 +58,9 @@ class Watchdog(object):
         #testing for overVoltage
         if sysV > self._levels.overVoltageCritical:
             self._electricStatistics['overVoltage'] = 3 #overVoltage is at critical level
-        elif sysV > self._levels.overVoltageWarning and sysV < self._levels.overVoltageCritical):
+        elif sysV > self._levels.overVoltageWarning and sysV < self._levels.overVoltageCritical:
             self._electricStatistics['overVoltage'] = 2 #overVoltage is at warning level
-        elif sysV > self._levels.overVoltageAlert and sysV < self._levels.overVoltageWarning):
+        elif sysV > self._levels.overVoltageAlert and sysV < self._levels.overVoltageWarning:
             self._electricStatistics['overVoltage'] = 1 #overVoltage is at alert level
         elif sysV < self._levels._overVoltageAlert:
             self._electricStatistics['overVoltage'] = 0
@@ -69,9 +69,9 @@ class Watchdog(object):
         #testing for underVoltage
         if sysV < self._levels.underVoltageCritical:
             self._electricStatistics['underVoltage'] = 3 #underVoltage is at critical level
-        elif sysV < self._levels.underVoltageWarning and sysV > self._levels.underVoltageCritical):
+        elif sysV < self._levels.underVoltageWarning and sysV > self._levels.underVoltageCritical:
             self._electricStatistics['underVoltage'] = 2 #underVoltage is at warning level
-        elif sysV < self._levels.underVoltageAlert and sysV > self._levels.underVoltageWarning):
+        elif sysV < self._levels.underVoltageAlert and sysV > self._levels.underVoltageWarning:
             self._electricStatistics['underVoltage'] = 1 #underVoltage is at alert level
         elif sysV > self._levels.underVoltageAlert:
             self._electricStatistics['underVoltage'] = 0
@@ -81,9 +81,9 @@ class Watchdog(object):
         #testing for overCurrent
         if sysI > self._levels.overCurrentCritical:
             self._electricStatistics['overCurrent'] = 3 #overCurrent is at critical level
-        elif sysI > self._levels.overCurrentWarning and sysI < self._levels.overCurrentCritical):
+        elif sysI > self._levels.overCurrentWarning and sysI < self._levels.overCurrentCritical:
             self._electricStatistics['overCurrent'] = 2 #overCurrent is at warning level
-        elif sysI > self._levels.overCurrentAlert and sysI < self._levels.overCurrentWarning):
+        elif sysI > self._levels.overCurrentAlert and sysI < self._levels.overCurrentWarning:
             self._electricStatistics['overCurrent'] = 1 #overCurrent is at alert level
         elif sysI < self._levels._overCurrentAlert:
             self._electricStatistics['overCurrent'] = 0
@@ -92,9 +92,9 @@ class Watchdog(object):
          #testing for batteryPercentage
         if batt < self._levels.battPercentCritical:
             self._electricStatistics['batteryPercentage'] = 3 #batteryPercentage is at critical level
-        elif batt < self._levels.battPercentWarning and batt > self._levels.battPercentCritical):
+        elif batt < self._levels.battPercentWarning and batt > self._levels.battPercentCritical:
             self._electricStatistics['batteryPercentage'] = 2 #batteryPercentage is at warning level
-        elif batt < self._levels.battPercentAlert and batt > self._levels.battPercentWarning):
+        elif batt < self._levels.battPercentAlert and batt > self._levels.battPercentWarning:
             self._electricStatistics['batteryPercentage'] = 1 #batteryPercentage is at alert level
         elif batt > self._levels.battPercentAlert:
             self._electricStatistics['batteryPercentage'] = 0
@@ -113,14 +113,15 @@ class Watchdog(object):
         self.reactToOverVoltage()
         self.reactToUnderVoltage()
         self.reactToOverCurrent()
-        self.reactTobattPercent()
-        if all(value == 0 for value in self_electricStatistics.values()) == True:
+        self.reactToBattPercent()
+        if all(value == 0 for value in self._electricStatistics.values()) == True:
             self._jetson._turnOffComponent('warningLED') #turning off warning LED if all values == 0
 
     def reactToBattPercent(self):
-
+        pass
 
     def reactToOverCurrent(self):
+        pass
 
 
     def reactToUnderVoltage(self):
@@ -157,7 +158,7 @@ class Watchdog(object):
             self._jetson._turnOffComponent('motorRelay')
             self._jetson._turnOffComponent('ledRelay')
             self._jetson._turnOffComponent('laserRelay')
-            self._turnOffComponent('relay4')
+            self._jetson._turnOffComponent('relay4')
             logging.critical("supply voltage is too high, components are at risk of being damaged")
             logging.critical("currently at {0}volts, expected less than {1}volts"\
                 .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.overVoltageAlert))
@@ -168,8 +169,7 @@ class Watchdog(object):
             self._jetson.mars.recall()
             self._jetson._turnOnComponent('warningLED')
             logging.critical("supply voltage is much higher than usual")
-            logging.critical("currently at {0}volts, expected less than {1}volts"\
-                .)
+            logging.critical("currently at {0}volts, expected less than {1}volts")
             logging.critical("recalling Mars for inspection")
             logging.critical("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
         elif value == 1:
@@ -179,3 +179,16 @@ class Watchdog(object):
                 .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.overCurrentAlert))
             logging.warning("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
 
+    def disable(self):
+        if self._enableWatchdog == False:
+            logging.warning("watchdog is already disabled")
+        else:
+            self._enableWatchdog = True
+            logging.critical("watchdog disabled")
+
+    def enable(self):
+        if self._enableWatchdog == True:
+            logging.warning("watchdog is already enabled")
+        else:
+            self._enableWatchdog = True
+            logging.critical("watchdog enabled")
