@@ -192,9 +192,7 @@ class Jetson(object):
     def initCommands(self):
         self._sysCommands = {'sys-shutdown': self.systemShutdown,
                                 'sys-restart': self.systemRestart,
-                                'a-poweron': self._arduino.powerOn,
-                                'a-poweroff': self._arduino.powerOff,
-                                'a-restart': self._arduino.reset,
+                                'a-restart': self.arduinoReset,
                                 'recall': self._mars.recall,
                                 'stream open': self._stream.open,
                                 'stream close': self._stream.close,
@@ -204,9 +202,11 @@ class Jetson(object):
                                 'led off': self._pinHash['ledRelay'].toggleOn,
                                 'hibernate': self.hibernate,
                                 'start': self.start,
-                                'exit': self.exit
+                                'exit': self.exit,
+                                'disable watchdog': self.disableWatchdog,
+                                'enable watchdog': self.enableWatchdog
+                                'enable recall':
                              }
-
 
 
     def start(self):
@@ -233,6 +233,37 @@ class Jetson(object):
         self._pinHash['laserRelay'].changeState(1)
         logging.info("Laser relay ended")
         self._stream.close()
+
+    def turnOnComponent(self,indentifier):
+        self._pinHash[indentifier].changeState(0) #inverted Logic: 0 --> On
+
+    def turnOffComponent(self,indentifier):
+        self._pinHash[indentifier].changeState(1) #inverted Logic: 1 --> Off
+
+    def disableWatchdog(self):
+        if self._watchdog._enableWatchdog == False:
+            logging.warning("watchdog is already disabled")
+        else:
+            self._watchdog._enableWatchdog = True
+            logging.critical("watchdog disabled")
+
+    def enableWatchdog(self):
+        if self._watchdog._enableWatchdog == True:
+            logging.warning("watchdog is already enabled")
+        else:
+            self._watchdog._enableWatchdog = True
+            logging.critical("watchdog enabled")
+
+    def resetArduino(self):
+        self.turnOnComponent("resetArduino")
+        time.sleep(.2)
+        self.turnOffComponent("resetArduino")
+
+
+
+
+
+
 
 
 

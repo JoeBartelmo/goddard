@@ -106,28 +106,6 @@ class Arduino(object):
         """
         return self._controller.inWaiting()
 
-    def reset(self):
-        logging.info("shutting down power to arduino")
-        self.powerOff()
-        logging.info("standby...")
-        time.sleep(2)
-        logging.info("restarting power")
-        self.powerOn()
-
-
-    def powerOn(self):
-        logging.info("feeding arduino power")
-        powerString = 'sudo echo 1 > /sys/class/gpio/gpio57/value'
-        ## calling Bash process to change
-        subprocess.call([powerString], shell=True)
-        self._powerStatus = 1
-
-    def powerOff(self):
-        logging.info("cutting arduino power")
-        powerString = 'sudo echo 0 > /sys/class/gpio/gpio57/value'
-        ## calling Bash process to change
-        subprocess.call([powerString], shell=True)
-        self._powerStatus = 0
 
     def brake(self):
         self._controller.write('M0010')
