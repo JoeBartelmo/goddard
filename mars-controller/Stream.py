@@ -4,6 +4,7 @@ import subprocess
 class Stream (object):
 
     def __init__(self, config, timestamp):
+        self._streamCodes = ['low res stream', 'high res stream']
         self._config = config
         self._bitrate = 'None yet'
         self._resolution = 'None yet'
@@ -28,32 +29,31 @@ class Stream (object):
         subprocess.call([newCall], shell=True)
 
 
-        #p = subprocess.Popen(["node" , self._indexPath , "-w", self._resolution[0], "-h", self._resolution[1], "-b", str(self._bitrate), "-f", self._logPath], shell=True)
-
-
     def issue(self, myCode):
         """
         Update the bitrate and resolution given the code from terminal and then refresh the stream
         :param myCode:
         :return:
         """
-        #update bitrate
-        self._bitrate = int(myCode._bitrate) * 1000 #converting Mb/s to Kb/s
+        rawBit = raw_input("What bitrate? (1-9)")
+        if RepresentsInt(rawBit) and rawBit > 1 and rawBit < 10:
+            self._bitrate = int(rawBit) * 1000 #converting Mb/s to Kb/s
 
         #update res 640x480
-        if int(myCode._code[1]) == 0:
+        if myCode == 'low res stream':
 
             logging.info('re-initializing steam with new inputs')
             self._resolution = ['640', '480']
 
         #update res 1280x960
-        elif int(myCode._code[1]) == 1:
+        elif myCode == 'high res stream':
 
             logging.info('re-initializing steam with new inputs')
             self._resolution = ['1280', '960']
 
         #Refresh stream
         self.refresh()
+        self._lastCommand = myCode
 
 
     def open(self):
@@ -78,3 +78,10 @@ class Stream (object):
         else:
             print("Stream not running")
             logging.info("Stream not running")
+
+def RepresentsInt(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False

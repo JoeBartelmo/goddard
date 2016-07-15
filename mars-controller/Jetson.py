@@ -21,16 +21,28 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, arduino, config, mars, timestamp, stream):
+    def __init__(self, devices, config, timestamp):
+
+        self._devices = devices
+        self.initDevices()
+
         self._pinHash = self.initPins()
-        self._arduino = arduino
-        self._stream = stream
-        self._mars = mars
+        self.initCommands()
+
         self._timestamp = timestamp
         self._config = config
         self._header = False
-        self.initCommands()
+
         self._watchdog = Watchdog(self)
+
+    def initDevices(self):
+        self._arduino = self._devices['Arduino']
+        self._stream = self._devices['Stream']
+        self._mars = self._devices['Mars']
+        self._motor = self._devices['Motor']
+        self._motor._arduino = self._arduino
+        self._led = self._devices['LED']
+        self._led._arduino = self._arduino
 
     def initPins(self):
         """
@@ -49,7 +61,23 @@ class Jetson(object):
 
         return pinHash
 
-
+    def initCommands(self):
+        self._sysCommands = {'sys-shutdown': self.systemShutdown,
+                                'sys-restart': self.systemRestart,
+                                'a-poweron': self._arduino.powerOn,
+                                'a-poweroff': self._arduino.powerOff,
+                                'a-restart': self._arduino.reset,
+                                'recall': self._mars.recall,
+                                'stream open': self._stream.open,
+                                'stream close': self._stream.close,
+                                'brake': self._arduino.brake,
+                                'motors off': self._pinHash['motorRelay'].toggleOn ,
+                                'lasers off': self._pinHash['laserRelay'].toggleOn,
+                                'led off': self._pinHash['ledRelay'].toggleOn,
+                                'hibernate': self.hibernate,
+                                'start': self.start,
+                                'exit': self.exit
+                             }
 
 
     def repeatInput(self):
@@ -64,11 +92,7 @@ class Jetson(object):
             controlCode = raw_input("LED, motion, stream, or control code: \n")
             myCodeInput = self.recieveInput(controlCode)
             if myCodeInput == None: continue
-            if myCodeInput.valid():
-                myCodeInput.issue()
-            else:
-                logging.info("Invalid code.")
-                continue
+
 
 
     def recieveInput(self, controlCode):
@@ -79,18 +103,18 @@ class Jetson(object):
         """
         print("Control code: " + controlCode)
 
-        if controlCode[0] == 'M':
-            return ConcreteMotorInput(controlCode, self._arduino)
-        elif controlCode[0] == 'L':
-            return ConcreteLEDInput(controlCode, self._arduino)
-        elif controlCode[0] == 'S':
-            return ConcreteStreamInput(controlCode, self._stream)
-        elif controlCode in (self._sysCommands):
-            return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
-        elif controlCode in ('forward', 'backward'):
-            return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
+        if controlCode in self._motor._motorCodes:
+            return self._motor.issue(controlCode, self._arduino)
+        elif controlCode in self._led.LEDcodes:
+            return self._led.issue(self._arduino)
+        elif controlCode in self._stream._streamCodes:
+            return self._stream.issue(controlCode)
+        elif controlCode in self._sysCommands:
+            self._sysCommands[controlCode]()
+            #return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
         else:
             return logging.info("Invalid control code. Check documentation for command syntax.")
+
 
 
     def statisticsController(self):
@@ -149,23 +173,35 @@ class Jetson(object):
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))
 
-    def startThreads(self):
+    def manageThreads(self, toggle):
             """
             This method starts the two threads that will run for the duration of the program. One scanning for input,
             the other generating, displaying, and saving data.
             :return:
             """
-            logging.info("Attempting to start threads")
 
-            try:
-                inputT = InputThread(self)
-                statsT = StatisticsThread(self)
-                inputT.start()
-                statsT.start()
-            except Exception as e:
-                logging.WARNING("error starting threads ({})".format(e))
-                logging.WARNING("program will terminate")
-                sys.exit()
+            if (toggle == 'start'):
+                logging.info("Attempting to start threads")
+
+                try:
+                    self._inputT = InputThread(self)
+                    self._statsT = StatisticsThread(self)
+                    self._inputT.start()
+                    self._statsT.start()
+                except Exception as e:
+                    logging.WARNING("error starting threads ({})".format(e))
+                    logging.WARNING("program will terminate")
+                    sys.exit()
+            elif (toggle == 'stop'):
+                logging.info("Attempting to stop threads")
+
+                try:
+                    self._inputT.stop()
+                    self._statsT.stop()
+                except Exception as e:
+                    logging.WARNING("error starting threads ({})".format(e))
+                    logging.WARNING("program will terminate")
+                    sys.exit()
 
 
     def systemRestart(self):
@@ -189,26 +225,6 @@ class Jetson(object):
         time.sleep(1)
         subprocess.call(['sudo poweroff'], shell=True)
 
-    def initCommands(self):
-        self._sysCommands = {'sys-shutdown': self.systemShutdown,
-                                'sys-restart': self.systemRestart,
-                                'a-restart': self.arduinoReset,
-                                'recall': self._mars.recall,
-                                'stream open': self._stream.open,
-                                'stream close': self._stream.close,
-                                'brake': self._arduino.brake,
-                                'motors off': self._pinHash['motorRelay'].toggleOn ,
-                                'lasers off': self._pinHash['laserRelay'].toggleOn,
-                                'led off': self._pinHash['ledRelay'].toggleOn,
-                                'hibernate': self.hibernate,
-                                'start': self.start,
-                                'exit': self.exit,
-                                'disable watchdog': self.disableWatchdog,
-                                'enable watchdog': self.enableWatchdog
-                                'enable recall':
-                             }
-
-
     def start(self):
         self._pinHash['motorRelay'].changeState(0)
         logging.info("Motor relay started")
@@ -217,13 +233,38 @@ class Jetson(object):
         self._pinHash['laserRelay'].changeState(0)
         logging.info("Laser relay started")
 
+        logging.info("Starting motor...")
+        self._motor.start()
+
+        logging.info("Starting stream...")
+        self._sysCommands['stream open']()
+
         logging.info("Starting threads...")
-        self.startThreads()
+        self.manageThreads('start')
 
     def exit(self):
-        self._sysCommands['brake']()
-        #self._sysCommands['a-poweroff']()
+
+        logging.info("Stopping threads")
+        self.manageThreads('stop')
+
+        logging.info("Braking motor...")
+        self._motor.brake()
+
+        logging.info("Closing stream...")
         self._sysCommands['stream close']()
+
+        logging.info(("Turning off LEDs..."))
+        self._led.issue(0)
+
+        self._pinHash['motorRelay'].changeState(1)
+        logging.info("Motor relay stopped")
+        self._pinHash['ledRelay'].changeState(1)
+        logging.info("LED relay stopped")
+        self._pinHash['laserRelay'].changeState(1)
+        logging.info("Laser relay stopped")
+
+        sys.exit()
+
 
     def hibernate(self):
         self._pinHash['motorRelay'].changeState(1)
@@ -240,25 +281,11 @@ class Jetson(object):
     def turnOffComponent(self,indentifier):
         self._pinHash[indentifier].changeState(1) #inverted Logic: 1 --> Off
 
-    def disableWatchdog(self):
-        if self._watchdog._enableWatchdog == False:
-            logging.warning("watchdog is already disabled")
-        else:
-            self._watchdog._enableWatchdog = True
-            logging.critical("watchdog disabled")
-
-    def enableWatchdog(self):
-        if self._watchdog._enableWatchdog == True:
-            logging.warning("watchdog is already enabled")
-        else:
-            self._watchdog._enableWatchdog = True
-            logging.critical("watchdog enabled")
-
     def resetArduino(self):
-        self.turnOnComponent("resetArduino")
-        time.sleep(.2)
-        self.turnOffComponent("resetArduino")
 
+        self.turnOffComponent("resetArduino")
+        time.sleep(.2)
+        self.turnOnComponent("resetArduino")
 
 
 

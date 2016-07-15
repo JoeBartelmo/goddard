@@ -33,7 +33,7 @@ class Watchdog(object):
         self._enableWatchdog = False
         self._electricStatistics = {'underVoltage': 0, 'overVoltage': 0, 'overCurrent': 0, 'batteryPercentage':0}
         self._shouldBrake = 0
-        self._levels = jetson._config.watchdog
+        self._levels = jetson._config.constants
 
 
     def watch(self):

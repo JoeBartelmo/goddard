@@ -107,6 +107,14 @@ class Arduino(object):
         return self._controller.inWaiting()
 
 
+    def powerOn(self):
+        pass
+
+    def powerOff(self):
+        pass
+
+    def reset(self):
+        pass
+
     def brake(self):
-        self._controller.write('M0010')
-        logging.info("Arduino braking...")
+        pass

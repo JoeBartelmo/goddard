@@ -2,6 +2,7 @@ import logging
 import time
 import sys
 from Arduino import Arduino
+from ArduinoDevices import Motor, LED
 from Jetson import Jetson
 from Mars import Mars
 from Stream import Stream
@@ -12,24 +13,25 @@ class System(object):
     def __init__(self, config, timestamp):
 
         #Init devices
-        self._arduino, self._mars = self.initDevices(config)
+
+        self._devices = self.initDevices(config)
 
         #Prepare stream
-        self._stream = Stream(config, timestamp)
+        self._devices['Stream'] = Stream(config, timestamp)
 
         logging.info("Connecting Jetson")
-        self._jetson = Jetson(self._arduino, config, self._mars, timestamp, self._stream)
+        self._jetson = Jetson(self._devices, config, timestamp)
         time.sleep(.5)
+
+
         logging.info("All devices connected")
         logging.info("System initialized.")
+
+
         answer = raw_input("Would you like to start? Y/N: ")
         if answer.lower() in ('y', 'yes'):
-            print ("The threads will start. ")
+            print ("The system will start. ")
             self._jetson.start()
-
-
-
-
 
 
     def initDevices(self, config):
@@ -47,8 +49,14 @@ class System(object):
         myMars = Mars(myArduino, config)
         time.sleep(.5)
 
+        devices = {
+                    'Motor': Motor(),
+                    'LED': LED(),
+                    'Mars': myMars,
+                    'Arduino': myArduino,
 
-        return myArduino, myMars
+        }
+        return devices
 
 
 

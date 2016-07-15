@@ -17,9 +17,12 @@ class ConcreteMotorInput(object):
     'D' is a decimal integer (0-9) that defines the speed(Each integer roughly corresponds 1Mph or .5m/s)
     """
     def __init__(self, code, arduino):
+
         self._code = code
         self._type = 'M'
         self._arduino = arduino
+
+
 
     def valid(self):
 

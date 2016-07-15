@@ -31,7 +31,7 @@ create 8 pin objects:
 
 gpio_list = [57,160,161,162,163,164,165,166]
 
-class GpioPin():
+class GpioPin(object):
 
     def __init__(self, gpioPin, direction = 'out'):
         self._state = 0
