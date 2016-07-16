@@ -1,7 +1,7 @@
 {
   "communications" : {
-    "arduinoPath":"/dev/ttyACM0",
-    "masterIP":"129.21.134.184"
+    "arduinoPath":"/dev/ttyACM3",
+    "masterIP":"129.21.56.78"
   },
   "battery" : {
     "currentBattery": 192.0
@@ -14,26 +14,30 @@
   "logging": {
     "shouldLog": true,
     "logName": "Test3",
-    "indexPath":"/home/ubuntu/mars-PyDetect/PyDetect/serverSide-stream/index.js",
-    "outputPath":"/home/ubuntu/mars-PyDetect/PyDetect/mars-controller"
+    "indexPath":"/home/ubuntu/PyDetect/serverSide-stream/index.js",
+    "outputPath":"/home/ubuntu/PyDetect/mars-controller"
   },
+  "watchdog": {
+    "underVoltageAlert": 12.0,
+    "underVoltageWarning": 11.0,
+    "underVoltageCritical": 10.5,
+
+    "overVoltageAlert": 36,
+    "overVoltageWarning": 40,
+    "overVoltageCritical": 45,
+
+    "battPercentAlert":20,
+    "battPercentWarning":15,
+    "battPercentCritical":10
+
+    },
   "constants": {
     "baudRate": 9600,
     "timeout": 5,
     "totalBattery": 192.0,
     "trackLength": 1500.0,
 
-    "underVoltageAlert": 13,
-    "underVoltageWarning": 12,
-    "underVoltageCritical": 11,
 
-    "overVoltageAlert": 36,
-    "overVoltageWarning": 40,
-    "overVoltageCritical": 45,
-
-    "overCurrentAlert": 15,
-    "overCurrentWarning": 20,
-    "overCurrentCritical": 25
   }
 }
 
