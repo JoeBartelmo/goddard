@@ -1,194 +1,109 @@
 import logging
 
 
-"""
-Jeff Maggio 07/10/16
-    
-    added 5 methods to jetson
-        turnOnComponent()
-        turnOffComponent()
-        enableWatchdog()
-        disableWatchdog()
-        resetArduino()
-    added 2 new commands 
-        enable watchdog
-        disable watchdog
-    added methods to test distance
-    removed arduino poweroff/poweron from Arduino
-    moved arduino reset to Jetson (needed access to GPIO objects)
-
-    NEED TO:
-    add documentation
-    add an showalerts indicator
-    add battery monitoring
-    add current monitoring
-
-"""
-
-
 class Watchdog(object):
     def __init__(self, jetson):
         self._jetson = jetson
         self._config = jetson._config
-        self._enableWatchdog = False
-        self._electricStatistics = {'underVoltage': 0, 'overVoltage': 0, 'overCurrent': 0, 'batteryPercentage':0}
-        self._shouldBrake = 0
-        self._levels = jetson._config.constants
+        self._electricStatistics = {'underVoltage': 0, 'overVoltage': 0, 'overCurrent': 0}
+        self._distanceFromObject = {'front': None, 'back': None}  # for when distance sensors are added
 
 
-    def watch(self):
-        if self._enableWatchdog == True:
-            self.sniff()
-            self.react()
+    def sniffPower(self):
+        """
+        this method 'sniffs' the telemetry data of Mars and checks to see if it is within a normal range
 
-    def sniff(self):
+            this modifies the self._electricStatistics attribute which indicates the severity of the problem.
+            0 is nominal, 1 is Alert level (alerts the operator), 2 is warning level (triggers a recall)
+            3 is critical level (triggers a shutdown)
+
+        (currently this checks for under-voltage,over-voltage and over-current. However, this will most certainly be expanded
+        once I implement distance sensing.)
+
+        """
 
         sysV = self._jetson._mars._statistics['SystemVoltage']
         sysI = self._jetson._mars._statistics['SystemCurrent']
-        frontDistance = self._jetson._mars._statistics['frontDistance']
-        backDistance = self._jetson._mars._statistics['backDistance']
+        levels = self._config.constants
 
-        self.testOverCurrent(sysI)
-        self.testOverVoltage(sysV)
-        self.testUnderVoltage(sysV)
-        self.testDistance(frontDistance,backDistance)
+        self.testOverCurrent(sysI, levels)
+        self.testOverVoltage(sysV, levels)
+        self.testUnderVoltage(sysV, levels)
 
+        return self._electricStatistics
 
-    def testOverVoltage(self, sysV):
+    def testOverVoltage(self, sysV, levels):
         #testing for overVoltage
-        if sysV > self._levels.overVoltageCritical:
+        if sysV > levels.overVoltageCritical:
             self._electricStatistics['overVoltage'] = 3 #overVoltage is at critical level
-        elif sysV > self._levels.overVoltageWarning and sysV < self._levels.overVoltageCritical:
+            logging.critical("SUPPLY VOLTAGE IS ABOVE CRTICAL LEVELS")
+        elif sysV in range(levels.overVoltageWarning,levels.overVoltageCritical):
             self._electricStatistics['overVoltage'] = 2 #overVoltage is at warning level
-        elif sysV > self._levels.overVoltageAlert and sysV < self._levels.overVoltageWarning:
+            logging.warning("supply voltage is above recommended levels, damage to components may occur")
+        elif sysV in range(levels.overVoltageAlert,levels.overVoltageWarning):
             self._electricStatistics['overVoltage'] = 1 #overVoltage is at alert level
-        elif sysV < self._levels._overVoltageAlert:
+            logging.info("voltage is higher than usual, recommend checking power source and VRM")
+        elif sysV < levels._overVoltageAlert:
             self._electricStatistics['overVoltage'] = 0
+            logging.info("")
 
-    def testUnderVoltage(self, sysV):
+    def testUnderVoltage(self, sysV, levels):
         #testing for underVoltage
-        if sysV < self._levels.underVoltageCritical:
+        if sysV < levels.underVoltageCritical:
             self._electricStatistics['underVoltage'] = 3 #underVoltage is at critical level
-        elif sysV < self._levels.underVoltageWarning and sysV > self._levels.underVoltageCritical:
+            logging.critical("SUPPLY VOLTAGE IS CRITIALLY LOW, HIGH RISK OF DAMAGE TO BATTERIES")
+        elif sysV in range(levels.underVoltageWarning,levels.underVoltageCritical):
             self._electricStatistics['underVoltage'] = 2 #underVoltage is at warning level
-        elif sysV < self._levels.underVoltageAlert and sysV > self._levels.underVoltageWarning:
+        elif sysV in range(levels.underVoltageAlert,levels.underVoltageWarning):
             self._electricStatistics['underVoltage'] = 1 #underVoltage is at alert level
-        elif sysV > self._levels.underVoltageAlert:
+            logging.warning("Supply Voltage extremely low, BATTERIES MAY BE CLOSE TO DEATH ")
+        elif sysV > levels.underVoltageAlert:
             self._electricStatistics['underVoltage'] = 0
+            logging.info("battery voltage is too low, recommend ending run soon")
 
-
-    def testOverCurrent(self, sysI):
+    def testOverCurrent(self, sysI, levels):
         #testing for overCurrent
-        if sysI > self._levels.overCurrentCritical:
+        if sysI > levels.overCurrentCritical:
             self._electricStatistics['overCurrent'] = 3 #overCurrent is at critical level
-        elif sysI > self._levels.overCurrentWarning and sysI < self._levels.overCurrentCritical:
+            logging.critical("SYSTEM CURRENT IS TOO HIGH. MARS MAY BE SAFETY HAZARD")
+        elif sysI in range(levels.overCurrentWarning,levels.overCurrentCritical):
             self._electricStatistics['overCurrent'] = 2 #overCurrent is at warning level
-        elif sysI > self._levels.overCurrentAlert and sysI < self._levels.overCurrentWarning:
+            logging.warning("Mars is pulling too much current and is at risk of being a safety hazard")
+        elif sysI in range(levels.overCurrentAlert,levels.overCurrentWarning):
             self._electricStatistics['overCurrent'] = 1 #overCurrent is at alert level
-        elif sysI < self._levels._overCurrentAlert:
+            logging.info("Mars is pulling more current than usual. Recommend checking over components for any possible problems")
+        elif sysI < levels._overCurrentAlert:
             self._electricStatistics['overCurrent'] = 0
 
-    def testBatteryPercentage(self,batt):
-         #testing for batteryPercentage
-        if batt < self._levels.battPercentCritical:
-            self._electricStatistics['batteryPercentage'] = 3 #batteryPercentage is at critical level
-        elif batt < self._levels.battPercentWarning and batt > self._levels.battPercentCritical:
-            self._electricStatistics['batteryPercentage'] = 2 #batteryPercentage is at warning level
-        elif batt < self._levels.battPercentAlert and batt > self._levels.battPercentWarning:
-            self._electricStatistics['batteryPercentage'] = 1 #batteryPercentage is at alert level
-        elif batt > self._levels.battPercentAlert:
-            self._electricStatistics['batteryPercentage'] = 0
-
-    def testDistance(self,frontDistance,backDistance):
-        distanceList = [frontDistance,backDistance]
-        if frontDistance == 'out of range' and backDistance == 'out of range':
-            self._shouldBrake = 0
-        else:
-            distanceList = filter(lambda a: a != 'out of range', distanceList)
-            if min(distanceList) < self._levels.brakingDistance:
-                self._shouldBrake = 1
+    def sniffUltrasonicDistance(self):
+        return self._distanceFromObject
 
 
     def react(self):
-        self.reactToOverVoltage()
-        self.reactToUnderVoltage()
-        self.reactToOverCurrent()
-        self.reactToBattPercent()
-        if all(value == 0 for value in self._electricStatistics.values()) == True:
-            self._jetson._turnOffComponent('warningLED') #turning off warning LED if all values == 0
-
-    def reactToBattPercent(self):
-        pass
-
-    def reactToOverCurrent(self):
-        pass
-
-
-    def reactToUnderVoltage(self):
-        value = self._electricStatistics['underVoltage']
-        if value == 3:
-            self._jetson._turnOnComponent('warningLED')
-            logging.critical("battery voltage is at critical levels")
-            logging.critical("currently at {0}volts, warning level is {1}volts"\
-                .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.underVoltageWarning))
-            logging.critical("battery percentage indicator may be wrong!")
-            logging.critical("initating sys-shutdown")
-            self._jetson.systemShutdown()
-        elif value == 2:
-            self._jetson._turnOnComponent('warningLED')
-            logging.critical("battery voltage is getting low")
-            logging.critical("currently at {0}volts, warning level is {1}volts"\
-                .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.underVoltageWarning))
-            logging.critical("battery percentage indicator may be wrong!")
-            logging.critical("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
-        elif value == 1:
-            self._jetson._turnOnComponent('warningLED')
-            logging.warning("battery voltage is getting low")
-            logging.warning("currently at {0}volts, warning level is {1}volts"\
-                .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.underVoltageWarning))
-            logging.warning("battery percentage indicator may be wrong!")
-            logging.warning("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
-
-
-    def reactToOverVoltage(self):
-        value = self._electricStatistics['overVoltage']
-    #OVERVOLTAGE    
-        if value == 3:
-            self._jetson._turnOnComponent('warningLED')
-            self._jetson._turnOffComponent('motorRelay')
-            self._jetson._turnOffComponent('ledRelay')
-            self._jetson._turnOffComponent('laserRelay')
-            self._jetson._turnOffComponent('relay4')
-            logging.critical("supply voltage is too high, components are at risk of being damaged")
-            logging.critical("currently at {0}volts, expected less than {1}volts"\
-                .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.overVoltageAlert))
-            logging.critical("all components have been turned off")
-            logging.critical("voltage sensor failure is probable cause")
-            logging.critical("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
-        elif value == 2:
+        if 3 in self._electricStatistics.values():
+            self._jetson.system_shutdown()
+        elif 2 in self._electricStatistics.values():
             self._jetson.mars.recall()
-            self._jetson._turnOnComponent('warningLED')
-            logging.critical("supply voltage is much higher than usual")
-            logging.critical("currently at {0}volts, expected less than {1}volts")
-            logging.critical("recalling Mars for inspection")
-            logging.critical("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
-        elif value == 1:
-            self._jetson._turnOnComponent('warningLED')
-            logging.warning("Voltage is higher than expected")
-            logging.warning("currently at {0}volts, expected less than {1}volts"\
-                .format(self._jetson._mars._statistics['SystemVoltage'],self._levels.overCurrentAlert))
-            logging.warning("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
 
-    def disable(self):
-        if self._enableWatchdog == False:
-            logging.warning("watchdog is already disabled")
-        else:
-            self._enableWatchdog = True
-            logging.critical("watchdog disabled")
+        #engaging the brake if we are too close to an object
+        frontDistance = self._distanceFromObject['front']
+        backDistance = self._distanceFromObject['back']
+        brakingDistance = self._config.constants.brakingDistance
 
-    def enable(self):
-        if self._enableWatchdog == True:
-            logging.warning("watchdog is already enabled")
-        else:
-            self._enableWatchdog = True
-            logging.critical("watchdog enabled")
+        if frontDistance != 'out of range':
+            if backDistance < brakingDistance:
+                logging.warning("object obstructing path detected. \r\n Engaging brake")
+                self._jetson._arduino.brake() #the control code to brake Mars
+
+
+        if backDistance != 'out of range':
+            if backDistance < brakingDistance:
+                logging.warning("object obstructing path detected. \r\n Engaging brake")
+                self._jetson._arduino.brake() #the control code to brake Mars
+
+
+
+
+
+
+

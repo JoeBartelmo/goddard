@@ -1,7 +1,7 @@
 {
   "communications" : {
-    "arduinoPath":"/dev/ttyACM3",
-    "masterIP":"129.21.56.78"
+    "arduinoPath":"/dev/ttyACM0",
+    "masterIP":"129.21.134.184"
   },
   "battery" : {
     "currentBattery": 192.0
@@ -14,8 +14,8 @@
   "logging": {
     "shouldLog": true,
     "logName": "Test3",
-    "indexPath":"/home/ubuntu/PyDetect/serverSide-stream/index.js",
-    "outputPath":"/home/ubuntu/PyDetect/mars-controller"
+    "indexPath":"/home/ubuntu/mars-PyDetect/PyDetect/serverSide-stream/index.js",
+    "outputPath":"/home/ubuntu/mars-PyDetect/PyDetect/mars-controller"
   },
   "constants": {
     "baudRate": 9600,
