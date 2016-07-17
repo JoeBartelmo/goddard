@@ -40,7 +40,7 @@ class GpioPin(object):
         if gpioPin in gpio_list:
             self._gpioPin = gpioPin
             #self.setup()
-            self.changeState(0)
+            self.toggleOn()
         else:
             logging.warning("GPIO PIN SETUP FAILED\r\nGPIO pin {} does not exist".format(str(gpioPin)))
             logging.warning("GPIO pin must be one of the following {}".format(str(gpio_list)))
@@ -69,10 +69,16 @@ class GpioPin(object):
     def toggleOn(self):
         if self._direction == "out":
             with open('/sys/class/gpio/gpio{}/value'.format(str(self._gpioPin)),'w') as value_file:
-                value_file.write(str(1))
+                value_file.write(str(0))
         else:
             raise ValueError("pin must be an output to change it's state")
 
+    def toggleOff(self):
+        if self._direction == "out":
+            with open('/sys/class/gpio/gpio{}/value'.format(str(self._gpioPin)),'w') as value_file:
+                value_file.write(str(1))
+        else:
+            raise ValueError("pin must be an output to change it's state")
 
 
 

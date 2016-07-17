@@ -106,15 +106,3 @@ class Arduino(object):
         """
         return self._controller.inWaiting()
 
-
-    def powerOn(self):
-        pass
-
-    def powerOff(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def brake(self):
-        pass

@@ -62,15 +62,12 @@ class Jetson(object):
         return pinHash
 
     def initCommands(self):
-        self._sysCommands = {'sys-shutdown': self.systemShutdown,
-                                'sys-restart': self.systemRestart,
-                                'a-poweron': self._arduino.powerOn,
-                                'a-poweroff': self._arduino.powerOff,
-                                'a-restart': self._arduino.reset,
+        self._sysCommands = {'system shutdown': self.systemShutdown,
+                                'system restart': self.systemRestart,
                                 'recall': self._mars.recall,
                                 'stream open': self._stream.open,
                                 'stream close': self._stream.close,
-                                'brake': self._arduino.brake,
+                                'reset arduino': self.resetArduino,
                                 'motors off': self._pinHash['motorRelay'].toggleOn ,
                                 'lasers off': self._pinHash['laserRelay'].toggleOn,
                                 'led off': self._pinHash['ledRelay'].toggleOn,
@@ -105,7 +102,7 @@ class Jetson(object):
 
         if controlCode in self._motor._motorCodes:
             return self._motor.issue(controlCode, self._arduino)
-        elif controlCode in self._led.LEDcodes:
+        elif controlCode in self._led._LEDcodes:
             return self._led.issue(self._arduino)
         elif controlCode in self._stream._streamCodes:
             return self._stream.issue(controlCode)

@@ -20,38 +20,37 @@ class LED(object):
             logging.info("Brightness must be 0-9")
 
     def write(self):
-        self._lastCommand = self._arduino.write('L' + str(self._brightness))
+        self._arduino.write('L' + str(self._brightness))
 
 
 class Motor(object):
 
     def __init__(self):
         self._motorCodes = ['forward', 'backward', 'enable brake', 'disable brake', 'enable motor', 'disable motor']
-        self._speed = 4
+        self._speed = 0
         self._lastCommand = None
-        self._direction = 1
-        self._brake = 1
+        self._direction = 0
+        self._brake = 0
         self._enabled = 0
 
     def issue(self, myCode, arduino):
         self._arduino = arduino
 
         if myCode in ('forward', 'backward'):
-            self.movement()
+            self.movement(myCode)
         elif myCode in ('enable motor', 'disable motor'):
             self.toggleMotor(myCode)
         elif myCode in ('enable brake', 'disable brake'):
             self.toggleBrake(myCode)
 
 
-    def movement(self):
+    def movement(self, myCode):
 
         rawSpeed = raw_input("How fast? (0-9)")
-        rawDirection = raw_input("forward or backward")
-        if RepresentsInt(rawSpeed) and rawDirection in ('forward', 'backward'):
+        if RepresentsInt(rawSpeed):
             if int(rawSpeed) < 10 and int(rawSpeed) >= 0:
                 self._speed = rawSpeed
-                if rawDirection == 'forward':
+                if myCode == 'forward':
                     self._direction = 1
                 else:
                     self._direction = 0
@@ -70,7 +69,7 @@ class Motor(object):
     def toggleMotor(self, myCode):
         if myCode == 'enable motor':
             self._enabled = 1
-        if myCode == 'disable motor':
+        elif myCode == 'disable motor':
             self._enabled = 0
 
         self.write()
@@ -78,7 +77,7 @@ class Motor(object):
     def toggleBrake(self, myCode):
         if myCode == 'enable brake':
             self._brake = 1
-        if myCode == 'disable brake':
+        elif myCode == 'disable brake':
             self._brake = 0
 
         self.write()
@@ -92,15 +91,13 @@ class Motor(object):
         self.write()
 
     def brake(self):
-        self._arduino.write('M0010')
+        self._arduino.write("M0010")
         logging.info("Arduino braking...")
 
 
     def write(self):
-        self._lastCommand = self._arduino.write('M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed))
-
-
-
+        print('M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed))
+        self._arduino.write('M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed))
 
 
 
