@@ -39,19 +39,21 @@ class System(object):
         #self._arduino.arduinoPowerOn()
         logging.info("Connecting arduino...")
         logging.info('Attempting to connect Arduino')
-        myArduino = Arduino(config)
+        myArduino = Arduino(config) #this line must be changed if multiple arduinos are used
         time.sleep(.5)
 
         #Flush buffers
         myArduino.flushBuffers()
 
         logging.info("Starting Mars...")
-        myMars = Mars(myArduino, config)
+        myLED = LED()
+        myMotor = Motor()
+        myMars = Mars(myArduino, config, self._jetson._valmar, self._jetson._watchdog,myLED,myMotor)
         time.sleep(.5)
 
         devices = {
-                    'Motor': Motor(),
-                    'LED': LED(),
+                    'Motor': myMotor,
+                    'LED': myLED,
                     'Mars': myMars,
                     'Arduino': myArduino,
 

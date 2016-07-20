@@ -13,8 +13,15 @@ class Mars(object):
     stats on time, battery, distance, power, and more.
     """
 
-    def __init__(self, arduino, config):
+    def __init__(self, arduino, config, valmar, watchdog, LED, Motor):
+        """ how to properly integrate valmar?"""
         self._arduino = arduino
+        self._valmar = valmar
+        self._watchdog = watchdog
+        self._LED = LED
+        self._Motor = Motor
+
+
         self._config = config
         self._integTime = time.time()
         self._currentBattery = self._config.constants.totalBattery
@@ -82,48 +89,20 @@ class Mars(object):
         batteryRemaining = self.batteryRemaining(power)
         self._statistics['BatteryRemaining'] = batteryRemaining
 
-        self.safteyCheck()
-
-    def safteyCheck(self):
-        """
-        Function to check the statistics pulled for any alarming signs (IE low battery)
-        :return:
-        """
-
-        #If recall is enabled
-        if (self._config.autonomous_action.enableRecall and self._recallOverride == False):
-
-            #If the battery remaining is less than or equal to the configuration recall percent
-            if (float(self._statistics['BatteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
-                print("The battery has reached critical levels. Recall is about to be issued, would you like to override? ")
-                print("WARNING : CANNOT BE UNDONE.")
-                answer = raw_input("Y / N: ")
-                if answer.lower() in ('n', 'no'):
-                    logging.warning("Battery low, recall issued")
-                    self.recall()
-                else:
-                    self._recallOverride = True
 
 
-    def recall(self):
-        """
-        Recall Mars when the battery is below the configuration threshhold
-        :return:
-        """
+        #pulling in last commands
+        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1])*self._config.conversions.codeToRpm
+        self._statistics['LEDBrightness'] = self._LED._lastCommand
 
-        print("Recall enabled in settings and ")
+        #pulling in watchdog telemetry
+        self._statistics = self._statistics.update(self._watchdog._electricStatistics)
 
-        midpoint = self._config.constants.trackLength / 2
+        #pulling in VALMAR telemetry
+        self._valmar.updateAll()
+        self._statistics = self._statistics.update(self._valmar._telemetry)
+        self._statistics["beamGap"] = self._valmar._beamGap
 
-        #If Mars is at or past the midpoint
-        if (self._statistics['TotalDistance'] >= midpoint):
-            print("Past halfway, moving forward")
-            #Move forward at full speed
-            self._arduino.write('M1104')
-        else:
-            print("Not halfway, moving back")
-            #Otherwise go back at full speed
-            self._arduino.write('M1004')
 
 
     def estimatedSpeed(self):
@@ -144,7 +123,8 @@ class Mars(object):
         """
 
         rpm = float(self._statistics['RPM']) #rpm must be a float
-        estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
+        rpmToSpeed = self._config.conversions.rpmToSpeed
+        estMps = rpm*rpmToSpeed #estimated SPEED in M/S
 
         returnEstMps = round(estMps, 1)
         self._statistics['Speed'] = returnEstMps
@@ -206,6 +186,8 @@ class Mars(object):
         totalDisplacement = round(totalDisplacement, 1)
 
         return intervalDisplacement,totalDisplacement
+
+
 
     def batteryRemaining(self,power=None, time = None):
         """

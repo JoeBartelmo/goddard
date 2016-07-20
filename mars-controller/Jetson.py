@@ -7,6 +7,7 @@ from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput,
 from GpioPin import GpioPin
 from Watchdog import Watchdog
 from Threads import InputThread, StatisticsThread
+from Valmar import Valmar
 import logging
 import csv
 import sys
@@ -34,6 +35,7 @@ class Jetson(object):
         self._header = False
 
         self._watchdog = Watchdog(self)
+        self._valmar = Valmar(self)
 
     def initDevices(self):
         self._arduino = self._devices['Arduino']
@@ -42,6 +44,7 @@ class Jetson(object):
         self._motor = self._devices['Motor']
         self._motor._arduino = self._arduino
         self._led = self._devices['LED']
+        self._led._arduino = self._arduino
         self._led._arduino = self._arduino
 
     def initPins(self):
@@ -134,9 +137,7 @@ class Jetson(object):
             #Set the integ time to the time of the last read for calculations
             self._mars._integTime = time.time()
 
-            #self._watchdog.sniffPower()
-            #self._watchdog.sniffUltrasonicDistance()
-            #self._watchdog.react()
+            # self._watchdog.watch()
 
     def displayStatistics(self, data):
         """

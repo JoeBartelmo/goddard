@@ -20,7 +20,9 @@ class LED(object):
             logging.info("Brightness must be 0-9")
 
     def write(self):
+        command = 'L' + str(self._brightness)
         self._arduino.write('L' + str(self._brightness))
+        self._lastCommand = command
 
 
 class Motor(object):
@@ -96,8 +98,9 @@ class Motor(object):
 
 
     def write(self):
-        print('M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed))
-        self._arduino.write('M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed))
+        command = 'M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed)
+        logging.info(command)
+        self._arduino.write(command)
 
 
 
