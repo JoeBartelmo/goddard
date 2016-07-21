@@ -17,13 +17,13 @@
 
   },
   "conversions": {
-    "codeToRpm" : 110,
+    "codeToRpm" : 111.1,
     "rpmToSpeed" : 0.0020228
 
   },
   "valmar":{
     "commandPath":"/home/ubuntu/PyDetect/valmar/command.json",
-    "telemetryPath":"/home/ubuntu/PyDetect/valmar/telemetry.csv",
+    "telemetryPath":"/home/ubuntu/PyDetect/valmar/telemetry.json",
     "beamGapPath":"/home/ubuntu/PyDetect/valmar/beam.gap"
 
   },
@@ -31,6 +31,7 @@
     "enableWatchdog":true,
     "recallCode":"M1005",
     "displayLogTimeout":10.0,
+    "brakingDistance":3.8,
 
     "underVoltageAlert": 12.0,
     "underVoltageWarning": 11.0,
@@ -39,6 +40,10 @@
     "overVoltageAlert": 36,
     "overVoltageWarning": 40,
     "overVoltageCritical": 45,
+    
+    "overCurrentAlert":12.0,
+    "overCurrentWarning":15.0,
+    "overCurrentCritical":18.0,
 
     "battPercentAlert":20,
     "battPercentWarning":15,

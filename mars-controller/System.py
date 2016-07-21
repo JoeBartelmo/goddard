@@ -7,6 +7,8 @@ from Jetson import Jetson
 from Mars import Mars
 from Stream import Stream
 from Threads import InputThread, StatisticsThread
+from Watchdog import Watchdog
+from Valmar import Valmar
 
 class System(object):
 
@@ -48,15 +50,19 @@ class System(object):
         logging.info("Starting Mars...")
         myLED = LED()
         myMotor = Motor()
-        myMars = Mars(myArduino, config, self._jetson._valmar, self._jetson._watchdog,myLED,myMotor)
+        myMars = Mars(myArduino, config, myLED, myMotor)
         time.sleep(.5)
+
+        myWatchDog = Watchdog(config, myArduino, myMars)
+        myValmar = Valmar(config, myMars)
 
         devices = {
                     'Motor': myMotor,
                     'LED': myLED,
                     'Mars': myMars,
                     'Arduino': myArduino,
-
+                    'Valmar': myValmar,
+                    'WatchDog': myWatchDog
         }
         return devices
 

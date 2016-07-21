@@ -5,7 +5,7 @@ class LED(object):
 
     def __init__(self):
         self._LEDcodes = ['brightness']
-        self._lastCommand = None
+        self._lastCommand = 'L0'
         self._brightness = 0
 
 
@@ -30,7 +30,7 @@ class Motor(object):
     def __init__(self):
         self._motorCodes = ['forward', 'backward', 'enable brake', 'disable brake', 'enable motor', 'disable motor']
         self._speed = 0
-        self._lastCommand = None
+        self._lastCommand = 'M0000'
         self._direction = 0
         self._brake = 0
         self._enabled = 0
@@ -100,6 +100,7 @@ class Motor(object):
     def write(self):
         command = 'M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed)
         logging.info(command)
+        self._lastCommand = command
         self._arduino.write(command)
 
 

@@ -13,11 +13,8 @@ class Mars(object):
     stats on time, battery, distance, power, and more.
     """
 
-    def __init__(self, arduino, config, valmar, watchdog, LED, Motor):
-        """ how to properly integrate valmar?"""
+    def __init__(self, arduino, config, LED, Motor):
         self._arduino = arduino
-        self._valmar = valmar
-        self._watchdog = watchdog
         self._LED = LED
         self._Motor = Motor
 
@@ -35,9 +32,6 @@ class Mars(object):
         statistics.setdefault('TotalDisplacement', 0)
         statistics.setdefault('BatteryRemaining', self._config.battery.currentBattery)
 
-
-
-
     def generateStatistics(self):
         """
         Through raw data and the work of helper functions, this method populates a dictionary stored attribute of Mars,
@@ -49,6 +43,9 @@ class Mars(object):
         serialData = self._arduino.serial_readline()
         rawArray = re.split(",", serialData)
 
+        while(len(rawArray) < 5):
+            serialData = self._arduino.serial_readline()
+            rawArray = re.split(",", serialData)
         #Assign integ time for use of helper functions
         copy = self._integTime
         currenttime = time.time()
@@ -57,7 +54,8 @@ class Mars(object):
         print("Integ time:" + str(self._integTime))
         self._statistics['RunClock'] = round(time.time() - self._arduino._timeInit, 4)
 
-        #print(rawArray)
+
+        print(rawArray)
         rpm = rawArray[0]
         self._statistics['RPM'] = rpm
         sysV = rawArray[1]
@@ -89,21 +87,11 @@ class Mars(object):
         batteryRemaining = self.batteryRemaining(power)
         self._statistics['BatteryRemaining'] = batteryRemaining
 
-
-
         #pulling in last commands
-        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1])*self._config.conversions.codeToRpm
+        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1:]) * self._config.conversions.codeToRpm
         self._statistics['LEDBrightness'] = self._LED._lastCommand
 
-        #pulling in watchdog telemetry
-        self._statistics = self._statistics.update(self._watchdog._electricStatistics)
-
-        #pulling in VALMAR telemetry
-        self._valmar.updateAll()
-        self._statistics = self._statistics.update(self._valmar._telemetry)
-        self._statistics["beamGap"] = self._valmar._beamGap
-
-
+        return self._statistics
 
     def estimatedSpeed(self):
         """
