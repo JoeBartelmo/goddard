@@ -109,7 +109,7 @@ class Jetson(object):
 
         if controlCode in self._motor._motorCodes:
             return self._motor.issue(controlCode, self._arduino)
-        elif ("forward" , "backward") in controlCode:
+        elif "forward" in controlCode or "backward" in controlCode:
             return self._motor.movement(controlCode)
         elif "brightness" in controlCode:
             return self._led.issue(self._arduino, controlCode)
