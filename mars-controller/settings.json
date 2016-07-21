@@ -30,6 +30,7 @@
   "watchdog": {
     "enableWatchdog":true,
     "recallCode":"M1005",
+    "displayLogTimeout":10.0,
 
     "underVoltageAlert": 12.0,
     "underVoltageWarning": 11.0,

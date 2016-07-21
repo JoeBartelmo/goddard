@@ -1,20 +1,30 @@
 import logging
-
+import time
 
 class Watchdog(object):
     def __init__(self, jetson):
         self._jetson = jetson
         self._config = jetson._config
 
-        self._electricStatistics = {'underVoltageLevel': 0, 'overVoltageLevel': 0, 'overCurrentLevel': 0, 'batteryPercentageLevel': 0}
+        self._enableWatchdog = self._levels.enableWatchdog
+        self._levels = jetson._config.watchdog
+        self._displayLogTimeout = self._levels.displayLogTimeout
 
         self._shouldBrake = 0
-        self._levels = jetson._config.watchdog
-        self._enableWatchdog = self._levels.enableWatchdog
+        self._loggingTime = 0
+
+        self._shouldDisplay = {"underVoltage":True,"overVoltage":True,"batteryPercentage":True,"overCurrent":True}
+        self._electricStatistics = {'underVoltageLevel': 0, 'overVoltageLevel': 0, 'overCurrentLevel': 0,
+                                    'batteryPercentageLevel': 0}
+
 
     def watch(self):
         self.sniff()
         if self._enableWatchdog == True:
+            waitTime = time.time() - self._loggingTime
+            if waitTime > self._displayLogTimeout:
+                self._shouldDisplay = self._shouldDisplay.fromkeys(self._shouldDisplay.iterkeys(), True)
+                self._loggingTime = time.time()
             self.bark()
 
     def sniff(self):
@@ -93,37 +103,68 @@ class Watchdog(object):
 
 
     def barkAtBattPercent(self):
-        pass
+        value = self._electricStatistics['batteryPercentageLevel']
+        display = self._shouldDisplay["batteryPercentage"]
+        if value == 3:
+            self._jetson._turnOnComponent('batteryLED')
+            if display == True:
+                logging.critical("battery level at warning level 3")
+                logging.critical("recommend initiating recall")
+        if value == 2:
+            self._jetson._turnOnComponent('batteryLED')
+            if display == True:
+                logging.critical("battery level at warning level 2")
+                logging.critical("recommend ending run soon")
+        if value == 1:
+            self._jetson._turnOnComponent('batteryLED')
+            if display == True:
+                logging.warning("battery level at warning level 1")
+
 
     def barkAtOverCurrent(self):
-        pass
+        value = self._electricStatistics['overCurrentLevel']
+        display = self._shouldDisplay["overCurrent"]
+        if value == 3:
+            self._jetson._turnOnComponent('warningLED')
+            if display == True:
+                logging.critical("overCurrent at warning level 3")
+                logging.critical("too much current detected! Recommend SHUTDOWN")
+        if value == 2:
+            self._jetson._turnOnComponent('warningLED')
+            if display == True:
+                logging.critical("overCurrent at warning level 2")
+                logging.critical("current draw is much higher than expected")
+        if value == 1:
+            self._jetson._turnOnComponent('warningLED')
+            if display == True:
+                logging.warning("overCurrent at warning level 1")
+
 
     def barkAtUnderVoltage(self):
         value = self._electricStatistics['underVoltageLevel']
         if value == 3:
             self._jetson._turnOnComponent('warningLED')
-            logging.critical("battery voltage is at critical levels")
-            logging.critical("currently at {0}volts, warning level is {1}volts" \
-                             .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.underVoltageWarning))
-            logging.critical("battery percentage indicator may be wrong!")
-            logging.critical("initating sys-shutdown")
+            self._jetson._turnOnComponent('batteryLED')
+            if self._shouldDisplay["underVoltage"] == True:
+                logging.critical("underVoltage warning at level 3")
+                logging.critical("initiating emergency shutdown")
+                self._shouldDisplay['underVoltage'] = False
             self._jetson.systemShutdown()
         elif value == 2:
             self._jetson._turnOnComponent('warningLED')
-            logging.critical("battery voltage is getting low")
-            logging.critical("currently at {0}volts, warning level is {1}volts" \
-                             .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.underVoltageWarning))
-            logging.critical("battery percentage indicator may be wrong!")
-            logging.critical(
-                "if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
+            self._jetson._turnOnComponent('batteryLED')
+            if self._shouldDisplay["underVoltage"] == True:
+                logging.critical("underVoltage warning at level 2")
+                logging.critical('battery may be near death!')
+                self._shouldDisplay['underVoltage'] = False
         elif value == 1:
             self._jetson._turnOnComponent('warningLED')
-            logging.warning("battery voltage is getting low")
-            logging.warning("currently at {0}volts, warning level is {1}volts" \
-                            .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.underVoltageWarning))
-            logging.warning("battery percentage indicator may be wrong!")
-            logging.warning(
-                "if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
+            self._jetson._turnOnComponent('batteryLED')
+            if self._shouldDisplay["underVoltage"] == True:
+                logging.warning("underVoltage warning at level 1")
+                logging.warning("battery may be close to dying, please check")
+                self._shouldDisplay['underVoltage'] = False
+
 
     def barkAtOverVoltage(self):
         value = self._electricStatistics['overVoltageLevel']
@@ -134,28 +175,22 @@ class Watchdog(object):
             self._jetson._turnOffComponent('ledRelay')
             self._jetson._turnOffComponent('laserRelay')
             self._jetson._turnOffComponent('relay4')
-            logging.critical("supply voltage is too high, components are at risk of being damaged")
-            logging.critical("currently at {0}volts, expected less than {1}volts" \
-                             .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.overVoltageAlert))
-            logging.critical("all components have been turned off")
-            logging.critical("voltage sensor failure is probable cause")
-            logging.critical(
-                "if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
+            if self._shouldDisplay['overVoltage'] == True:
+                logging.critical("overVoltage warning at level 3")
+                logging.critical("motor, LEDs, and laser circuits turned off")
+                logging.critical("recommend disabling watchdog and recalling mars")
         elif value == 2:
             self.recall()
             self._jetson._turnOnComponent('warningLED')
-            logging.critical("supply voltage is much higher than usual")
-            logging.critical("currently at {0}volts, expected less than {1}volts"\
-                             .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.overVoltageAlert))
-            logging.critical("recalling Mars for inspection")
-            logging.critical("if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
+            if self._shouldDisplay['overVoltage'] == True:
+                logging.critical("overVoltage at warning level 2")
+                logging.critical("recommend enabling a recall")
         elif value == 1:
             self._jetson._turnOnComponent('warningLED')
-            logging.warning("Voltage is higher than expected")
-            logging.warning("currently at {0}volts, expected less than {1}volts" \
-                            .format(self._jetson._mars._statistics['SystemVoltage'], self._levels.overVoltageAlert))
-            logging.warning(
-                "if you would like to disable automatic monitoring type 'disable watchdog' (NOT RECCOMENDED)")
+            if self._shouldDisplay['overVoltage'] == True:
+                logging.warning("overVoltage at warning level 1")
+                logging.warning("recommend checking power supply")
+
 
     def recall(self):
         # tell mars to head backwards toward operator
@@ -163,12 +198,14 @@ class Watchdog(object):
         logging.critical("recall initiated")
         logging.critical("type 'disable watchdog' to resume control")
 
+
     def disable(self):
         if self._enableWatchdog == False:
             logging.warning("watchdog is already disabled")
         else:
             self._enableWatchdog = True
             logging.critical("watchdog disabled")
+
 
     def enable(self):
         if self._enableWatchdog == True:

@@ -39,7 +39,7 @@ class System(object):
         #self._arduino.arduinoPowerOn()
         logging.info("Connecting arduino...")
         logging.info('Attempting to connect Arduino')
-        myArduino = Arduino(config) #this line must be changed if multiple arduinos are used
+        myArduino = Arduino(config)
         time.sleep(.5)
 
         #Flush buffers

@@ -1,5 +1,6 @@
 
 import json
+import re
 
 class Valmar():
 
@@ -18,7 +19,6 @@ class Valmar():
     def modifyCommandParameter(self, parameter, value):
         with open(self._commandPath),'r' as commandFile:
             self._commands = json.load(commandFile)
-
             self._commands[parameter] = value
 
         with open(self._commandPath, 'w') as commandFile:
@@ -32,7 +32,10 @@ class Valmar():
 
     def updateTelemetry(self):
         with open(self._telemetryPath, 'r') as telemetryFile:
-            self._telemetry = telemetryFile.readlines()[-1]
+            keys = re.split(",",telemetryFile.readlines()[0])
+            values = re.split(",",telemetryFile.readlines()[-1])
+            for element in range(len(keys)):
+                self._telemetry[keys[element]] = values[element]
 
         return self._telemetry
 
