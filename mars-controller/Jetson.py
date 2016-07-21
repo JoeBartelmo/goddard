@@ -109,8 +109,10 @@ class Jetson(object):
 
         if controlCode in self._motor._motorCodes:
             return self._motor.issue(controlCode, self._arduino)
-        elif controlCode in self._led._LEDcodes:
-            return self._led.issue(self._arduino)
+        elif "forward" or "backward" in controlCode:
+            return self._motor.movement(controlCode)
+        elif "brightness" in controlCode:
+            return self._led.issue(self._arduino, controlCode)
         elif controlCode in self._stream._streamCodes:
             return self._stream.issue(controlCode)
         elif controlCode in self._sysCommands:
@@ -240,7 +242,7 @@ class Jetson(object):
         self._motor.start()
 
         logging.info("Starting stream...")
-        self._sysCommands['stream open']()
+        self._stream.open()
 
         logging.info("Starting threads...")
         self.manageThreads('start')

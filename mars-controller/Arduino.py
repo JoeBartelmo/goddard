@@ -16,7 +16,7 @@ class Arduino(object):
         self._init = False #False until initialized
         self._arduinoPath = glob.glob('/dev/ttyACM*')[0]
 
-	print self._arduinoPath
+        print self._arduinoPath
         self._timeInit = time.time()
         self._lastLED = 'None yet'
         self._lastMotor = 'None yet'

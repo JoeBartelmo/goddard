@@ -23,7 +23,7 @@ class Stream (object):
             self.close()
         logging.info('re-initializing steam with new inputs')
         newCall = 'nohup' + ' node '+ self._indexPath + ' -w '  + self._resolution[0] + ' -h ' + self._resolution[1] + ' -b ' \
-                  + str(self._bitrate) + ' -f ' + self._logPath + ' &'
+                  + str(self._bitrate) + ' -f ' + self._logPath
         logging.info(newCall)
 
         subprocess.call([newCall], shell=True)

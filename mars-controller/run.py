@@ -61,14 +61,34 @@ def run(json_string, q = None):
 
     System(config, timestamp, q)
 
+def parseObject(jsonObject):
+    with open(jsonObject) as f:
+        json_string = "".join(line.strip() for line in f)
+
+    return json_string
+
 def main():
-    if len(sys.argv) < 2:
-        print('To few arguments, please specify a json string with which to load configuration')
+    if len(sys.argv) != 2:
+        print('Incorrect arguments, please specify a json string or object with which to load configuration')
         print('\tUsage: run.py json_string')
+        print('\tUsage: run.py object.json')
         return
+
     sys.argv.pop(0)
-    json_string = ''.join(sys.argv)
-    run(json_string)
+    print (sys.argv)
+    if sys.argv[0].lower().endswith('.json'):
+        logging.debug('Reading in settings and configurations')
+        with open(sys.argv[0]) as f:
+            configs = f.read().splitlines()
+        configString =""
+        for i in configs:
+            configString = configString + i
+        json_string = configString.replace(" ", "")
+        run(json_string)
+    else:
+        json_string = ''.join(sys.argv)
+        run(json_string)
+
 
 main()
 

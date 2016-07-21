@@ -10,14 +10,13 @@ class LED(object):
 
 
 
-    def issue(self, arduino):
+    def issue(self, arduino, controlCode):
         self._arduino = arduino
 
-        rawBright = raw_input("How bright? (0-9)")
-        if RepresentsInt(rawBright):
-            self._brightness = rawBright
-        else:
-            logging.info("Brightness must be 0-9")
+        if "brightness" in controlCode:
+            if RepresentsInt(controlCode[11]):
+                self._brightness = controlCode[11]
+                self.write()
 
     def write(self):
         command = 'L' + str(self._brightness)
@@ -28,7 +27,7 @@ class LED(object):
 class Motor(object):
 
     def __init__(self):
-        self._motorCodes = ['forward', 'backward', 'enable brake', 'disable brake', 'enable motor', 'disable motor']
+        self._motorCodes = ['enable brake', 'disable brake', 'enable motor', 'disable motor']
         self._speed = 0
         self._lastCommand = 'M0000'
         self._direction = 0
@@ -38,9 +37,7 @@ class Motor(object):
     def issue(self, myCode, arduino):
         self._arduino = arduino
 
-        if myCode in ('forward', 'backward'):
-            self.movement(myCode)
-        elif myCode in ('enable motor', 'disable motor'):
+        if myCode in ('enable motor', 'disable motor'):
             self.toggleMotor(myCode)
         elif myCode in ('enable brake', 'disable brake'):
             self.toggleBrake(myCode)
@@ -48,24 +45,25 @@ class Motor(object):
 
     def movement(self, myCode):
 
-        rawSpeed = raw_input("How fast? (0-9)")
-        if RepresentsInt(rawSpeed):
-            if int(rawSpeed) < 10 and int(rawSpeed) >= 0:
-                self._speed = rawSpeed
-                if myCode == 'forward':
-                    self._direction = 1
-                else:
-                    self._direction = 0
+        if self._enabled == 0:
+            return logging.info("Motor must be enabled before you can move! Use: enable motor")
+        if self._brake == 1:
+            return logging.info("Brake must be disabled to move! Use: disable break")
 
+        if "forward" in myCode:
+            if RepresentsInt(myCode[8]):
+                self._direction = 1
+                self._speed = myCode[8]
+                self.write()
+        elif "backward" in myCode:
+            if RepresentsInt(myCode[8]):
+                self._direction = 0
+                self._speed = myCode[9]
+                self.write()
         else:
             logging.info("Speed must be 0-9. Direction must be forward or backward.")
 
-        if self._enabled == 0:
-            logging.info("Motor must be enabled before you can move! Use: enable motor")
-        if self._brake == 1:
-            logging.info("Brake must be disabled to move! Use: disable break")
 
-        self.write()
 
 
     def toggleMotor(self, myCode):
