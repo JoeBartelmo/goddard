@@ -4,24 +4,24 @@ class InputThread(threading.Thread):
     def __init__(self, jetson):
         threading.Thread.__init__(self)
         self._jetson = jetson
-        self._stop = threading.Event()
+        self._is_running = False
 
     def run(self):
-        while 1:
+        while not self._is_running:
             self._jetson.repeatInput()
 
     def stop(self):
-        self._stop.set()
+        self._is_running = True
 
 class StatisticsThread(threading.Thread):
     def __init__(self, jetson):
         threading.Thread.__init__(self)
         self._jetson = jetson
-        self._stop = threading.Event()
+        self._is_running = False
 
     def run(self):
-        while 1:
+        while not self._is_running:
             self._jetson.statisticsController()
 
     def stop(self):
-        self._stop.set()
+        self._is_running = True

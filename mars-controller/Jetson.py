@@ -207,7 +207,7 @@ class Jetson(object):
                     self._inputT.stop()
                     self._statsT.stop()
                 except Exception as e:
-                    logging.WARNING("error starting threads ({})".format(e))
+                    logging.WARNING("error stopping threads ({})".format(e))
                     logging.WARNING("program will terminate")
                     sys.exit()
 
