@@ -25,6 +25,7 @@ class Jetson(object):
 
         self._devices = devices
         self.initDevices()
+        self.initThreads()
 
         self._pinHash = self.initPins()
         self.initCommands()
@@ -71,6 +72,7 @@ class Jetson(object):
                                 'motors off': self._pinHash['motorRelay'].toggleOn ,
                                 'lasers off': self._pinHash['laserRelay'].toggleOn,
                                 'led off': self._pinHash['ledRelay'].toggleOn,
+                                'start statistics': self._statsT.start,
                                 'hibernate': self.hibernate,
                                 'start': self.start,
                                 'exit': self.exit
@@ -170,6 +172,10 @@ class Jetson(object):
         except Exception as e:
             logging.info("unable to log data because: \r\n {}".format(e))
 
+    def initThreads(self):
+        self._inputT = InputThread(self)
+        self._statsT = StatisticsThread(self)
+
     def manageThreads(self, toggle):
             """
             This method starts the two threads that will run for the duration of the program. One scanning for input,
@@ -181,8 +187,7 @@ class Jetson(object):
                 logging.info("Attempting to start threads")
 
                 try:
-                    self._inputT = InputThread(self)
-                    self._statsT = StatisticsThread(self)
+
                     self._inputT.start()
                     self._statsT.start()
                 except Exception as e:
@@ -238,6 +243,9 @@ class Jetson(object):
 
         logging.info("Starting threads...")
         self.manageThreads('start')
+
+    def manual(self):
+        self._inputT.start()
 
     def exit(self):
 

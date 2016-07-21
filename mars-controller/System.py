@@ -28,10 +28,13 @@ class System(object):
         logging.info("System initialized.")
 
 
-        answer = raw_input("Would you like to start? Y/N: ")
+        answer = raw_input("Would you like to start? If you answer no, you will enter manual input mode.")
         if answer.lower() in ('y', 'yes'):
             print ("The system will start. ")
             self._jetson.start()
+        if answer.lower() in ('n', 'no'):
+            print ("Manual mode starting")
+            self._jetson.manual()
 
 
     def initDevices(self, config):
