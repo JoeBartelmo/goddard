@@ -61,7 +61,7 @@ class Motor(object):
                 self._speed = myCode[9]
                 self.write()
         else:
-            logging.info("Speed must be 0-9. Direction must be forward or backward.")
+            return logging.info("Speed must be 0-9. Direction must be forward or backward.")
 
 
 
