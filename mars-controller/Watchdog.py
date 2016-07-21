@@ -68,7 +68,8 @@ class Watchdog(object):
         sysI = statistics['SystemCurrent']
         frontDistance = statistics['FrontDistance']
         backDistance = statistics['BackDistance']
-
+        logging.info(sysV)
+        logging.info(sysI)
         self.sniffOverCurrent(sysI)
         self.sniffOverVoltage(sysV)
         self.sniffUnderVoltage(sysV)
@@ -80,7 +81,7 @@ class Watchdog(object):
         self.barkAtOverCurrent()
         self.barkAtBattPercent()
         if all(value == 0 for value in self._electricStatistics.values()) == True:
-            self._jetson._turnOffComponent('warningLED')  # turning off warning LED if all values == 0
+            self.turnOffComponent('warningLED')  # turning off warning LED if all values == 0
 
     def sniffOverVoltage(self, sysV):
         # testing for overVoltage
@@ -90,7 +91,7 @@ class Watchdog(object):
             self._electricStatistics['overVoltageLevel'] = 2  # overVoltage is at warning level
         elif sysV > self._levels.overVoltageAlert and sysV < self._levels.overVoltageWarning:
             self._electricStatistics['overVoltageLevel'] = 1  # overVoltage is at alert level
-        elif sysV < self._levels._overVoltageAlert:
+        elif sysV < self._levels.overVoltageAlert:
             self._electricStatistics['overVoltageLevel'] = 0
 
     def sniffUnderVoltage(self, sysV):
@@ -112,7 +113,7 @@ class Watchdog(object):
             self._electricStatistics['overCurrentLevel'] = 2  # overCurrent is at warning level
         elif sysI > self._levels.overCurrentAlert and sysI < self._levels.overCurrentWarning:
             self._electricStatistics['overCurrentLevel'] = 1  # overCurrent is at alert level
-        elif sysI < self._levels._overCurrentAlert:
+        elif sysI < self._levels.overCurrentAlert:
             self._electricStatistics['overCurrentLevel'] = 0
 
     def sniffBatteryPercentage(self, batt):

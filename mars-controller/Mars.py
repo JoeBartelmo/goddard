@@ -40,11 +40,11 @@ class Mars(object):
         :return:
         """
 
-        serialData = self._arduino.serial_readline()
+        serialData = self._arduino.serial_readline().rstrip()
         rawArray = re.split(",", serialData)
 
         while(len(rawArray) < 5):
-            serialData = self._arduino.serial_readline()
+            serialData = self._arduino.serial_readline().rstrip()
             rawArray = re.split(",", serialData)
         #Assign integ time for use of helper functions
         copy = self._integTime
@@ -57,11 +57,11 @@ class Mars(object):
 
         print(rawArray)
         rpm = rawArray[0]
-        self._statistics['RPM'] = rpm
+        self._statistics['RPM'] = float(rpm)
         sysV = rawArray[1]
-        self._statistics['SystemVoltage'] = sysV
+        self._statistics['SystemVoltage'] = float(sysV)
         sysI = rawArray[2]
-        self._statistics['SystemCurrent'] = sysI
+        self._statistics['SystemCurrent'] = float(sysI)
         frontDistance = rawArray[3]
         self._statistics['FrontDistance'] = frontDistance
 
