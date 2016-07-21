@@ -7,12 +7,16 @@ import time
 import logging
 import subprocess
 import sys
+import glob
 
 class Arduino(object):
 
     def __init__(self, config):
         self._config = config
         self._init = False #False until initialized
+        self._arduinoPath = glob.glob('/dev/ttyACM*')[0]
+
+	print self._arduinoPath
         self._timeInit = time.time()
         self._lastLED = 'None yet'
         self._lastMotor = 'None yet'
@@ -20,7 +24,7 @@ class Arduino(object):
 
         try:
             print("Attempting to connect Arduino")
-            self._controller = serial.Serial(self._config.communications.arduinoPath, self._config.constants.baudRate)
+            self._controller = serial.Serial(self._arduinoPath, self._config.constants.baudRate)
             self._init = True
             logging.info('Arduino connected')
             print("Arduino connected.")

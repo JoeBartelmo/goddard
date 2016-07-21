@@ -13,8 +13,12 @@ class Mars(object):
     stats on time, battery, distance, power, and more.
     """
 
-    def __init__(self, arduino, config):
+    def __init__(self, arduino, config, LED, Motor):
         self._arduino = arduino
+        self._LED = LED
+        self._Motor = Motor
+
+
         self._config = config
         self._integTime = time.time()
         self._currentBattery = self._config.constants.totalBattery
@@ -28,9 +32,6 @@ class Mars(object):
         statistics.setdefault('TotalDisplacement', 0)
         statistics.setdefault('BatteryRemaining', self._config.battery.currentBattery)
 
-
-
-
     def generateStatistics(self):
         """
         Through raw data and the work of helper functions, this method populates a dictionary stored attribute of Mars,
@@ -39,9 +40,12 @@ class Mars(object):
         :return:
         """
 
-        serialData = self._arduino.serial_readline()
+        serialData = self._arduino.serial_readline().rstrip()
         rawArray = re.split(",", serialData)
 
+        while(len(rawArray) < 5):
+            serialData = self._arduino.serial_readline().rstrip()
+            rawArray = re.split(",", serialData)
         #Assign integ time for use of helper functions
         copy = self._integTime
         currenttime = time.time()
@@ -50,13 +54,14 @@ class Mars(object):
         print("Integ time:" + str(self._integTime))
         self._statistics['RunClock'] = round(time.time() - self._arduino._timeInit, 4)
 
-        #print(rawArray)
+
+        print(rawArray)
         rpm = rawArray[0]
-        self._statistics['RPM'] = rpm
+        self._statistics['RPM'] = float(rpm)
         sysV = rawArray[1]
-        self._statistics['SystemVoltage'] = sysV
+        self._statistics['SystemVoltage'] = float(sysV)
         sysI = rawArray[2]
-        self._statistics['SystemCurrent'] = sysI
+        self._statistics['SystemCurrent'] = float(sysI)
         frontDistance = rawArray[3]
         self._statistics['FrontDistance'] = frontDistance
 
@@ -82,49 +87,11 @@ class Mars(object):
         batteryRemaining = self.batteryRemaining(power)
         self._statistics['BatteryRemaining'] = batteryRemaining
 
-        self.safteyCheck()
+        #pulling in last commands
+        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1:]) * self._config.conversions.codeToRpm
+        self._statistics['LEDBrightness'] = self._LED._lastCommand
 
-    def safteyCheck(self):
-        """
-        Function to check the statistics pulled for any alarming signs (IE low battery)
-        :return:
-        """
-
-        #If recall is enabled
-        if (self._config.autonomous_action.enableRecall and self._recallOverride == False):
-
-            #If the battery remaining is less than or equal to the configuration recall percent
-            if (float(self._statistics['BatteryRemaining']) <= float(self._config.autonomous_action.recallPercent)):
-                print("The battery has reached critical levels. Recall is about to be issued, would you like to override? ")
-                print("WARNING : CANNOT BE UNDONE.")
-                answer = raw_input("Y / N: ")
-                if answer.lower() in ('n', 'no'):
-                    logging.warning("Battery low, recall issued")
-                    self.recall()
-                else:
-                    self._recallOverride = True
-
-
-    def recall(self):
-        """
-        Recall Mars when the battery is below the configuration threshhold
-        :return:
-        """
-
-        print("Recall enabled in settings and ")
-
-        midpoint = self._config.constants.trackLength / 2
-
-        #If Mars is at or past the midpoint
-        if (self._statistics['TotalDistance'] >= midpoint):
-            print("Past halfway, moving forward")
-            #Move forward at full speed
-            self._arduino.write('M1104')
-        else:
-            print("Not halfway, moving back")
-            #Otherwise go back at full speed
-            self._arduino.write('M1004')
-
+        return self._statistics
 
     def estimatedSpeed(self):
         """
@@ -144,7 +111,8 @@ class Mars(object):
         """
 
         rpm = float(self._statistics['RPM']) #rpm must be a float
-        estMps = (rpm/221.0)*0.44704 #estimated SPEED in M/S
+        rpmToSpeed = self._config.conversions.rpmToSpeed
+        estMps = rpm*rpmToSpeed #estimated SPEED in M/S
 
         returnEstMps = round(estMps, 1)
         self._statistics['Speed'] = returnEstMps
@@ -206,6 +174,8 @@ class Mars(object):
         totalDisplacement = round(totalDisplacement, 1)
 
         return intervalDisplacement,totalDisplacement
+
+
 
     def batteryRemaining(self,power=None, time = None):
         """

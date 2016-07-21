@@ -7,10 +7,12 @@ from Jetson import Jetson
 from Mars import Mars
 from Stream import Stream
 from Threads import InputThread, StatisticsThread
+from Watchdog import Watchdog
+from Valmar import Valmar
 
 class System(object):
 
-    def __init__(self, config, timestamp):
+    def __init__(self, config, timestamp, q = None):
 
         #Init devices
 
@@ -20,15 +22,18 @@ class System(object):
         self._devices['Stream'] = Stream(config, timestamp)
 
         logging.info("Connecting Jetson")
-        self._jetson = Jetson(self._devices, config, timestamp)
+        self._jetson = Jetson(self._devices, config, timestamp, q)
         time.sleep(.5)
 
 
         logging.info("All devices connected")
         logging.info("System initialized.")
 
-
-        answer = raw_input("Would you like to start? If you answer no, you will enter manual input mode.")
+        if q is None:
+            answer = raw_input("Would you like to start? Y/N: ")
+        else:
+            logging.info('Would you like to start? Y/N')
+            answer = q.get()
         if answer.lower() in ('y', 'yes'):
             print ("The system will start. ")
             self._jetson.start()
@@ -49,15 +54,21 @@ class System(object):
         myArduino.flushBuffers()
 
         logging.info("Starting Mars...")
-        myMars = Mars(myArduino, config)
+        myLED = LED()
+        myMotor = Motor()
+        myMars = Mars(myArduino, config, myLED, myMotor)
         time.sleep(.5)
 
+        myWatchDog = Watchdog(config, myArduino, myMars)
+        myValmar = Valmar(config, myMars)
+
         devices = {
-                    'Motor': Motor(),
-                    'LED': LED(),
+                    'Motor': myMotor,
+                    'LED': myLED,
                     'Mars': myMars,
                     'Arduino': myArduino,
-
+                    'Valmar': myValmar,
+                    'WatchDog': myWatchDog
         }
         return devices
 

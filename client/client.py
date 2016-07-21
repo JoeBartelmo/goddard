@@ -4,6 +4,7 @@ import time
 import struct
 import pickle
 import logging
+from threading import Thread
 
 marsPort = 1337
 logPort = 1338
@@ -21,28 +22,32 @@ print 'Mars Socket and TelementryLog Socket Established!!!'
 
 #https://docs.python.org/2/howto/logging-cookbook.html
 #https://docs.python.org/2/library/logging.html#logging.LogRecord
+def receieveTelemetry(connection):
+    while True:
+        chunk = connection.recv(4)
+        if len(chunk) < 4:
+            break
+        slen = struct.unpack('>L', chunk)[0]
+        chunk = connection.recv(slen)
+        while len(chunk) < slen:
+            chunk = chunk + connection.recv(slen - len(chunk))
+        obj = pickle.loads(chunk)
+        record = logging.makeLogRecord(obj)
+        print record.msg
+
+
 try:    
     # Send data
     with open('config.json', 'r') as content_file:
         message = content_file.read().replace('\n','').replace(' ', '')
     print >>sys.stderr, 'sending "%s"' % message
     sock.sendall(message)
+    thread = Thread(target = receieveTelemetry, args = (telemetryConnection, ))
+    thread.start()
     while True:
-            chunk = telemetryConnection.recv(4)
-            if len(chunk) < 4:
-                break
-            slen = struct.unpack('>L', chunk)[0]
-            chunk = telemetryConnection.recv(slen)
-            while len(chunk) < slen:
-                chunk = chunk + telemetryConnection.recv(slen - len(chunk))
-            obj = pickle.loads(chunk)
-            record = logging.makeLogRecord(obj)
-            print record.msg
-    #iwhile True:
-    #    data = sock.recv(16)
-    #    amount_received += len(data)
-    #    if len(data) > 0:
-    #       print >>sys.stderr, 'received "%s"' % data
+        command = raw_input()
+        sock.sendall(command)
+    
 except KeyboardInterrupt:
     print 'closing socket'
     sock.close()

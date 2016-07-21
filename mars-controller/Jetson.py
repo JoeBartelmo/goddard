@@ -7,6 +7,7 @@ from CodeInput import ConcreteLEDInput, ConcreteStreamInput, ConcreteMotorInput,
 from GpioPin import GpioPin
 from Watchdog import Watchdog
 from Threads import InputThread, StatisticsThread
+from Valmar import Valmar
 import logging
 import csv
 import sys
@@ -21,7 +22,7 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, devices, config, timestamp):
+    def __init__(self, devices, config, timestamp, q = None):
 
         self._devices = devices
         self.initDevices()
@@ -33,8 +34,7 @@ class Jetson(object):
         self._timestamp = timestamp
         self._config = config
         self._header = False
-
-        self._watchdog = Watchdog(self)
+        self._q = q
 
     def initDevices(self):
         self._arduino = self._devices['Arduino']
@@ -44,6 +44,8 @@ class Jetson(object):
         self._motor._arduino = self._arduino
         self._led = self._devices['LED']
         self._led._arduino = self._arduino
+        self._watchdog = self._devices['WatchDog']
+        self._valmar = self._devices['Valmar']
 
     def initPins(self):
         """
@@ -65,7 +67,7 @@ class Jetson(object):
     def initCommands(self):
         self._sysCommands = {'system shutdown': self.systemShutdown,
                                 'system restart': self.systemRestart,
-                                'recall': self._mars.recall,
+                                'recall': self._watchdog.recall,
                                 'stream open': self._stream.open,
                                 'stream close': self._stream.close,
                                 'reset arduino': self.resetArduino,
@@ -88,7 +90,10 @@ class Jetson(object):
 
         while True:
             #Prompt for input
-            controlCode = raw_input("LED, motion, stream, or control code: \n")
+            if self._q is None:
+                controlCode = raw_input("LED, motion, stream, or control code: \n")
+            else:
+                controlCode = self._q.get()
             myCodeInput = self.recieveInput(controlCode)
             if myCodeInput == None: continue
 
@@ -125,8 +130,10 @@ class Jetson(object):
         while True:
 
             logging.debug("Generating Statistics...")
-            self._mars.generateStatistics()
-
+            statistics = self._mars.generateStatistics()
+            #inject statistics updates
+            statistics.update(self._valmar.updateTelemetry())
+            statistics.update(self._watchdog.watch(statistics))
             logging.debug("Displaying Statistics...")
             logging.info(self.displayStatistics(self._mars._statistics))
 
@@ -136,9 +143,6 @@ class Jetson(object):
             #Set the integ time to the time of the last read for calculations
             self._mars._integTime = time.time()
 
-            #self._watchdog.sniffPower()
-            #self._watchdog.sniffUltrasonicDistance()
-            #self._watchdog.react()
 
     def displayStatistics(self, data):
         """
@@ -219,12 +223,9 @@ class Jetson(object):
 
     def systemShutdown(self):
         logging.info("initiating safe shutdown")
-        logging.info("shutting down arduino")
-        self._arduino.powerOff()
         ### add functionality to cut power to motor controller
         logging.info("shutting downn this computer")
         logging.info("this connection will be lost")
-        time.sleep(1)
         subprocess.call(['sudo poweroff'], shell=True)
 
     def start(self):
@@ -291,14 +292,4 @@ class Jetson(object):
         self.turnOffComponent("resetArduino")
         time.sleep(.2)
         self.turnOnComponent("resetArduino")
-
-
-
-
-
-
-
-
-
-
 
