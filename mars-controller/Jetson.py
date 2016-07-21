@@ -81,21 +81,19 @@ class Jetson(object):
                              }
 
 
-    def repeatInput(self):
+    def safeInput(self):
         """
         Continuesly scans for controller input first identifying the type of command then checking validity
         before writing to the arduino and storing the last command.
         :return:
         """
 
-        while True:
-            #Prompt for input
-            if self._q is None:
-                controlCode = raw_input("LED, motion, stream, or control code: \n")
-            else:
-                controlCode = self._q.get()
-            myCodeInput = self.recieveInput(controlCode)
-            if myCodeInput == None: continue
+        #Prompt for input
+        if self._q is None:
+            controlCode = raw_input("LED, motion, stream, or control code: \n")
+        else:
+            controlCode = self._q.get()
+        myCodeInput = self.recieveInput(controlCode)
 
 
 
@@ -129,21 +127,19 @@ class Jetson(object):
         :return:
         """
 
-        while True:
+        logging.debug("Generating Statistics...")
+        statistics = self._mars.generateStatistics()
 
-            logging.debug("Generating Statistics...")
-            statistics = self._mars.generateStatistics()
-            #inject statistics updates
-            statistics.update(self._valmar.updateTelemetry())
-            statistics.update(self._watchdog.watch(statistics))
-            logging.debug("Displaying Statistics...")
-            logging.info(self.displayStatistics(self._mars._statistics))
+        #inject statistics updates
+        statistics.update(self._valmar.updateTelemetry())
+        statistics.update(self._watchdog.watch(statistics))
+        logging.debug("Displaying Statistics...")
+        logging.info(self.displayStatistics(self._mars._statistics))
+        logging.debug("Saving statistics...")
+        self.saveStats(self._mars._statistics)
 
-            logging.debug("Saving statistics...")
-            self.saveStats(self._mars._statistics)
-
-            #Set the integ time to the time of the last read for calculations
-            self._mars._integTime = time.time()
+        #Set the integ time to the time of the last read for calculations
+        self._mars._integTime = time.time()
 
 
     def displayStatistics(self, data):
