@@ -262,7 +262,7 @@ class Jetson(object):
         self._sysCommands['stream close']()
 
         logging.info(("Turning off LEDs..."))
-        self._led.issue(0, "brightness")
+        self._led.issue(self._arduino, "brightness 0")
 
         self._pinHash['motorRelay'].changeState(1)
         logging.info("Motor relay stopped")
