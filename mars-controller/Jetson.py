@@ -22,7 +22,7 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, devices, config, timestamp):
+    def __init__(self, devices, config, timestamp, q = None):
 
         self._devices = devices
         self.initDevices()
@@ -33,6 +33,7 @@ class Jetson(object):
         self._timestamp = timestamp
         self._config = config
         self._header = False
+        self._q = q
 
     def initDevices(self):
         self._arduino = self._devices['Arduino']
@@ -87,7 +88,10 @@ class Jetson(object):
 
         while True:
             #Prompt for input
-            controlCode = raw_input("LED, motion, stream, or control code: \n")
+            if self._q is None:
+                controlCode = raw_input("LED, motion, stream, or control code: \n")
+            else:
+                controlCode = self._q.get()
             myCodeInput = self.recieveInput(controlCode)
             if myCodeInput == None: continue
 

@@ -12,7 +12,7 @@ from Valmar import Valmar
 
 class System(object):
 
-    def __init__(self, config, timestamp):
+    def __init__(self, config, timestamp, q = None):
 
         #Init devices
 
@@ -22,15 +22,18 @@ class System(object):
         self._devices['Stream'] = Stream(config, timestamp)
 
         logging.info("Connecting Jetson")
-        self._jetson = Jetson(self._devices, config, timestamp)
+        self._jetson = Jetson(self._devices, config, timestamp, q)
         time.sleep(.5)
 
 
         logging.info("All devices connected")
         logging.info("System initialized.")
 
-
-        answer = raw_input("Would you like to start? Y/N: ")
+        if q is None:
+            answer = raw_input("Would you like to start? Y/N: ")
+        else:
+            logging.info('Would you like to start? Y/N')
+            answer = q.get()
         if answer.lower() in ('y', 'yes'):
             print ("The system will start. ")
             self._jetson.start()
