@@ -271,6 +271,8 @@ class Jetson(object):
         self._pinHash['laserRelay'].changeState(1)
         logging.info("Laser relay stopped")
 
+        self.manageThreads('stop')
+
         sys.exit()
 
 
