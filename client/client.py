@@ -1,56 +1,53 @@
 import socket
 import sys
 import time
-import struct
-import pickle
-import logging
-from threading import Thread
+from listener import ListenerThread
+from Queue import Queue
 
 marsPort = 1337
 logPort = 1338
 
-# Create TCP/IP sockets, order specified cannot be changed.
+killCommand = 'exit'
+
+##
+## Create TCP/IP sockets, order specified cannot be changed.
+##
+
+#socket that receives data from server
 telemetry = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 telemetry.bind(('localhost', logPort))
 telemetry.listen(1)
-sock = socket.create_connection(('localhost', 1337))
 
+#socket that will send data to the server
+sock = socket.create_connection(('localhost', marsPort))
 
+#accepts receiving socket
 telemetryConnection, server_address = telemetry.accept()
-print 'Mars Socket and TelementryLog Socket Established!!!'
 
-
-#https://docs.python.org/2/howto/logging-cookbook.html
-#https://docs.python.org/2/library/logging.html#logging.LogRecord
-def receieveTelemetry(connection):
-    while True:
-        chunk = connection.recv(4)
-        if len(chunk) < 4:
-            break
-        slen = struct.unpack('>L', chunk)[0]
-        chunk = connection.recv(slen)
-        while len(chunk) < slen:
-            chunk = chunk + connection.recv(slen - len(chunk))
-        obj = pickle.loads(chunk)
-        record = logging.makeLogRecord(obj)
-        print record.msg
+#Queues responsible for communicating between GUI and this socket client
+guiInput = Queue()
+guiOutput = Queue()
 
 
 try:    
-    # Send data
+    # Send configuration data
     with open('config.json', 'r') as content_file:
         message = content_file.read().replace('\n','').replace(' ', '')
-    print >>sys.stderr, 'sending "%s"' % message
     sock.sendall(message)
-    thread = Thread(target = receieveTelemetry, args = (telemetryConnection, ))
+    #launch thread that continuouly receieves data from server
+    thread = ListenerThread(None, telemetryConnection)
     thread.start()
     while True:
         command = raw_input()
         sock.sendall(command)
+        if command == killCommand:
+            time.sleep(5)#lets all messages be displayed from listener
+            sock.close()
+            thread.stop()
+            telemetryConnection.close()
+            break
     
 except KeyboardInterrupt:
     print 'closing socket'
     sock.close()
-finally:
-    print 'closing socket'
-    sock.close()
+
