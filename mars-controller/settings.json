@@ -1,6 +1,6 @@
 {
   "battery" : {
-    "currentBattery": 192.0
+    "current_battery": 192.0
 
   },
   "autonomous_action" : {
@@ -10,21 +10,21 @@
 
   },
   "logging": {
-    "shouldLog": true,
-    "logName": "Test3",
-    "indexPath":"/home/ubuntu/PyDetect/serverSide-stream/index.js",
-    "outputPath":"/home/ubuntu/PyDetect/mars-controller"
+    "should_log": true,
+    "log_name": "Test3",
+    "index_path":"/home/ubuntu/PyDetect/serverSide-stream/index.js",
+    "output_path":"/home/ubuntu/PyDetect/mars-controller"
 
   },
   "conversions": {
-    "codeToRpm" : 111.1,
-    "rpmToSpeed" : 0.0020228
+    "code_to_rpm" : 111.1,
+    "rpm_to_speed" : 0.0020228
 
   },
   "valmar":{
-    "commandPath":"/home/ubuntu/PyDetect/valmar/command.json",
-    "telemetryPath":"/home/ubuntu/PyDetect/valmar/telemetry.json",
-    "beamGapPath":"/home/ubuntu/PyDetect/valmar/beam.gap"
+    "command_path":"/home/ubuntu/PyDetect/valmar/command.json",
+    "telemetry_path":"/home/ubuntu/PyDetect/valmar/telemetry.json",
+    "beam_gap_path":"/home/ubuntu/PyDetect/valmar/beam.gap"
 
   },
   "watchdog": {
@@ -51,9 +51,9 @@
 
     },
   "constants": {
-    "baudRate": 9600,
+    "baud_rate": 9600,
     "timeout": 5,
-    "totalBattery": 192.0,
+    "total_battery": 192.0,
     "trackLength": 1500.0
 
 
