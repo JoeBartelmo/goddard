@@ -1,17 +1,11 @@
 {
-  "battery" : {
+  "user_input" : {
+    "logName": "<insert pod team name here>",
     "current_battery": 192.0
-
+    
   },
-  "autonomous_action" : {
-    "enableRecall": true,
-    "recallPercent": 30.0,
-    "enableAutoShutdown": true
 
-  },
   "logging": {
-    "should_log": true,
-    "log_name": "Test3",
     "index_path":"/home/ubuntu/PyDetect/serverSide-stream/index.js",
     "output_path":"/home/ubuntu/PyDetect/mars-controller"
 
