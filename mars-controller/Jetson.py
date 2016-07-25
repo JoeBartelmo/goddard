@@ -8,13 +8,14 @@ from GpioPin import GpioPin
 from Watchdog import Watchdog
 from Threads import InputThread, StatisticsThread
 from Valmar import Valmar
+from GraphUtility import GraphUtility
 import logging
 import csv
 import sys
 import time
 import json
 import subprocess
-
+import base64
 
 class Jetson(object):
     """
@@ -35,6 +36,7 @@ class Jetson(object):
         self._config = config
         self._header = False
         self._q = q
+        self.graphUtil = GraphUtility()
 
     def initDevices(self):
         self._arduino = self._devices['Arduino']
@@ -77,7 +79,8 @@ class Jetson(object):
                                 'start statistics': self._statsT.start,
                                 'hibernate': self.hibernate,
                                 'start': self.start,
-                                'exit': self.exit
+                                'exit': self.exit,
+                                'list logs': self.listLogs
                              }
 
 
@@ -115,7 +118,8 @@ class Jetson(object):
             return self._stream.issue(controlCode)
         elif controlCode in self._sysCommands:
             self._sysCommands[controlCode]()
-            #return ConcreteSystemInput(controlCode, self, self._arduino, self._mars, self._sysCommands)
+        elif 'graph' in controlCode:
+            self.graph(controlCode)
         else:
             return logging.info("Invalid control code. Check documentation for command syntax.")
 
@@ -159,14 +163,14 @@ class Jetson(object):
         """
         #If the header to the file isn't written, write it.
         if (not self._header ):
-            fileName = self._config.logging.outputPath + '/output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.outputPath + '/output/' + self._config.logging.logName + '-' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writeheader()
             self._header = True
 
         try:
-            fileName = self._config.logging.outputPath + '/output/' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.outputPath + '/output/' + self._config.logging.logName + '-' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writerow(data)
@@ -288,8 +292,27 @@ class Jetson(object):
         self._pinHash[indentifier].changeState(1) #inverted Logic: 1 --> Off
 
     def resetArduino(self):
-
         self.turnOffComponent("resetArduino")
         time.sleep(.2)
         self.turnOnComponent("resetArduino")
 
+    def graph(self, graphCommand):
+        #This is kinda hacky, but we want to keep mars independant of the server
+        #usually we would want to initiate a tcp-ip stream and send our pdf over
+        #packets. To do this we would need to have mars have some 'knowledge' of 
+        #the server. As I said, that's not preferred.
+
+        #My solution is to base64 encode the file, and send it via the logging
+        #this simplifies the entire process, and keeps us from coupling
+        graphCommand = graphCommand.split(' ')
+        if len(graphCommand) > 1:
+            self.graphUtil.generate_pdf(graphCommand[1])
+        else:
+            self.graphUtil.generate_pdf()
+        with open('telemetry_graphs.pdf', 'rb') as f:
+            logging.info('<<< Sending File >>>')
+            logging.info(base64.b64encode(f.read()))
+
+    def listLogs(self):
+        logging.info(self.graphUtil.get_all_outputs())
+ 

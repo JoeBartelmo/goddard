@@ -49,13 +49,8 @@ cp startup_config /etc/rc.local
 chmod +x /etc/rc.local
 /etc/rc.local
 
-#configure wine 
-echo "Installing Wine Dependencies..."
-apt-get install flex bison xserver-xorg-dev x11proto-gl-dev
-echo "\n\n\n\nAbout to install and compile wine from source, this may take a while (1hr)...\nYou can abort this if you don't care about wine, otherwise setup is complete...\n"
-wget http://dl.winehq.org/wine/source/1.8/wine-1.8.3.tar.bz2
-tar -xf wine-1.8.3.tar.bz2 -C /etc/
-/etc/wine-1.8.3/configure
-/etc/wine-1.8.3/make
-#TODO: Make a symbolic link to /bin/usr once this is done compiling, waiting on it right now...
+#pip, and other dependencies
+apt-get install python-opencv python-pip python-dev
+pip install numpy
+pip install matplotlib
 

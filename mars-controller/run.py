@@ -24,14 +24,14 @@ def initOutput(config, q = None):
     t = time.localtime()
     timestamp = time.strftime('%b-%d-%Y_%H%M%S', t)
 
-    if not os.path.exists(config.logging.outputPath + '/output/' + timestamp + '/'):
-        os.makedirs(config.logging.outputPath + '/output/' + timestamp + '/')
+    if not os.path.exists(config.logging.outputPath + '/output/' + config.logging.logName + '-'+ timestamp + '/'):
+        os.makedirs(config.logging.outputPath + '/output/' + config.logging.logName + '-' + timestamp + '/')
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
     # create debug file handler and set level to debug
-    handler = logging.FileHandler(os.path.join(config.logging.outputPath + '/output/' + timestamp + '/', "log.txt"),"w")
+    handler = logging.FileHandler(os.path.join(config.logging.outputPath + '/output/' + config.logging.logName + '-' + timestamp + '/', "log.txt"),"w")
     handler.setLevel(logging.INFO)
     formatter = logging.Formatter("%(levelname)s - %(message)s")
     handler.setFormatter(formatter)
