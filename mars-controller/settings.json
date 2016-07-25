@@ -52,7 +52,7 @@
     },
   "constants": {
     "baudRate": 9600,
-    "timeout": 5,
+    "timeout": 10,
     "totalBattery": 192.0,
     "trackLength": 1500.0
 
