@@ -36,7 +36,7 @@ class Jetson(object):
         self._config = config
         self._header = False
         self._q = q
-        self.graphUtil = GraphUtility()
+        self.graphUtil = GraphUtility(config)
 
     def initDevices(self):
         self._arduino = self._devices['Arduino']
@@ -309,9 +309,17 @@ class Jetson(object):
             self.graphUtil.generate_pdf(graphCommand[1])
         else:
             self.graphUtil.generate_pdf()
-        with open('telemetry_graphs.pdf', 'rb') as f:
-            logging.info('<<< Sending File >>>')
-            logging.info(base64.b64encode(f.read()))
+        self.logFile('telemetry_graphs.pdf')
+
+    #Sends with structure: magic namelength delimiter name filedata
+    #magicheader: <<<_file_record_>>>
+    #namelength: integer
+    #delimiter: _
+    #filedata: the local file read in as base64
+    def logFile(self, fileIn):    
+        with open(fileIn, 'rb') as f:
+            nameLength = str(len(fileIn))
+            logging.info('<<<_file_record_>>>' + nameLength + '_' + fileIn + base64.b64encode(f.read()))
 
     def listLogs(self):
         logging.info(self.graphUtil.get_all_outputs())

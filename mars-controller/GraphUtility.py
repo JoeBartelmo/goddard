@@ -7,19 +7,22 @@ import logging
 
 class GraphUtility(object):
 
+    def __init__(self, config):
+        self.output_path = config.logging.output_path + '/output'
+
     def get_all_outputs(self):
-        if not os.path.exists('output'):
+        if not os.path.exists(self.output_path):
             logging.warning('output folder does not exist, cannot get outputs')
             return []
-        mtime = lambda f: os.stat(os.path.join('output', f)).st_mtime
-        return list(sorted(os.listdir('output'), key=mtime))
+        mtime = lambda f: os.stat(os.path.join(self.output_path, f)).st_mtime
+        return list(sorted(os.listdir(self.output_path), key=mtime))
 
     def generate_pdf(self, inputFolder = None):
         if inputFolder is None:
             if len(self.get_all_outputs()) is 0:
                 return
             inputFolder = self.get_all_outputs()[0]
-        inputFolder = 'output/' + inputFolder
+        inputFolder = self.output_path + '/' + inputFolder
 
         for f in os.listdir(inputFolder):
             if fnmatch.fnmatch(f, '*.csv'):
@@ -28,7 +31,7 @@ class GraphUtility(object):
         if filename is None:
             log.warning('Could not find a *.csv file in ' + inputFolder)
             return
-        
+        logging.info(filename)  
         with PdfPages('telemetry_graphs.pdf') as pdf:
 
             out = pdf.infodict()
