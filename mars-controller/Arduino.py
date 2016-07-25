@@ -24,7 +24,7 @@ class Arduino(object):
 
         try:
             print("Attempting to connect Arduino")
-            self._controller = serial.Serial(self._arduinoPath, self._config.constants.baudRate)
+            self._controller = serial.Serial(self._arduinoPath, self._config.constants.baud_rate)
             self._init = True
             logging.info('Arduino connected')
             print("Arduino connected.")

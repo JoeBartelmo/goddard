@@ -163,14 +163,14 @@ class Jetson(object):
         """
         #If the header to the file isn't written, write it.
         if (not self._header ):
-            fileName = self._config.logging.outputPath + '/output/' + self._config.logging.logName + '-' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.output_path + '/output/' + self._config.logging.log_name + '-' + self._timestamp + '/' + self._config.logging.log_name + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writeheader()
             self._header = True
 
         try:
-            fileName = self._config.logging.outputPath + '/output/' + self._config.logging.logName + '-' + self._timestamp + '/' + self._config.logging.logName + '_machine_log.csv'
+            fileName = self._config.logging.output_path + '/output/' + self._config.logging.log_name + '-' + self._timestamp + '/' + self._config.logging.log_name + '_machine_log.csv'
             with open(fileName, 'a') as rawFile:
                 rawWriter = csv.DictWriter(rawFile, data.keys())
                 rawWriter.writerow(data)

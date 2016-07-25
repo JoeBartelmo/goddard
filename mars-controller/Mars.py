@@ -21,7 +21,7 @@ class Mars(object):
 
         self._config = config
         self._integTime = time.time()
-        self._currentBattery = self._config.constants.totalBattery
+        self._currentBattery = self._config.constants.total_battery
         self._recallOverride = False
 
         statistics = {}
@@ -30,7 +30,7 @@ class Mars(object):
         statistics.setdefault('IntervalDistance', 0)
         statistics.setdefault('IntervalDisplacement', 0)
         statistics.setdefault('TotalDisplacement', 0)
-        statistics.setdefault('BatteryRemaining', self._config.battery.currentBattery)
+        statistics.setdefault('BatteryRemaining', self._config.battery.current_battery)
 
     def generateStatistics(self):
         """
@@ -88,7 +88,7 @@ class Mars(object):
         self._statistics['BatteryRemaining'] = batteryRemaining
 
         #pulling in last commands
-        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1:]) * self._config.conversions.codeToRpm
+        self._statistics['setSpeed'] = int(self._Motor._lastCommand[-1:]) * self._config.conversions.code_to_rpm
         self._statistics['LEDBrightness'] = self._LED._lastCommand
 
         return self._statistics
@@ -111,7 +111,7 @@ class Mars(object):
         """
 
         rpm = float(self._statistics['RPM']) #rpm must be a float
-        rpmToSpeed = self._config.conversions.rpmToSpeed
+        rpmToSpeed = self._config.conversions.rpm_to_speed
         estMps = rpm*rpmToSpeed #estimated SPEED in M/S
 
         returnEstMps = round(estMps, 1)
@@ -203,7 +203,7 @@ class Mars(object):
             self._currentBattery = float(self._currentBattery) - whrUsed
             #subtracting energy used from battery total
 
-        battPercent = float(self._currentBattery) / float(self._config.constants.totalBattery) * 100.0
+        battPercent = float(self._currentBattery) / float(self._config.constants.total_battery) * 100.0
         battPercentReturned = round(battPercent, 1)
 
         return battPercentReturned

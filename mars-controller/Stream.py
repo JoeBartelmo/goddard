@@ -10,8 +10,8 @@ class Stream (object):
         self._resolution = 'None yet'
         self._timestamp = timestamp
         self._init = False
-        self._indexPath = self._config.logging.indexPath
-        self._logPath = self._config.logging.outputPath + '/output/' + self._timestamp +'/' + self._config.logging.logName
+        self._indexPath = self._config.logging.index_path
+        self._logPath = self._config.logging.output_path + '/output/' + self._timestamp +'/' + self._config.logging.log_name
 
 
     def refresh(self):

@@ -7,8 +7,8 @@ class Valmar():
 
     def __init__(self, config, mars):
         self._config = config
-        self._commandPath = self._config.valmar.commandPath
-        self._telemetryPath = self._config.valmar.telemetryPath
+        self._commandPath = self._config.valmar.command_path
+        self._telemetryPath = self._config.valmar.telemetry_path
 
         self._commands = {}
         self._telemetry = {}
