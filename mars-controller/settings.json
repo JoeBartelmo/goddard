@@ -1,6 +1,6 @@
 {
   "user_input" : {
-    "log_name": "<insert pod team name here>",
+    "log_name": "insert_pod_team_name_here",
     "current_battery": 192.0
   },
   "logging": {
@@ -18,7 +18,7 @@
     "beam_gap_path":"/home/ubuntu/PyDetect/valmar/beam.gap"
   },
   "watchdog": {
-    "enable_watchdog":true,
+    "enable_watchdog":false,
     "recall_code":"M1005",
     "display_log_timeout":10.0,
     "braking_distance":3.8,

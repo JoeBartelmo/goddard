@@ -24,11 +24,11 @@ class Jetson(object):
 
     def __init__(self, devices, config, timestamp, q = None):
         self._devices = devices
-        self.initDevices()
-        self.initThreads()
 
         self._pinHash = self.initPins()
         self._devices['Watchdog'] = Watchdog(config, self._devices['Arduino'], self._devices['Mars'], self._pinHash)
+        self.initDevices()
+        self.initThreads()
         self.initCommands()
 
         self._timestamp = timestamp
@@ -45,7 +45,7 @@ class Jetson(object):
         self._motor._arduino = self._arduino
         self._led = self._devices['LED']
         self._led._arduino = self._arduino
-        self._watchdog = self._devices['WatchDog']
+        self._watchdog = self._devices['Watchdog']
         self._valmar = self._devices['Valmar']
 
     def initPins(self):
