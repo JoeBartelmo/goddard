@@ -60,3 +60,5 @@ apt-get install python-imaging-tk libvlc-dev libvlc5
 #don't prompt on shutdown
 gsettings set com.canonical.indicator.session suppress-logout-restart-shutdown true
 
+#test dependency
+pip install git+https://github.com/behave/behave

@@ -1,0 +1,8 @@
+For full documentation on how to run feature files please go here:
+
+http://pythonhosted.org/behave/
+
+Run the command 'behave' to run all feature files in the current directory
+
+Feature files will be tagged with certain tags for ease in which case you run the command 'behave -tag=tagname'
+To run everything but certain tags type 'behave --tag=tagname'
