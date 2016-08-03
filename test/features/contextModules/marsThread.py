@@ -2,10 +2,12 @@ import threading
 from multiprocessing import Process
 import sys
 from select import select
+import os
 
 #Add mars files
 sys.path.insert(0, '../../mars')
 import run as Mars
+import time
 
 """
 This is going to be a thread that manages a thread which
@@ -25,7 +27,16 @@ class MarsThread(threading.Thread):
 
     def run(self):
         #configuration file defined in local directory
-        mars = Process(target=Mars.run, args=(self.configFile, self.queueIn, self.debugMode))
+
+        print os.getcwd()        
+        with open(self.config) as f:
+            configs = f.read().splitlines()
+        configString =""
+        for i in configs:
+            configString = configString + i
+        json_string = configString.replace(" ", "")
+        
+        mars = Process(target=Mars.run, args=(json_string, self.queueIn, self.debugMode))
         mars.start()
 
         while self.stopped() == False and self.gracefulStopped() == False:

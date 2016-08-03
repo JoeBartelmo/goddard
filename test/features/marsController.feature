@@ -7,7 +7,7 @@ Feature: Mars Interactions
   @mars
   Scenario: Debug Functionality
     When I start the Mars Controller as a debug operator
-    And I wait 5 seconds
+    And I wait for the Mars Controller to initialize
     And I close the Mars Controller
     And I view the log
     Then I should see debug statements in the log
