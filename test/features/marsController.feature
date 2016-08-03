@@ -19,3 +19,18 @@ Feature: Mars Interactions
     And I attempt to send "exit" to the Mars Controller
     Then I should see that the Mars Controller is Closed
 
+  @mars
+  Scenario: Sending an invalid command to mars does not stop mars from functioning properly
+    When I start the Mars Controller as a client
+    And I wait for the Mars Controller to initialize
+    And I attempt to send "Garbage nonsense command" to the Mars Controller
+    Then I should not see errors in the log
+    And I should see a log entry indicating my command was incorrect
+
+  @mars @system
+  Scenario: On exit of the Mars Controller, I should see videos and logs in the output directory of my configuration file
+    When I start the Mars Controller as a client
+    And I wait for the Mars Controller to initialize
+    And I close the Mars Controller
+    Then I should see the two logs in my output directory
+    And I should see three videos in my output directory
