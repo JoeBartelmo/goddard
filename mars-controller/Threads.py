@@ -18,16 +18,16 @@ class InputThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
-class StatisticsThread(threading.Thread):
+class TelemetryThread(threading.Thread):
     def __init__(self, jetson):
-        super(StatisticsThread, self).__init__()
+        super(TelemetryThread, self).__init__()
         self._jetson = jetson
         self._stop = threading.Event()
 
     def run(self):
         while self.stopped() is False:
-            self._jetson.statisticsController()
-        print 'Statistics Thread Stopped'
+            self._jetson.telemetryController()
+        print 'Telemetry Thread Stopped'
 
     def stop(self):
         self._stop.set()

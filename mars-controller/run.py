@@ -39,7 +39,7 @@ def initOutput(config, q = None):
 
     if (os.path.isfile(config.logging.output_path + '/output/' + config.user_input.log_name + '-' + timestamp + '/' + config.user_input.log_name + '_machine_log.csv')):
         logging.debug("The telemetry output file you specified in the configuration file already exists.")
-        logging.debug("The statistics from the previous reads will be overwritten if you don't specify a new file.")
+        logging.debug("The telemetry from the previous reads will be overwritten if you don't specify a new file.")
         logging.debug("Do you wish to continue?")
         if(q is not None):
             answer = q.get()

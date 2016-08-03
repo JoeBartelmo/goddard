@@ -85,7 +85,7 @@ class GpioPin(object):
         """
         if self._direction == "out":
             with open('/sys/class/gpio/gpio{}/value'.format(str(self._gpioPin)),'w') as value_file:
-                value_file.write(str(0))
+                value_file.write(str(1))
         else:
             raise ValueError("pin must be an output to change it's state")
 
@@ -96,7 +96,7 @@ class GpioPin(object):
         """
         if self._direction == "out":
             with open('/sys/class/gpio/gpio{}/value'.format(str(self._gpioPin)),'w') as value_file:
-                value_file.write(str(1))
+                value_file.write(str(0))
         else:
             raise ValueError("pin must be an output to change it's state")
 

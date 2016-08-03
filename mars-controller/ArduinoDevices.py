@@ -76,11 +76,13 @@ class Motor(object):
 
         if "forward" in myCode:
             if RepresentsInt(myCode[8]):
+                self._enabled = 1
                 self._direction = 1
                 self._speed = myCode[8]
                 self.write()
         elif "backward" in myCode:
             if RepresentsInt(myCode[8]):
+                self._enabled = 1
                 self._direction = 0
                 self._speed = myCode[9]
                 self.write()
@@ -120,10 +122,12 @@ class Motor(object):
         Default motor configurations
         :return:
         """
-        self._speed = 4
-        self._direction = 1
-        self._enabled = 1
-        self._brake = 0
+        self._enabled = 0
+        self._direction = 0
+        self._brake = 1
+        self._speed = 0
+
+        logging.info("motor ready for commands")
 
         self.write()
 
@@ -133,7 +137,7 @@ class Motor(object):
         :return:
         """
         self._arduino.write("M0010")
-        logging.info("Arduino braking...")
+        logging.warning("Brake engaged")
 
     def write(self):
         """
