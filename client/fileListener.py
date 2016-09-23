@@ -8,6 +8,8 @@ import logging
 from ColorLogger import initializeLogger 
 from select import select
 import struct
+import errno
+from socket import error as socket_error
 
 logger = logging.getLogger('mars_logging') 
 
@@ -22,39 +24,60 @@ class FileListenerThread(threading.Thread):
     def run(self):
         logger.debug('Client side FileListener Thread waiting for connectionn...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        listener.bind(('', self.port))
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if self.serverAddr != 'localhost':
+            listener.bind(('', self.port))
+        else:
+            listener.bind(('localhost', self.port))
         listener.listen(1)
 
         listenerConnection, address = listener.accept()
         listenerConnection.setblocking(0)
         listenerConnection.settimeout(self.socketTimeout)
 
-        logger.debug('Client side FileListener Thread "' + self.name + '" connected!')
-        while self.stopped() is False:
+        logger.warning('Client side "File Listener" Thread connected!')
+        
+        while self.stopped() == False:
             isReady = select([listenerConnection],[],[],self.socketTimeout)
             if isReady[0]:
-                fileNameLength = self.readIntFromSocket(listenerConnection)
-                fileName = listenerConnection.recv(fileNameLength)
+                try:
+                    fileNameLength = self.readIntFromSocket(listenerConnection)
+                    if fileNameLength == -1:
+                        break
+                    fileName = listenerConnection.recv(fileNameLength)
 
-                logger.info('Downloading file [' + fileName + ']')
+                    logger.info('Downloading file [' + fileName + ']')
 
-                fileLength = self.readIntFromSocket(listenerConnection)
-                fileBase64Str = ''
-                while len(fileBase64Str) < fileLength:
-                    bytesToRead = 64
-                    if fileLength - len(fileBase64Str) < bytesToRead:
-                        bytesToRead = fileLength - len(fileBase64Str)
-                    fileBase64Str += listenerConnection.recv(bytesToRead)
+                    fileLength = self.readIntFromSocket(listenerConnection)
+                    fileBase64Str = ''
+                    while len(fileBase64Str) < fileLength:
+                        bytesToRead = 64
+                        if fileLength - len(fileBase64Str) < bytesToRead:
+                            bytesToRead = fileLength - len(fileBase64Str)
+                        fileBase64Str += listenerConnection.recv(bytesToRead)
 
-                with open(fileName, 'wb') as f:
-                    f.write(fileBase64Str.decode('base64'))
-        
+                    with open(fileName, 'wb') as f:
+                        f.write(fileBase64Str.decode('base64'))
+                except socket_error as serr:
+                    if serr.errno == errno.ECONNREFUSED or serr.errno == errno.EPIPE:
+                        logger.critical('Was not able to connect to File Listener socket, closing app')
+                        break
+                    raise serr
+                    
+        logger.warning('Closing listener socket')
+        listenerConnection.shutdown(2)
+        listener.shutdown(2)
         listenerConnection.close()
         listener.close()
-        logger.debug('Client Side FileListener Thread Stopped')
+        logger.warning('Client Side "File Listener" Thread Stopped')
+        
+        self.stop()
     
     def readIntFromSocket(self, listenerConnection):
-        return int(struct.unpack('I', listenerConnection.recv(4))[0])
+        data = listenerConnection.recv(4)
+        if data is None or len(data) == 0:
+            return -1
+        return int(struct.unpack('I', data)[0])
     
     def stop(self):
         self._stop.set()

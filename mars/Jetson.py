@@ -25,7 +25,7 @@ class Jetson(object):
     arduino/mars
     """
 
-    def __init__(self, devices, config, timestamp, q = None):
+    def __init__(self, devices, config, timestamp, q = None, marsOnlineQueue = None):
         self._devices = devices
 
         self._pinHash = self._devices['pinHash']
@@ -42,6 +42,7 @@ class Jetson(object):
         self.graphUtil = GraphUtility(config)
 
         self._pauseTelemetry = False
+        self._marsOnlineQueue = marsOnlineQueue
 
     def initDevices(self):
         """
@@ -96,7 +97,10 @@ class Jetson(object):
 
         #Prompt for input
         if self._q is None:
-            controlCode = raw_input("LED, motion, stream, or control code: \n")
+            try:
+                controlCode = raw_input("LED, motion, stream, or control code: \n")
+            except KeyboardInterrupt:
+                self.exit()
         else:
             controlCode = self._q.get()
         myCodeInput = self.recieveInput(controlCode)
@@ -293,6 +297,8 @@ class Jetson(object):
         logger.info("Laser Circuit turned off")
 
         self._exit = True
+        if self._marsOnlineQueue is not None:
+            self._marsOnlineQueue.put(0)
 
     def hibernate(self):
         """

@@ -6,11 +6,16 @@ from threading import Thread
 import socket
 import logging
 from select import select
+from socket import error as socket_error
+import errno
 
 logger = logging.getLogger('mars_logging')
+#time at which we should think mars disconnected from us
+MARS_TIMEOUT = 5
+
 
 class ListenerThread(threading.Thread):
-    def __init__(self, q, serverAddr, port, name = 'Thread', displayInConsole = True):
+    def __init__(self, q, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
         self.q = q
@@ -19,10 +24,16 @@ class ListenerThread(threading.Thread):
         self.name = name
         self.displayInConsole = displayInConsole
         self.socketTimeout = 3
+        self.logLevel = logLevel
+        #ideally we want to stop repeat logs on mars side, but for short term
+        #this will make client more responsive
+        self.lastLogEntry = ""
+        
     
     def run(self):
         logger.debug('Client side Listener Thread "'+self.name+'" waiting for connection...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if self.serverAddr != 'localhost':
             listener.bind(('', self.port))
         else:
@@ -33,28 +44,41 @@ class ListenerThread(threading.Thread):
         listenerConnection.setblocking(0)
         listenerConnection.settimeout(self.socketTimeout)
 
-        logger.debug('Client side Listener Thread "'+self.name+'" connected!')
+        logger.warning('Client side Listener Thread "'+self.name+'" connected!')
         while self.stopped() is False:
             isReady = select([listenerConnection],[],[],self.socketTimeout)
             if isReady[0]:
-                chunk = listenerConnection.recv(4)
-                if len(chunk) < 4:
-                    break
-                slen = struct.unpack('>L', chunk)[0]
-                chunk = listenerConnection.recv(slen)
-                while len(chunk) < slen:
-                    chunk = chunk + listenerConnection.recv(slen - len(chunk))
-                obj = pickle.loads(chunk)
-                record = logging.makeLogRecord(obj)
+                try:
+                    chunk = listenerConnection.recv(4)
+                    if chunk is None or len(chunk) < 4:
+                        break
+                    slen = struct.unpack('>L', chunk)[0]
+                    chunk = listenerConnection.recv(slen)
+                    while len(chunk) < slen:
+                        chunk = chunk + listenerConnection.recv(slen - len(chunk))
+                    obj = pickle.loads(chunk)
+                    record = logging.makeLogRecord(obj)
 
-                if self.q is not None:
-                    self.q.put(record)
-                if self.displayInConsole:
-                    logger.log(record.levelno, record.msg + ' (' + record.filename + ':' + str(record.lineno) + ')')
+                    if record.levelno >= self.logLevel:
+                        if self.q is not None and record.msg not in self.lastLogEntry:
+                            self.q.put(record)
+                            self.lastLogEntry = record.msg
+                        if self.displayInConsole:
+                            logger.log(record.levelno, record.msg + ' (' + record.filename + ':' + str(record.lineno) + ')')
+                except socket_error as serr:
+                    if serr.errno == errno.ECONNREFUSED or serr.errno == errno.EPIPE:
+                        logger.critical('Was not able to connect to "' + self.name + '" socket, closing app')
+                        break
+                    raise serr
+
+        listenerConnection.shutdown(2)
+        listener.shutdown(2)
 
         listenerConnection.close()
         listener.close()
-        logger.debug('Client Side Listener Thread "'+self.name+'" Stopped')
+        logger.warning('Client Side Listener Thread "'+self.name+'" Stopped')
+        
+        self.stop()
 
     def stop(self):
         self._stop.set()
