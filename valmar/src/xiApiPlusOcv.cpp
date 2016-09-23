@@ -2235,6 +2235,59 @@
 		CheckResult(res,"SetBandwidthLimit");
 	}
 			
+	// Bandwidth limit enabled (XI_PRM_LIMIT_BANDWIDTH_MODE)
+	XI_SWITCH xiAPIplus_Camera::GetBandwidthLimitMode()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetBandwidthLimitMode");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_LIMIT_BANDWIDTH_MODE, &val);
+		CheckResult(res,"GetBandwidthLimitMode");
+		return (XI_SWITCH)val;
+	}
+	
+	XI_SWITCH xiAPIplus_Camera::GetBandwidthLimitMode_Maximum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetBandwidthLimitMode" "_Maximum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_LIMIT_BANDWIDTH_MODE XI_PRM_INFO_MAX, &val);
+		CheckResult(res,"GetBandwidthLimitMode" "_Maximum");
+		return (XI_SWITCH)val;
+	}
+	XI_SWITCH xiAPIplus_Camera::GetBandwidthLimitMode_Minimum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetBandwidthLimitMode" "_Minimum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_LIMIT_BANDWIDTH_MODE XI_PRM_INFO_MIN, &val);
+		CheckResult(res,"GetBandwidthLimitMode" "_Minimum");
+		return (XI_SWITCH)val;
+	}
+	
+	int xiAPIplus_Camera::GetBandwidthLimitMode_Increment()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetBandwidthLimitMode" "_Increment");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_LIMIT_BANDWIDTH_MODE XI_PRM_INFO_INCREMENT, &val);
+		CheckResult(res,"GetBandwidthLimitMode" "_Increment");
+		return val;
+	}
+	
+	void xiAPIplus_Camera::SetBandwidthLimitMode(XI_SWITCH BandwidthLimitMode)
+	{
+		
+		CheckCamHandleInt("SetBandwidthLimitMode",(int)BandwidthLimitMode);
+		
+		XI_RETURN res=xiSetParamInt(camera_handle, XI_PRM_LIMIT_BANDWIDTH_MODE, BandwidthLimitMode);
+		CheckResult(res,"SetBandwidthLimitMode");
+	}
+				
 	// Sensor output data bit depth. (XI_PRM_SENSOR_DATA_BIT_DEPTH)
 	XI_BIT_DEPTH xiAPIplus_Camera::GetSensorDataBitDepth()
 	{
@@ -5196,48 +5249,14 @@
 
 	
 	// Return device serial number (XI_PRM_DEVICE_SN)
-	int xiAPIplus_Camera::GetSerialNumber()
+	void xiAPIplus_Camera::GetSerialNumber(char* buffer, int buffer_length)
 	{
-		int val=0;
 		
 		CheckCamHandle("GetSerialNumber");
 		
-		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_DEVICE_SN, &val);
+		XI_RETURN res=xiGetParamString(camera_handle, XI_PRM_DEVICE_SN, buffer, buffer_length);
 		CheckResult(res,"GetSerialNumber");
-		return val;
 	}
-	int xiAPIplus_Camera::GetSerialNumber_Maximum()
-	{
-		int val=0;
-		
-		CheckCamHandle("GetSerialNumber" "_Maximum");
-		
-		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_DEVICE_SN XI_PRM_INFO_MAX, &val);
-		CheckResult(res,"GetSerialNumber" "_Maximum");
-		return val;
-	}
-	int xiAPIplus_Camera::GetSerialNumber_Minimum()
-	{
-		int val=0;
-		
-		CheckCamHandle("GetSerialNumber" "_Minimum");
-		
-		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_DEVICE_SN XI_PRM_INFO_MIN, &val);
-		CheckResult(res,"GetSerialNumber" "_Minimum");
-		return val;
-	}
-	
-	int xiAPIplus_Camera::GetSerialNumber_Increment()
-	{
-		int val=0;
-		
-		CheckCamHandle("GetSerialNumber" "_Increment");
-		
-		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_DEVICE_SN XI_PRM_INFO_INCREMENT, &val);
-		CheckResult(res,"GetSerialNumber" "_Increment");
-		return val;
-	}
-
 	
 	// Return sensor serial number (XI_PRM_DEVICE_SENS_SN)
 	void xiAPIplus_Camera::GetSensorSerialNumber(char* buffer, int buffer_length)
@@ -5299,6 +5318,59 @@
 		CheckResult(res,"GetDeviceManifest");
 	}
 	
+	// User image data at image header to track parameters synchronization. (XI_PRM_IMAGE_USER_DATA)
+	int xiAPIplus_Camera::GetImageUserData()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetImageUserData");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_IMAGE_USER_DATA, &val);
+		CheckResult(res,"GetImageUserData");
+		return val;
+	}
+	int xiAPIplus_Camera::GetImageUserData_Maximum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetImageUserData" "_Maximum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_IMAGE_USER_DATA XI_PRM_INFO_MAX, &val);
+		CheckResult(res,"GetImageUserData" "_Maximum");
+		return val;
+	}
+	int xiAPIplus_Camera::GetImageUserData_Minimum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetImageUserData" "_Minimum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_IMAGE_USER_DATA XI_PRM_INFO_MIN, &val);
+		CheckResult(res,"GetImageUserData" "_Minimum");
+		return val;
+	}
+	
+	int xiAPIplus_Camera::GetImageUserData_Increment()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetImageUserData" "_Increment");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_IMAGE_USER_DATA XI_PRM_INFO_INCREMENT, &val);
+		CheckResult(res,"GetImageUserData" "_Increment");
+		return val;
+	}
+
+	
+	void xiAPIplus_Camera::SetImageUserData(int ImageUserData)
+	{
+		
+		CheckCamHandleInt("SetImageUserData",ImageUserData);
+		
+		XI_RETURN res=xiSetParamInt(camera_handle, XI_PRM_IMAGE_USER_DATA, ImageUserData);
+		CheckResult(res,"SetImageUserData");
+	}
+			
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// ---- Parameter Group: Device acquisition settings
@@ -5453,6 +5525,59 @@
 		
 		XI_RETURN res=xiSetParamInt(camera_handle, XI_PRM_TRANSPORT_PIXEL_FORMAT, TransportPixelFormat);
 		CheckResult(res,"SetTransportPixelFormat");
+	}
+				
+	// Target selector for data - CPU RAM or GPU RAM (XI_PRM_TRANSPORT_DATA_TARGET)
+	XI_TRANSPORT_DATA_TARGET_MODE xiAPIplus_Camera::GetTransportDataTarget()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetTransportDataTarget");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_TRANSPORT_DATA_TARGET, &val);
+		CheckResult(res,"GetTransportDataTarget");
+		return (XI_TRANSPORT_DATA_TARGET_MODE)val;
+	}
+	
+	XI_TRANSPORT_DATA_TARGET_MODE xiAPIplus_Camera::GetTransportDataTarget_Maximum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetTransportDataTarget" "_Maximum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_TRANSPORT_DATA_TARGET XI_PRM_INFO_MAX, &val);
+		CheckResult(res,"GetTransportDataTarget" "_Maximum");
+		return (XI_TRANSPORT_DATA_TARGET_MODE)val;
+	}
+	XI_TRANSPORT_DATA_TARGET_MODE xiAPIplus_Camera::GetTransportDataTarget_Minimum()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetTransportDataTarget" "_Minimum");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_TRANSPORT_DATA_TARGET XI_PRM_INFO_MIN, &val);
+		CheckResult(res,"GetTransportDataTarget" "_Minimum");
+		return (XI_TRANSPORT_DATA_TARGET_MODE)val;
+	}
+	
+	int xiAPIplus_Camera::GetTransportDataTarget_Increment()
+	{
+		int val=0;
+		
+		CheckCamHandle("GetTransportDataTarget" "_Increment");
+		
+		XI_RETURN res=xiGetParamInt(camera_handle, XI_PRM_TRANSPORT_DATA_TARGET XI_PRM_INFO_INCREMENT, &val);
+		CheckResult(res,"GetTransportDataTarget" "_Increment");
+		return val;
+	}
+	
+	void xiAPIplus_Camera::SetTransportDataTarget(XI_TRANSPORT_DATA_TARGET_MODE TransportDataTarget)
+	{
+		
+		CheckCamHandleInt("SetTransportDataTarget",(int)TransportDataTarget);
+		
+		XI_RETURN res=xiSetParamInt(camera_handle, XI_PRM_TRANSPORT_DATA_TARGET, TransportDataTarget);
+		CheckResult(res,"SetTransportDataTarget");
 	}
 				
 	// Sensor clock frequency in Hz. (XI_PRM_SENSOR_CLOCK_FREQ_HZ)
@@ -8413,15 +8538,18 @@ void xiAPIplus_Camera::OpenByID(unsigned long id)
 	if(!camera_handle) res = XI_INVALID_HANDLE;
 	CheckResult(res,"OpenByID");
 }
-void xiAPIplus_Camera::OpenBySN(unsigned long serial_number)
+void xiAPIplus_Camera::OpenBySN(char* serial_number)
 {
 	xiAPIPlusDP((DBFIN "%s\n","OpenBySN"));
 	xiAPIplus API;
 	unsigned long count = API.GetNumberOfConnectedCameras();
-	for (unsigned long id=0;id<count;id++)
+	
+	for(unsigned long id=0; id < count; id++)
 	{
+		char camera_sn[MAX_PATH]="";
 		OpenByID(id);
-		if (GetSerialNumber() == (int)(serial_number))
+		GetSerialNumber(camera_sn, sizeof(camera_sn));
+		if (!strcmp(camera_sn, serial_number))
 		{
 			// found
 			return;
@@ -8850,10 +8978,14 @@ void xiAPIplusCameraOcv::resetCvImage_()
 	bool do_reset = false;
 	//printf ("Reseting image\n");
 	// first check basic image resolution
-	if(((int) next_image_->GetWidth()!= cv_image_->width) || ((int)next_image_->GetHeight()!= cv_image_->height)){
-		do_reset = true; 
-		
+	if (next_image_->GetDataFormat()!=XI_MONO8){
+		if(((int) next_image_->GetWidth()!= cv_image_->width) || ((int)next_image_->GetHeight()!= cv_image_->height))
+			do_reset = true; 
 	}
+	else {
+		if(((int) (next_image_->GetWidth()+next_image_->GetPadding_X())!= cv_image_->width) || ((int)next_image_->GetHeight()!= cv_image_->height))
+			do_reset = true; 
+	}	
 
 	// afterwards check image format
 	switch( next_image_->GetDataFormat())
@@ -8899,7 +9031,7 @@ void xiAPIplusCameraOcv::resetCvImage_()
 		switch( next_image_->GetDataFormat())
 		{
 		case XI_MONO8       :
-		case XI_RAW8        : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth(), next_image_->GetHeight()), IPL_DEPTH_8U, 1); printf ("Doing reset to mono\n"); break;
+		case XI_RAW8        : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth()+next_image_->GetPadding_X(), next_image_->GetHeight()), IPL_DEPTH_8U, 1); printf ("Doing reset to mono\n"); break;
 		case XI_MONO16      :
 		case XI_RAW16       : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth(), next_image_->GetHeight()), IPL_DEPTH_16U, 1); printf ("Doing reset to mono\n");break;
 		case XI_RGB24       :

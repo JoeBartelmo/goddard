@@ -57,7 +57,7 @@ int _tmain(int argc, _TCHAR* argv[])
             settingsFile = argv[1];
             break;
         default:
-            printf("Usage: capturePipe [optional settings file.json]%d", argc);
+            printf("Usage: capturePipe [optional settings file.json]%d\n", argc);
             return EXIT_FAILURE;
     }
     
@@ -69,10 +69,14 @@ int _tmain(int argc, _TCHAR* argv[])
     cam.OpenFirst();
     
     assignSettings(settingsFile, &cam);
-
+    try
+ 	{
     printf("Starting acquisition...\n");
-    cam.StartAcquisition();
-   
+    cam.StartAcquisition();}
+    catch(xiAPIplus_Exception& exp)
+ {
+   exp.PrintError(); // report error if some call fails
+ }
     printf("Running calibration cycle...\n");
     if (abs(calibrationEntity.runCalibration(&cam) - (-1)) <= DELTA_DOUBLE_THRESHOLD) { 
         cam.StopAcquisition();

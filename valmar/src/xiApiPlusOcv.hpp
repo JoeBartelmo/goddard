@@ -3,7 +3,7 @@
 //-------------------------------------------------------------------------------------------------------------------
 // xiApi Extension header file
 
-// Generated for xiAPI version 4.11.01
+// Generated for xiAPI version 4.11.11
 
 #ifndef __XIAPIEXT_H
 #define __XIAPIEXT_H
@@ -14,6 +14,7 @@
 #define  XI_PRM_HORIZONTAL_FLIP                 "horizontal_flip"         // Horizontal flip enable 
 #define  XI_PRM_VERTICAL_FLIP                   "vertical_flip"           // Vertical flip enable 
 #define  XI_PRM_LENS_COMM_DATA                  "lens_comm_data"          // Write/Read data sequences to/from lens 
+#define  XI_PRM_DEVICE_ID                       "device_id"               // Return unique device ID 
 #define  XI_PRM_IMAGE_CORRECTION_SELECTOR       "image_correction_selector"// Select image correction function XI_IMAGE_CORRECTION_SELECTOR
 #define  XI_PRM_IMAGE_CORRECTION_VALUE          "image_correction_value"  // Select image correction selected function value 
 #define  XI_PRM_NEW_PROCESS_CHAIN_ENABLE        "new_process_chain_enable"// Enables (2015/FAPI) processing chain for MQ MU cameras 
@@ -155,7 +156,7 @@ typedef enum
 #endif
 //#include <xiExt.h>
 #include <stdio.h>
-#include <opencv2/core/core.hpp> 
+#include <opencv2/core.hpp> 
 #include <opencv2/highgui/highgui.hpp>
 
 // debug support
@@ -260,7 +261,7 @@ public:
 	// open/close
 	void OpenFirst();
 	void OpenByID(unsigned long id);
-	void OpenBySN(unsigned long serial_number);
+	void OpenBySN(char* serial_number);
 	void OpenByPath(char* device_path);
 	void Close();
 
@@ -616,6 +617,13 @@ public:
 	int GetBandwidthLimit_Increment();
 	void SetBandwidthLimit(int BandwidthLimit);
 			
+	// Bandwidth limit enabled (XI_PRM_LIMIT_BANDWIDTH_MODE)
+	XI_SWITCH GetBandwidthLimitMode();
+	XI_SWITCH GetBandwidthLimitMode_Maximum();	
+	XI_SWITCH GetBandwidthLimitMode_Minimum();
+	int GetBandwidthLimitMode_Increment();
+	void SetBandwidthLimitMode(XI_SWITCH BandwidthLimitMode);
+				
 	// Sensor output data bit depth. (XI_PRM_SENSOR_DATA_BIT_DEPTH)
 	XI_BIT_DEPTH GetSensorDataBitDepth();
 	XI_BIT_DEPTH GetSensorDataBitDepth_Maximum();	
@@ -1057,10 +1065,7 @@ public:
 	int GetModelId_Minimum();
 	int GetModelId_Increment();
 	// Return device serial number (XI_PRM_DEVICE_SN)
-	int GetSerialNumber();
-	int GetSerialNumber_Maximum();
-	int GetSerialNumber_Minimum();
-	int GetSerialNumber_Increment();
+	void GetSerialNumber(char* buffer, int buffer_lenght);
 	// Return sensor serial number (XI_PRM_DEVICE_SENS_SN)
 	void GetSensorSerialNumber(char* buffer, int buffer_lenght);
 	// Return unique device ID (XI_PRM_DEVICE_ID)
@@ -1073,6 +1078,13 @@ public:
 	void GetUserId(char* buffer, int buffer_lenght);
 	// Return device capability description XML. (XI_PRM_DEVICE_MANIFEST)
 	void GetDeviceManifest(char* buffer, int buffer_lenght);
+	// User image data at image header to track parameters synchronization. (XI_PRM_IMAGE_USER_DATA)
+	int GetImageUserData();
+	int GetImageUserData_Maximum();
+	int GetImageUserData_Minimum();
+	int GetImageUserData_Increment();
+	void SetImageUserData(int ImageUserData);
+			
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// ---- Parameter Group: Device acquisition settings
@@ -1097,6 +1109,13 @@ public:
 	XI_GenTL_Image_Format_e GetTransportPixelFormat_Minimum();
 	int GetTransportPixelFormat_Increment();
 	void SetTransportPixelFormat(XI_GenTL_Image_Format_e TransportPixelFormat);
+				
+	// Target selector for data - CPU RAM or GPU RAM (XI_PRM_TRANSPORT_DATA_TARGET)
+	XI_TRANSPORT_DATA_TARGET_MODE GetTransportDataTarget();
+	XI_TRANSPORT_DATA_TARGET_MODE GetTransportDataTarget_Maximum();	
+	XI_TRANSPORT_DATA_TARGET_MODE GetTransportDataTarget_Minimum();
+	int GetTransportDataTarget_Increment();
+	void SetTransportDataTarget(XI_TRANSPORT_DATA_TARGET_MODE TransportDataTarget);
 				
 	// Sensor clock frequency in Hz. (XI_PRM_SENSOR_CLOCK_FREQ_HZ)
 	float GetSensorClockFrequencyHz();

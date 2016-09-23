@@ -4,8 +4,8 @@
     },
     "capture" : {
         "framerate": 100,
-        "exposure_us": 10000,
-        "gain": 2,
+        "exposure_us": 1000000,
+        "gain": 3,
         "gamma_y": 0.97,
         "sharpness":0
     },
@@ -19,7 +19,8 @@
     "calibration": {
         "write_location": "/phobos/PyDetect/mars/files/",
         "pixel_ratio":5.0,
-        "ibeam_offset" : 0
+        "ibeam_offset" : 0,
+        "number_of_frames": 10
     }
 }
 
