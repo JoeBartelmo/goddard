@@ -1,5 +1,8 @@
-# PyDetect
+# goddard
+
 This project is a collaboration of the hyperloop software development team at RIT. Overall, this project is centered around our rover (Codename: Mars). As a whole, this is a collection of submodules that are coupled together to preform higher level tasks.
+> Previously this repository was keyed 'PyDetect', this has since been renamed.
+
 
 ### Goal
 Originally, we were told that "A camera on top of an RC car" would be optimal" We have decided to go above and beyond expectations. Mars is a rover system that is capable of many operations. 
