@@ -1,26 +1,30 @@
 {
     "command":{
-        "enabled": true
+        "enabled": true,
+        "refresh_frame_interval": 100
     },
     "capture" : {
         "framerate": 100,
-        "exposure_us": 1000000,
+        "exposure_us": 10000,
         "gain": 3,
-        "gamma_y": 0.97,
-        "sharpness":0
+        "gamma_y": 1.00,
+        "sharpness": 0.5
     },
     "system" : {
         "image_queue_size" : 150
     },
     "processing" : {
-        "psnr_threshold": 5,
-        "num_frames_to_process" : 100
+        "psnr_threshold": 50.0
     },
     "calibration": {
-        "write_location": "/phobos/PyDetect/mars/files/",
+        "write_location": "/phobos/goddard/mars/files/",
         "pixel_ratio":5.0,
         "ibeam_offset" : 0,
         "number_of_frames": 10
+    },
+    "ximea_cameras": {
+        "left": "12531150",
+        "right": "15533850"
     }
 }
 

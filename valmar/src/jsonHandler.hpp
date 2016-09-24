@@ -8,6 +8,7 @@ class JsonSettings {
     private:
         bool enabled;
 
+        //camera settings
         int framerate;
         int exposure_us;
         int gain;
@@ -17,16 +18,21 @@ class JsonSettings {
         int image_queue_size;
 
         double psnr_threshold;
-        int num_frames_to_process;
 
         string write_location;
         double pixel_ratio;
         int ibeam_offset;
 
+        //Camera serial id numbers
+        string left;
+        string right; 
+
+        int refresh_interval;       
+
         void setCameraProperties();
     public:
         bool isEnabled();
-        
+
         int getIBeamOffset();
         void setIBeamOffset(int offset);
 
@@ -37,7 +43,10 @@ class JsonSettings {
         double getSharpness();
 
         double getPsnrThreshold();
-
+        
+        int getRefreshInterval();
         void refreshAllData(string filename);
+
+        char* getCamera(const char* camera);
 };
 
