@@ -103,7 +103,4 @@ class System(object):
                     'pinHash': myPinHash
         }
         return devices
-myValmar,
-                    'pinHash': myPinHash
-        }
-        return devices
+

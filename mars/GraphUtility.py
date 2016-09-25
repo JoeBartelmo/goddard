@@ -85,4 +85,4 @@ class GraphUtility(object):
 
             #file is now generated. Move it into folder and have the server take care of the rest
             os.rename(telemetryGraphName, self.fileLoc + telemetryGraphName)
-    os.rename(telemetryGraphName, self.fileLoc + telemetryGraphName)
+

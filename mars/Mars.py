@@ -251,11 +251,3 @@ class Mars(object):
         except Empty:
             return 0
 
-e local testing
-        if self._watchdogQueue is None:
-            return 1
-        try:
-            return self._watchdogQueue.get(timeout=self._config.watchdog.display_log_timeout)
-        except Empty:
-            return 0
-
