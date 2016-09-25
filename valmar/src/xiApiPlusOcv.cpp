@@ -8912,3 +8912,14 @@ void xiAPIplusCameraOcv::resetCvImage_()
 	}
 	return;
 }
+_RAW16       : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth(), next_image_->GetHeight()), IPL_DEPTH_16U, 1); printf ("Doing reset to mono\n");break;
+		case XI_RGB24       :
+		case XI_RGB_PLANAR  : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth(), next_image_->GetHeight()), IPL_DEPTH_8U, 3);	printf ("Doing reset to RGB\n");; break;
+		case XI_RGB32       : cv_image_ = cvCreateImage(cvSize( next_image_->GetWidth(), next_image_->GetHeight()), IPL_DEPTH_8U, 4);	printf ("Doing reset to RGB\n");; break;
+		default :
+			printf("CvCaptureCAM_XIMEA::resetCvImage ERROR: Unknown format.");
+			return;
+		}
+	}
+	return;
+}
