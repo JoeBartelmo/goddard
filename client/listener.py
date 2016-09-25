@@ -103,8 +103,3 @@ class ListenerThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
-    self._stop.set()
-   
-    def stopped(self):
-        return self._stop.isSet()
-

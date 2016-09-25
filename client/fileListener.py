@@ -22,7 +22,6 @@ import logging
 from threading import Thread
 import socket
 import logging
-from ColorLogger import initializeLogger 
 from select import select
 import struct
 import errno
