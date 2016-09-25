@@ -117,3 +117,7 @@ if __name__=='__main__':
     
     run(json_string, None, None, None, debugEnabled)
 
+       json_string = ''.join(sys.argv)
+    
+    run(json_string, None, None, None, debugEnabled)
+

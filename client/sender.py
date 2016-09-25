@@ -91,3 +91,8 @@ class SenderThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
+op.set()
+   
+    def stopped(self):
+        return self._stop.isSet()
+

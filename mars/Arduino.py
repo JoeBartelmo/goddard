@@ -182,3 +182,7 @@ class Arduino(object):
         else:
             logger.warning('Attempted to access arduino during connection reset...')
 
+         logger.error('Arduino Connection is not established')
+        else:
+            logger.warning('Attempted to access arduino during connection reset...')
+

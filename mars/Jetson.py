@@ -367,3 +367,16 @@ class Jetson(object):
     def listLogs(self):
         logger.info(self.graphUtil.get_all_outputs())
  
+f._stream.open()
+
+
+    def graph(self, graphCommand):
+        graphCommand = graphCommand.split(' ')
+        if len(graphCommand) > 1:
+            self.graphUtil.generate_pdf(graphCommand[1])
+        else:
+            self.graphUtil.generate_pdf()
+
+    def listLogs(self):
+        logger.info(self.graphUtil.get_all_outputs())
+ 

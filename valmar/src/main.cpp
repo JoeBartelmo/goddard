@@ -127,3 +127,9 @@ int _tmain(int argc, _TCHAR* argv[])
     printf("Done\n");
 }
 
+et to false, stopping valmar.\n");
+    cam.StopAcquisition();
+    cam.Close();
+    printf("Done\n");
+}
+

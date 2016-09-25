@@ -116,3 +116,7 @@ class ListenerThread(threading.Thread):
 
     def stopped(self):
         return self._stop.isSet()
+onds + unixtime.microseconds/1000000.0
+
+    def stopped(self):
+        return self._stop.isSet()

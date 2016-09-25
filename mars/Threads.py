@@ -38,3 +38,5 @@ class TelemetryThread(threading.Thread):
     def stopped(self):
         return self._stop.isSet()
 
+ self._stop.isSet()
+
