@@ -84,7 +84,7 @@ int findPoint(Vec4f line, int x){
         uses multiple for loops to go through the image row by row
         and subtract distances left to right
 */
-int calculateRawDistances(const Mat src_image, Mat *distances, int max_line_break = 50) {
+int calculateRawDistances(const Mat src_image, Mat& distances, int max_line_break = 50) {
     Mat line_image(src_image.rows,src_image.cols,CV_8UC3); //matrix specifically for lines, same shape as src
     vector<Vec4i> lines;
 #if defined DEBUG 
@@ -94,9 +94,9 @@ int calculateRawDistances(const Mat src_image, Mat *distances, int max_line_brea
     // FOLLOWING 3 LINES NOT PART OF ORIGINAL
     int start = lines[0][0] < lines[1][0] ? lines[1][0] : lines[0][0];
     int end = lines[0][2] < lines[1][2] ? lines[0][2] : lines[1][2];
-    distances = new Mat(end-start,1,CV_8UC1); 
+    distances = Mat(end-start,1,CV_8UC1); 
 #if defined DEBUG
-    cout << "SIZE OF DISTANCES:" << (*distances).size() << endl;
+    cout << "SIZE OF DISTANCES:" << distances.size() << endl;
     cout << "SIZE OF LINES:" << lines.size() << endl;
     //cout << "LINES:" << lines << endl;
     cout << "Hough performed" << endl;
@@ -113,19 +113,21 @@ int calculateRawDistances(const Mat src_image, Mat *distances, int max_line_brea
 #endif
     //Calculating distances
     if(lines.size() != 2) { //rejecting if there are more than two lines in this image
-        cout << "Must have 2 lines. Computation is impossible." << endl;
+        printf("Must have 2 lines. Given frame had %d lines. Computation is impossible.\n", lines.size());
         return 0; 
     }
     else {
+#if DEBUG
         cout << "START:" << start << endl;
         cout << "END:" << end << endl;
-        for(int col = 0; col < (end - start); col++){ // loops for the length of the first line 
+#endif        
+    for(int col = 0; col < (end - start); col++){ // loops for the length of the first line 
                 int pixelDistance = findPoint(lines[1],col) - findPoint(lines[0],col); 
-                (*distances).at<uchar>(col,0) = pixelDistance;
+                distances.at<uchar>(col,0) = pixelDistance;
         }
     }
 #if defined DEBUG    
-    cout << "LENGTH OF DISTANCES:" << (*distances).size() << endl;
+    cout << "LENGTH OF DISTANCES:" << distances.size() << endl;
 #endif
     return 1;
 }

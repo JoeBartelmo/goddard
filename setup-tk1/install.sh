@@ -30,6 +30,9 @@ source ~/.bashrc
 source /home/ubuntu/.bashrc
 nvm install 4.4.3
 
+#install x264encoding
+wget https://gstreamer.freedesktop.org/src/gst-omx/gst-omx-1.2.0.tar.xz
+
 #install dtrx -- few of us prefer this package, not required
 wget http://brettcsmith.org/2007/dtrx/dtrx-7.1.tar.gz
 tar -xvf dtrx-7.1.tar.gz 

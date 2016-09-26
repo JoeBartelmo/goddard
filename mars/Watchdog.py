@@ -47,7 +47,7 @@ class Watchdog(object):
                                     'batteryPercentageLevel': 0
                                     }
         self._pinHash = pinHash
-
+        self._scan = False
 
     def systemShutdown(self):
         logger.info("initiating safe shutdown")
@@ -87,6 +87,7 @@ class Watchdog(object):
         self.barkAtUnderVoltage()
         self.barkAtOverCurrent()
         self.barkAtBattPercent()
+        self.barkAtDistance()
         if all(value == 0 for value in self._electricStats.values()) == True:
             self._pinHash['warningLED'].toggleOff() # turning off warning LED if all values == 0
 
@@ -204,8 +205,19 @@ class Watchdog(object):
         elif value == 1:
             logger.warning("battery may be close to dying, please check")
 
-
-
+    def scanEnable(self):
+        self._scan = True
+    
+    def scanDisable(self):
+        self._scan = False
+ 
+    def barkAtDistance(self):
+        if self._scan == True:
+            #recall instead
+            pass
+        else:
+            #shit the brake
+            pass
 
     def barkAtOverVoltage(self):
         value = self._electricStats['overVoltageLevel']

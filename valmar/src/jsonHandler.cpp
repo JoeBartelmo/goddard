@@ -55,8 +55,12 @@ double JsonSettings::getSharpness() {
     return sharpness;
 }
 
-double JsonSettings::getPsnrThreshold() {
-    return psnr_threshold;
+int JsonSettings::getThreshold() {
+    return threshold;
+}
+
+int JsonSettings::getHistogramMax() {
+    return histogramMax;
 }
 
 int JsonSettings::getRefreshInterval() {
@@ -108,7 +112,8 @@ void JsonSettings::refreshAllData(string filename) {
 
     image_queue_size = settings["system"]["image_queue_size"];
 
-    psnr_threshold = settings["processing"]["psnr_threshold"];
+    threshold = settings["processing"]["threshold"];
+    histogramMax = settings["processing"]["histogram_max"];
 
     write_location = settings["calibration"]["write_location"];
     pixel_ratio = settings["calibration"]["pixel_ratio"];

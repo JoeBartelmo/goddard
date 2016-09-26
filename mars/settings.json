@@ -4,7 +4,6 @@
     "current_battery": 192.0
   },
   "logging": {
-    "index_path":"/phobos/goddard/maven/index.js",
     "output_path":"/phobos/goddard/mars",
     "connection_path":"/phobos/goddard/mars/connection"
   },
@@ -13,9 +12,12 @@
     "rpm_to_speed" : 0.0020228
   },
   "valmar":{
-    "command_path":"/phobos/goddard/valmar/command.json",
-    "telemetry_path":"/phobos/goddard/valmar/telemetry.json",
-    "beam_gap_path":"/phobos/goddard/valmar/beam.gap"
+    "path": "/phobos/goddard/valmar/target/valmar",
+    "command_path": "/phobos/goddard/valmar/command.json",
+    "beam_gap_path": "/phobos/goddard/valmar/beam.gap"
+  },
+  "maven": {
+    "path":"/phobos/goddard/maven/index.js"
   },
   "watchdog": {
     "enable_watchdog":false,

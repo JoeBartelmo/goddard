@@ -17,7 +17,8 @@ class JsonSettings {
         
         int image_queue_size;
 
-        double psnr_threshold;
+        int threshold;
+        int histogramMax;
 
         string write_location;
         double pixel_ratio;
@@ -42,7 +43,8 @@ class JsonSettings {
         double getGammaLuminosity();
         double getSharpness();
 
-        double getPsnrThreshold();
+        int getHistogramMax();
+        int getThreshold();
         
         int getRefreshInterval();
         void refreshAllData(string filename);

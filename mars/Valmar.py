@@ -16,36 +16,96 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import json
-import re
+import subprocess
+import logging
 
-class Valmar():
+logger = logging.getLogger('mars_logging')
 
-    def __init__(self, config, mars):
+class Valmar(object):
+    '''
+    Handles communication between the C++ Valmar program
+    and Mars
+    '''
+
+    def __init__(self, config, bufferSize = 8096):
         self._config = config
+        self._path = self._config.valmar.path
         self._commandPath = self._config.valmar.command_path
-        self._telemetryPath = self._config.valmar.telemetry_path
+        self._beamGapPipe = self._config.valmar.beam_gap_path
+        self._validCommands = {"enabled": "boolean", 
+                                "refresh_frame_interval": "int",
+                                "gain": {
+                                    "type": "int",
+                                    "parent": ""
+                                },
+                                "sharpness": {
+                                    "type":"float",
+                                    "parent": ""
+                                },
+                                "psnr_threshold": {
+                                    "type":"float",
+                                    "parent": ""
+                                }
+        }
+        self._init = False
+        self._bufferSize = bufferSize
+        self._io = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
 
-        self._commands = {}
-        self._telemetry = {}
-        self._mars = mars
+    def refresh(self):
+        if (self._init):
+            self.close()
+        self.enable()
+        newCall = 'nohup' + self._path + ' >/dev/null 2>&1 &'
+        logger.info('Launching Valmar with: ' + newCall)
 
+        subprocess.call([newCall], shell=True)
+        self._init = True
 
     def issueCommand(self, parameter, value):
-        with open(self._commandPath),'r' as commandFile:
-            self._commands = json.load(commandFile)
-            self._commands[parameter] = value
+        '''
+        Our Commands enable them to change settings in the JSON file
+        Valmar reads from this JSON every 100 frames
+        '''
+        if parameter in self._validCommands:
+            typeOf = self._validCommands[parameter]
+            try:
+                if 'int' in typeOf:
+                    var = int(value)
+                elif 'float' in typeOf:
+                    var = float(value)
+                elif 'boolean' in typeOf:
+                    var = bool(value)
+            except ValueError:
+                logger.warning('Supplied value for ' + parameter + ' was not valid type');
+                return
+            with open(self._commandPath, 'rw') as commandFile:
+                self._commands = json.load(commandFile)
+                self._commands[parameter] = var
+                commandFile.seek(0, 0)
+                commandFile.write(json.dumps(self._commands))
+        else:
+            logger.warning('Valmar setting "' + parameter + '" does not exist')
 
-        with open(self._commandPath, 'w') as commandFile:
-            commandFile.write(json.dumps(self._commands))
+    def getBeamGapData(self):
+        '''
+        Opens the FIFO and reads from it if possible
+        '''
+        try:
+            buffer = os.read(self._io, self._bufferSize)
+        except OSError as err:
+            if err.errno == errno.EAGAIN or err.errno == errno.EWOULDBLOCK:
+                buffer = None
+            else:
+                raise
 
-
-    def updateTelemetry(self):
-        with open(self._telemetryPath, 'r') as telemFile:
-            self._telemetry = json.load(telemFile)
-        return self._telemetry
+        if buffer is None:
+            return None
+        else:
+            #data is piped through as json
+            beamGapData = json.load(buffer)
 
     def enable(self):
-        self.issueCommand("enable", True)
+        self.issueCommand("enabled", True)
 
     def disable(self):
-        self.issueCommand("enable",False)
+        self.issueCommand("enabled", False)

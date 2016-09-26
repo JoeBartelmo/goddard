@@ -85,8 +85,8 @@ class Jetson(object):
         self._sysCommands = {'system shutdown': self.systemShutdown,
                                 'system restart': self.systemRestart,
                                 'recall': self._watchdog.recall,
-                                'stream open': self._stream.open,
-                                'stream close': self._stream.close,
+                                'stream on': self._stream.open,
+                                'stream off': self._stream.close,
                                 'motor off': self._pinHash['motorRelay'].toggleOff,
                                 'motor on' : self._pinHash['motorRelay'].toggleOn,
                                 'laser off': self._pinHash['laserRelay'].toggleOff,
@@ -101,9 +101,18 @@ class Jetson(object):
                                 'watchdog off': self._watchdog.disable,
                                 'watchdog on': self._watchdog.enable,
                                 'valmar off': self._valmar.disable,
-                                'valmar on': self._valmar.enable
+                                'valmar on': self._valmar.enable,
+                                'scan on': self.scan,
+                                'scan off': self._watchdog.scanDisable
                              }
 
+    def scan(self):
+        #disengage brake
+        #motor on
+        #forward 5
+        #enable watchdog
+        #enable leds 5
+        pass
 
     def safeInput(self):
         """

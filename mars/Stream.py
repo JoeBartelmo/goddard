@@ -29,7 +29,7 @@ class Stream (object):
         self._resolution = 'None yet'
         self._timestamp = timestamp
         self._init = False
-        self._indexPath = self._config.logging.index_path
+        self._indexPath = self._config.maven.path
         self._logPath = self._config.logging.output_path + 'output/' + self._config.user_input.log_name + '-' + self._timestamp + '/video'
 
 
@@ -43,7 +43,7 @@ class Stream (object):
         logger.info('re-initializing steam with new inputs')
         newCall = 'nohup' + ' node '+ self._indexPath + ' -w '  + self._resolution[0] + ' -h ' + self._resolution[1] + ' -b ' \
                   + str(self._bitrate) + ' -f ' + self._logPath + ' >/dev/null 2>&1 &'
-        logger.info(newCall)
+        logger.info('Launching Maven with: ' + newCall)
 
         subprocess.call([newCall], shell=True)
 

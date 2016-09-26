@@ -5,7 +5,7 @@
     },
     "capture" : {
         "framerate": 100,
-        "exposure_us": 10000,
+        "exposure_us": 3000,
         "gain": 3,
         "gamma_y": 1.00,
         "sharpness": 0.5
@@ -14,7 +14,8 @@
         "image_queue_size" : 150
     },
     "processing" : {
-        "psnr_threshold": 50.0
+        "histogram_max": 150,
+        "threshold": 6000
     },
     "calibration": {
         "write_location": "/phobos/goddard/mars/files/",
