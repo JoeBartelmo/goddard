@@ -21,9 +21,14 @@ $(PROGRAM): $(MAIN_SOURCES)
 	$(CXX) $(CALIB_SOURCES) -o target/$(CALIB) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
 	$(CXX) $(CALIB_SOURCES) -o target/$(CALIB)-debug -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG
 
+$(CALIB): $(MAIN_SOURCES)
+	$(CXX) $(CALIB_SOURCES) -o target/$(CALIB) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
+	$(CXX) $(CALIB_SOURCES) -o target/$(CALIB)-debug -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG
+	
 .cpp.o: $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 	$(CXX) -g -c $< -o $@
 
 clean:
 	rm -f $(PROGRAM) $(MAIN_OBJECTS)
+
 
