@@ -8,6 +8,8 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include <cmath>
+
 #include "includes.hpp"
 using namespace cv;
 using namespace std;
@@ -149,6 +151,42 @@ static bool runCalibration( Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
     return ok;
 }
 
+double distance(Point2f point1, Point2f point2){
+// return euclidean distance between two points
+
+return sqrt(pow((point2.x - point1.x), 2) + pow((point2.y - point1.y), 2));
+}
+
+double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize)
+{
+    double sum_pixel_dist = 0.0;
+    int samples = 0, index1, index2;
+
+    for (int i = 0; i < boardSize.height; ++i)
+    {
+        for (int j = 0; j < boardSize.width - 1; ++j)
+        {
+            index1 = i * boardSize.height + j;
+            index2 = i * boardSize.height + (j + 1);
+            sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
+            samples++;
+        }
+    }
+
+    for (int k = 0; k < boardSize.height - 1; ++k)
+    {
+        for (int l = 0; l < boardSize.width; ++l)
+        {
+            index1 = k * boardSize.height + l;
+            index2 = (k + 1) * boardSize.height + l;
+            sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
+            samples++;
+        }
+    }
+
+    return sum_pixel_dist / samples;
+}
+
 int main(int argc, char* argv[])
 {
     //load settings
@@ -184,7 +222,14 @@ int main(int argc, char* argv[])
         exp.PrintError(); // report error if some call fails
         return EXIT_FAILURE;
     }
-    Size boardSize = Size(9, 6);
+
+    printf("Running Calibration (Rectification)\n");
+    printf("Place checkerboard in field of view.\n");
+    printf("Press c; change orientation (roll, yaw, and pitch ), repeat at least 5 times.\n");
+    printf("When enough samples have been taken, press q.\n");
+    printf("(All these key presses need to happen with the picture window in focus \n(i.e. click on the window with the video stream in it before tying the letters.))\n");
+
+    Size boardSize = Size(4, 3);
     float squareSize = 50.0;
     Size imageSize;
     vector<vector<Point2f> > imagePoints;
@@ -201,7 +246,7 @@ int main(int argc, char* argv[])
             break;
         else if(c == 'c' || c == 'C')
         {
-	    printf("Frame Grabbed\n");
+	        printf("Frame Grabbed\n");
             imageSize = view.size();  // Format input image.
 
             vector<Point2f> pointBuf;
@@ -211,8 +256,9 @@ int main(int argc, char* argv[])
 
             if (found)
             {
-		printf("Chessboard Found\n");
-
+		        printf("Chessboard Found\n");
+                for(int i=0; i<pointBuf.size(); ++i)
+                     std::cout << pointBuf[i] << " \n";
                 //Mat viewGray;
                 //cvtColor(view, viewGray, COLOR_BGR2GRAY);
                 cornerSubPix( view, pointBuf, Size(11,11),
@@ -224,7 +270,6 @@ int main(int argc, char* argv[])
         }  
     }
 
-    printf("Running Calibration\n");
     // do calibration
     Mat cameraMatrix, distCoeffs;
 
@@ -232,13 +277,74 @@ int main(int argc, char* argv[])
 
     printf("Saving Stuff\n");
 
-    FileStorage fs("dist_coeff.yml", FileStorage::WRITE);
+    FileStorage fs("calibration_coefficients.yml", FileStorage::WRITE);
     fs << "Distribution Coeffiecients" << distCoeffs;
-
-    FileStorage fs_cm("cam_mat.yml", FileStorage::WRITE);
-    fs_cm << "Camera Matrix" << cameraMatrix;
+    fs << "Camera Matrix" << cameraMatrix;
+    fs << "Corners" << imagePoints;
+    fs << "boardSize" << boardSize;
 
     printf("Saved Stuff\n");
+
+    // SPLIT OF PIXEL DISTANCE CALIBRATION AND RECTIFICATION
+    printf("Running Calibration (Pixel -> Real Distance Calculation)\n");
+    printf("Place checkerboard in characteristic plane of rail, then press c. \n");
+    printf("Rotate checkerboard, press c, repeat at least 5 times. \n");
+    printf("When enough samples are taken, press q. \n");
+    printf("(All these key presses need to happen with the picture window in focus \n(i.e. click on the window with the video stream in it before tying the letters.))\n");
+
+    //calculate maps for remapping
+    Mat view, rview, map1, map2;
+    initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+            getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+            imageSize, CV_16SC2, map1, map2);
+
+    //get corners
+    vector<Point2f> rectified_points;
+    double average_pixel_distance = 0.0;
+    int samples = 0;
+
+    while(true)
+    {   
+        view = leftCam.GetNextImageOcvMat(); // get an image
+
+        remap(view, rview, map1, map2, INTER_LINEAR); // remap using previously calculated maps
+
+        imshow("Image View", rview);
+        char c = (char)waitKey(30);
+        if( c == 'q' || c == 'Q' )
+            break;
+        else if(c == 'c' || c == 'C')
+        {
+        printf("Frame Grabbed\n");
+        imageSize = rview.size();  // Format input image.
+
+
+        bool found = findChessboardCorners( rview, boardSize, rectified_points,
+                CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
+
+            if (found)
+            {
+                printf("Chessboard Found\n");
+                for(int i=0; i<rectified_points.size(); ++i)
+                     std::cout << rectified_points[i] << " \n";
+                //Mat viewGray;
+                //cvtColor(view, viewGray, COLOR_BGR2GRAY);
+                cornerSubPix( rview, rectified_points, Size(11,11),
+                    Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+                
+                //then calculate average pixel length of a side of the checkerboard
+
+                average_pixel_distance += get_pixel_distance(rectified_points, boardSize);
+                samples ++;
+            }
+        }  
+    }
+    average_pixel_distance = average_pixel_distance / (double)samples;
+    printf("Average Pixel Distance: %f\n", average_pixel_distance);
+
+    double real_side_length = 50; // in mm
+
+    printf("Milimeters Per Pixel: %f\n", real_side_length / average_pixel_distance);
 
     leftCam.StopAcquisition();
     leftCam.Close();
