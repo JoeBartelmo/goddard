@@ -1,29 +1,29 @@
-#include <iostream>
-#include <sstream>
-#include <time.h>
-#include <stdio.h>
+/**
+* Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+* associated documentation files (the "Software"), to deal in the Software without restriction,
+* including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+* and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+* subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all copies or substantial 
+* portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+* LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+* WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
-#include <cmath>
-
+*/
 #include "includes.hpp"
-using namespace cv;
-using namespace std;
-
-#include "includes.hpp"
-
-#if !defined(JSON_SETTINGS)
+#include "util.cpp"
+#if !defined JSON_SETTINGS
     #define JSON_SETTINGS
     #include "jsonHandler.hpp"
     #define JSON_LOAD_ATTEMPT 10
 #endif
-
-#define DELTA_DOUBLE_THRESHOLD 0.00005
-
 const char* leftCamera = "left";
 const char* rightCamera = "right";
 
@@ -31,68 +31,17 @@ JsonSettings* ptrSettings = new JsonSettings();
 JsonSettings settings = *ptrSettings;
 
 
-//We need to pass in ptr b/c stream will automatically close at end of scope otherwise
-void assignSettings(string settingsFile, xiAPIplusCameraOcv *cam) {
-    settings.refreshAllData(settingsFile);
-#if DEBUG
-    printf("#####################################\n");
-    printf("Printing Settings of Camera currently:\n");
-    printf("#####################################\n");
-#endif
-
-
-    if ((int)(*cam).GetExposureTime() != settings.getExposureTime()) {
-#if DEBUG
-        printf("\tExposure: %d\n", (int)(*cam).GetExposureTime());
-#endif
-        (*cam).SetExposureTime(settings.getExposureTime());
-    }
-
-    //The only one i can't seem to adjust right    
-    //if ((int)(*cam).GetFrameRate() != settings.getFrameRate()) {
-    //    (*cam).SetFrameRate(settings.getExposureTime());
-    //}
-
-    if ((int)(*cam).GetGain() != settings.getGain()) {
-#if DEBUG
-        printf("\tGain: %d\n", (int)(*cam).GetGain());
-#endif
-        (*cam).SetGain(settings.getGain());
-    }
-
-    if (abs((*cam).GetGammaLuminosity() - settings.getGammaLuminosity()) > DELTA_DOUBLE_THRESHOLD) {
-#if DEBUG
-        printf("\tGammaY: %f\n", (float)(*cam).GetGain());
-#endif
-        //(*cam).SetGammaLuminosity(settings.getGammaLuminosity());
-    }
-    
-    if (abs((*cam).GetSharpness() - settings.getSharpness()) > DELTA_DOUBLE_THRESHOLD) {
-#if DEBUG
-        printf("\tSharpness: %f\n", (float)(*cam).GetSharpness());
-#endif
-        (*cam).SetSharpness(settings.getSharpness());
-    }
-#if DEBUG
-    printf("#####################################\n");
-    printf("#####################################\n");
-#endif
-}
-
-
 static double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
                                          const vector<vector<Point2f> >& imagePoints,
                                          const vector<Mat>& rvecs, const vector<Mat>& tvecs,
                                          const Mat& cameraMatrix , const Mat& distCoeffs,
-                                         vector<float>& perViewErrors)
-{
+                                         vector<float>& perViewErrors) {
     vector<Point2f> imagePoints2;
     int i, totalPoints = 0;
     double totalErr = 0, err;
     perViewErrors.resize(objectPoints.size());
 
-    for( i = 0; i < (int)objectPoints.size(); ++i )
-    {
+    for(i = 0; i < (int)objectPoints.size(); ++i) {
         projectPoints( Mat(objectPoints[i]), rvecs[i], tvecs[i], cameraMatrix,
                        distCoeffs, imagePoints2);
         err = norm(Mat(imagePoints[i]), Mat(imagePoints2), CV_L2);
@@ -106,18 +55,18 @@ static double computeReprojectionErrors( const vector<vector<Point3f> >& objectP
     return std::sqrt(totalErr/totalPoints);
 }
 
-static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners)
-{
+static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners) {
     corners.clear();
 
-    for( int i = 0; i < boardSize.height; ++i )
-        for( int j = 0; j < boardSize.width; ++j )
+    for (int i = 0; i < boardSize.height; ++i) {
+        for (int j = 0; j < boardSize.width; ++j) {
             corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
+        }
+    }
 }
 
 static bool runCalibration( Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
-                            vector<vector<Point2f> > imagePoints, Size boardSize, float squareSize)
-{
+                            vector<vector<Point2f> > imagePoints, Size boardSize, float squareSize) {
     // define parameters
     vector<Mat> rvecs, tvecs;
     vector<float> reprojErrs;
@@ -153,19 +102,15 @@ static bool runCalibration( Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
 
 double distance(Point2f point1, Point2f point2){
 // return euclidean distance between two points
-
-return sqrt(pow((point2.x - point1.x), 2) + pow((point2.y - point1.y), 2));
+    return sqrt(pow((point2.x - point1.x), 2) + pow((point2.y - point1.y), 2));
 }
 
-double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize)
-{
+double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize) {
     double sum_pixel_dist = 0.0;
     int samples = 0, index1, index2;
 
-    for (int i = 0; i < boardSize.height; ++i)
-    {
-        for (int j = 0; j < boardSize.width - 1; ++j)
-        {
+    for (int i = 0; i < boardSize.height; ++i) {
+        for (int j = 0; j < boardSize.width - 1; ++j) {
             index1 = i * boardSize.height + j;
             index2 = i * boardSize.height + (j + 1);
             sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
@@ -173,10 +118,8 @@ double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize)
         }
     }
 
-    for (int k = 0; k < boardSize.height - 1; ++k)
-    {
-        for (int l = 0; l < boardSize.width; ++l)
-        {
+    for (int k = 0; k < boardSize.height - 1; ++k) {
+        for (int l = 0; l < boardSize.width; ++l) {
             index1 = k * boardSize.height + l;
             index2 = (k + 1) * boardSize.height + l;
             sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
@@ -189,33 +132,35 @@ double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize)
 
 int main(int argc, char* argv[])
 {
+
+    xiAPIplusCameraOcv cam;
     //load settings
     string settingsFile = "command.json";
+    string camera = "";
     switch(argc) {
-        case 2:
+        case 3:
             settingsFile = argv[1];
-            //Load in all settings from command json 
-            settings.refreshAllData(settingsFile);
+            //Load in all settings from command json
+            camera = argv[2];
+            if (strcmp(argv[2], leftCamera) || strcmp(argv[2], rightCamera)) {
+                settings.refreshAllData(settingsFile);
+                cam.OpenBySN(settings.getCamera(argv[2]));
+            }
+            else {
+                printf("Usage:\tcalibration [command.json] [left|right]\n");
+                return EXIT_FAILURE;
+            }
             break;
         default:
-            printf("Usage:\tcalibration [command.json]\n");
+            printf("Usage:\tcalibration [command.json] [left|right]\n");
             return EXIT_FAILURE;
     }
-
-    xiAPIplusCameraOcv leftCam;
-    //xiAPIplusCameraOcv rightCam;
-
-    leftCam.OpenBySN(settings.getCamera(leftCamera));
-    //rightCam.OpenBySN(settings.getCamera(rightCamera));
-
     // Retrieving a handle to the camera device
-    printf("Opening first camera...\n");
     
-    assignSettings(settingsFile, &leftCam);
+    assignSettings(settings,settingsFile, &cam);
     try {
         printf("Starting acquisition...\n");
-        leftCam.StartAcquisition();
-        //rightCam.startAcquisition();
+        cam.StartAcquisition();
     }
     catch(xiAPIplus_Exception& exp) {
         printf("Error occured on attempting to start acquisition\n");
@@ -229,61 +174,83 @@ int main(int argc, char* argv[])
     printf("When enough samples have been taken, press q.\n");
     printf("(All these key presses need to happen with the picture window in focus \n(i.e. click on the window with the video stream in it before tying the letters.))\n");
 
-    Size boardSize = Size(4, 3);
-    float squareSize = 50.0;
-    Size imageSize;
+    Size boardSize = Size(settings.getCheckerboardWidth(), settings.getCheckerboardHeight());
+    float squareSize = 50;
     vector<vector<Point2f> > imagePoints;
+    Mat cameraMatrix, distCoeffs;
+    int refresh_tick = 0;
+    char c = '\0';
+    FileStorage writer;
+    register Mat view = cam.GetNextImageOcvMat(); // get an image - for image size
+    Size imageSize = view.size();
 
-    while(true)
-    {
-        Mat view;
-        
-        view = leftCam.GetNextImageOcvMat(); // get an image
-        
-        imshow("Image View", view);
-        char c = (char)waitKey(30);
-        if( c == 'q' || c == 'Q' )
-            break;
-        else if(c == 'c' || c == 'C')
-        {
-	        printf("Frame Grabbed\n");
-            imageSize = view.size();  // Format input image.
 
-            vector<Point2f> pointBuf;
-
-            bool found = findChessboardCorners( view, boardSize, pointBuf,
-                    CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
-
-            if (found)
-            {
-		        printf("Chessboard Found\n");
-                for(int i=0; i<pointBuf.size(); ++i)
-                     std::cout << pointBuf[i] << " \n";
-                //Mat viewGray;
-                //cvtColor(view, viewGray, COLOR_BGR2GRAY);
-                cornerSubPix( view, pointBuf, Size(11,11),
-                    Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
-                
-                //drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
-                imagePoints.push_back(pointBuf);
-            }
-        }  
+    bool calibrate = true;
+    if (checkFileExists((camera + "_calibration_coefficients.yml").c_str())) {
+        printf("\n\nDetected %s exists, would you like to overwrite it?\ny/N: ", (camera + "_calibration_coefficients.yml").c_str());
+        char input;
+        cin >> input;
+        calibrate = input == 'y' || input == 'Y';
     }
 
-    // do calibration
-    Mat cameraMatrix, distCoeffs;
+    if (calibrate) {
+        while(c != 'q' || c != 'Q') {
+            view = cam.GetNextImageOcvMat(); // get an image
+            
+            imshow("Image View", view);
+            c = (char)waitKey(30);
+            if(c == 'c' || c == 'C') {
+                printf("Frame Grabbed\n");
+                vector<Point2f> pointBuf;
 
-    runCalibration(imageSize, cameraMatrix, distCoeffs, imagePoints, boardSize, squareSize);
+                bool found = findChessboardCorners( view, boardSize, pointBuf,
+                        CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
 
-    printf("Saving Stuff\n");
+                if (found) {
+                    printf("Chessboard Found\n");
+#if DEBUG
+                    for(int i=0; i<pointBuf.size(); ++i)
+                         cout << pointBuf[i] << " \n";
+#endif 
+                   //Mat viewGray;
+                    //cvtColor(view, viewGray, COLOR_BGR2GRAY);
+                    cornerSubPix( view, pointBuf, Size(11,11),
+                        Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
+                    
+                    //drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
+                    imagePoints.push_back(pointBuf);
+                }
+            }  
+            if (refresh_tick >= settings.getRefreshInterval()) {
+                assignSettings(settings, settingsFile, &cam);
+                refresh_tick = 0;
+            }
+            refresh_tick++;
+        }
+        runCalibration(imageSize, cameraMatrix, distCoeffs, imagePoints, boardSize, squareSize);
+    }
+    else {
+        FileStorage reader(camera + "_calibration_coefficients.yml", FileStorage::READ);
+        reader["distribution_coefficients"] >> distCoeffs;
+        reader["camera_matrix"] >> cameraMatrix;
+        //reader["corners"] >> imagePoints;
+        reader["board_size"] >> boardSize;
+        reader.release();
+    }
+    
+    if (!writer.isOpened()) {
+        writer = FileStorage(camera + "_calibration_coefficients.yml", FileStorage::WRITE);
+        writer << "distribution_coefficients" << distCoeffs;
+        writer << "camera_matrix" << cameraMatrix;
+        //writer << "corners" << imagePoints;
+        writer << "board_size" << boardSize;
+    }
 
-    FileStorage fs("calibration_coefficients.yml", FileStorage::WRITE);
-    fs << "Distribution Coeffiecients" << distCoeffs;
-    fs << "Camera Matrix" << cameraMatrix;
-    fs << "Corners" << imagePoints;
-    fs << "boardSize" << boardSize;
-
-    printf("Saved Stuff\n");
+    //calculate maps for remapping
+    Mat rview, map1, map2;
+    initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
+            getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+            imageSize, CV_16SC2, map1, map2);
 
     // SPLIT OF PIXEL DISTANCE CALIBRATION AND RECTIFICATION
     printf("Running Calibration (Pixel -> Real Distance Calculation)\n");
@@ -292,63 +259,56 @@ int main(int argc, char* argv[])
     printf("When enough samples are taken, press q. \n");
     printf("(All these key presses need to happen with the picture window in focus \n(i.e. click on the window with the video stream in it before tying the letters.))\n");
 
-    //calculate maps for remapping
-    Mat view, rview, map1, map2;
-    initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
-            getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
-            imageSize, CV_16SC2, map1, map2);
-
     //get corners
     vector<Point2f> rectified_points;
     double average_pixel_distance = 0.0;
     int samples = 0;
-
-    while(true)
-    {   
-        view = leftCam.GetNextImageOcvMat(); // get an image
+    
+    c = (char)waitKey(30);
+    while(c != 'q' && c != 'Q') {   
+        view = cam.GetNextImageOcvMat(); // get an image
 
         remap(view, rview, map1, map2, INTER_LINEAR); // remap using previously calculated maps
 
         imshow("Image View", rview);
-        char c = (char)waitKey(30);
-        if( c == 'q' || c == 'Q' )
-            break;
-        else if(c == 'c' || c == 'C')
-        {
-        printf("Frame Grabbed\n");
-        imageSize = rview.size();  // Format input image.
+        c = (char)waitKey(30);
+        if(c == 'c' || c == 'C') {
+            printf("Frame Grabbed\n");
+            imageSize = rview.size();  // Format input image.
 
 
-        bool found = findChessboardCorners( rview, boardSize, rectified_points,
+            bool found = findChessboardCorners( rview, boardSize, rectified_points,
                 CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
 
-            if (found)
-            {
+            if (found) {
                 printf("Chessboard Found\n");
                 for(int i=0; i<rectified_points.size(); ++i)
                      std::cout << rectified_points[i] << " \n";
-                //Mat viewGray;
-                //cvtColor(view, viewGray, COLOR_BGR2GRAY);
                 cornerSubPix( rview, rectified_points, Size(11,11),
                     Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
                 
                 //then calculate average pixel length of a side of the checkerboard
 
                 average_pixel_distance += get_pixel_distance(rectified_points, boardSize);
-                samples ++;
+                samples++;
             }
         }  
+        if (refresh_tick >= settings.getRefreshInterval()) {
+            assignSettings(settings, settingsFile, &cam);
+            refresh_tick = 0;
+        }
+        refresh_tick++;
     }
     average_pixel_distance = average_pixel_distance / (double)samples;
     printf("Average Pixel Distance: %f\n", average_pixel_distance);
 
-    double real_side_length = 50; // in mm
+    double real_side_length = settings.getPixelConversionFactor(); // in inches
 
-    printf("Milimeters Per Pixel: %f\n", real_side_length / average_pixel_distance);
-
-    leftCam.StopAcquisition();
-    leftCam.Close();
-    //rightCam.StopAcquisition();
-    //rightCam.Close();
+    printf("Inches Per Pixel: %f\n", real_side_length / average_pixel_distance);
+    writer << "inches_conversion_factor" << real_side_length / average_pixel_distance;
+    
+    writer.release();
+    cam.StopAcquisition();
+    cam.Close();
     return 0;
 }

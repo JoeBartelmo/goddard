@@ -1,27 +1,44 @@
 {
-    "command":{
+    "command": {
         "enabled": true,
-        "refresh_frame_interval": 100
+        "refresh_frame_interval": 10
     },
-    "capture" : {
+    "capture": {
         "framerate": 100,
-        "exposure_us": 3000,
-        "gain": 3,
+        "exposure_us": 2000,
+        "gain": 2,
         "gamma_y": 1.00,
         "sharpness": 0.5
     },
-    "system" : {
-        "image_queue_size" : 150
+    "system": {
+        "image_queue_size": 150
     },
-    "processing" : {
-        "histogram_max": 150,
-        "threshold": 6000
+    "processing": {
+        "histogram_max": 120,
+        "threshold": 6000,
+        "hough_line": {
+            "rho": 1,
+            "theta": 0.0003469817,
+            "threshold": 10, 
+            "min_line_length": 400,
+            "max_line_gap": 3
+        },
+        "vertical_edge_thresholds": {
+            "canny_1": 100,
+            "canny_2": 10500
+        },
+        "erosion_kernal_size": {
+            "vertical": 1,
+            "horizontal":2 
+        }
     },
     "calibration": {
         "write_location": "/phobos/goddard/mars/files/",
-        "pixel_ratio":5.0,
-        "ibeam_offset" : 0,
-        "number_of_frames": 10
+        "checkerboard": {
+            "width": 4,
+            "height": 3
+        },
+        "conversion_factor": 0.1875
     },
     "ximea_cameras": {
         "left": "12531150",

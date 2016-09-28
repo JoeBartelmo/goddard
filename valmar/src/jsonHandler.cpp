@@ -24,52 +24,95 @@
 #endif
 
 bool JsonSettings::isEnabled() {
-    return enabled;
-}
-
-int JsonSettings::getIBeamOffset() {
-    return ibeam_offset;
-}
-
-void JsonSettings::setIBeamOffset(int offset) {
-    ibeam_offset = offset;
+    return settings["command"]["enabled"];
 }
 
 int JsonSettings::getFrameRate() {
-    return framerate;
+    return settings["capture"]["framerate"];
 }
 
 int JsonSettings::getExposureTime() {
-    return exposure_us;
+    return settings["capture"]["exposure_us"];
 }
 
 int JsonSettings::getGain() {
-    return gain;
+    return settings["capture"]["gain"];
 }
 
 double JsonSettings::getGammaLuminosity() {
-    return gamma_y;
+    return (double)settings["capture"]["gamma_y"];
 }
 
 double JsonSettings::getSharpness() {
-    return sharpness;
+    return settings["capture"]["sharpness"];
 }
 
 int JsonSettings::getThreshold() {
-    return threshold;
+    return settings["processing"]["threshold"];
 }
 
 int JsonSettings::getHistogramMax() {
-    return histogramMax;
+    return settings["processing"]["histogram_max"];
 }
 
 int JsonSettings::getRefreshInterval() {
-    return refresh_interval;
+    return settings["command"]["refresh_frame_interval"];
 }
 
+int JsonSettings::getCheckerboardWidth() {
+    return settings["calibration"]["checkerboard"]["width"];
+}
+
+int JsonSettings::getCheckerboardHeight() {
+    return settings["calibration"]["checkerboard"]["height"];
+}
+
+double JsonSettings::getPixelConversionFactor() {
+    return (double)settings["calibration"]["conversion_factor"];
+}
+
+int JsonSettings::getHoughLineRho() {
+    return settings["processing"]["hough_line"]["rho"];
+}
+
+int JsonSettings::getHoughLineThreshold() {
+    return settings["processing"]["hough_line"]["threshold"];
+}
+
+int JsonSettings::getHoughLineMinLength() {
+    return settings["processing"]["hough_line"]["min_line_length"];
+}
+
+int JsonSettings::getHoughLineMaxGap() {
+    return settings["processing"]["hough_line"]["max_line_gap"];
+}
+
+double JsonSettings::getHoughLineTheta() {
+    return (double)settings["processing"]["hough_line"]["theta"];
+}
+
+int JsonSettings::getCannyThreshold(int i) {
+    switch(i) {
+        case 1:
+            return settings["processing"]["vertical_edge_thresholds"]["canny_1"];
+        case 2:
+            return settings["processing"]["vertical_edge_thresholds"]["canny_2"];
+    }
+    return -1;
+}
+
+int JsonSettings::getVerticalMorph() {
+    return settings["processing"]["erosion_kernal_size"]["vertical"];
+}
+
+int JsonSettings::getHorizontalMorph() {
+    return settings["processing"]["erosion_kernal_size"]["horizontal"];
+}
 //getsCameraSerialNumber
 char* JsonSettings::getCamera(const char* camera) {
     //ximeas api wants a char* not a const char* :(
+    string left = settings["ximea_cameras"]["left"];
+    string right = settings["ximea_cameras"]["right"];
     const char* cam;
     if (strcmp(camera, "left") == 0) {
         cam = left.c_str();
@@ -85,7 +128,7 @@ char* JsonSettings::getCamera(const char* camera) {
 }
 
 void JsonSettings::refreshAllData(string filename) {
-    json settings;
+    json temp_settings;
     int attempt;    
     for(attempt = 0; attempt < JSON_LOAD_ATTEMPT; attempt++) {
         try {
@@ -93,7 +136,7 @@ void JsonSettings::refreshAllData(string filename) {
             std::ifstream t(filename);
             std::stringstream buffer;
             buffer << t.rdbuf();
-            settings = json::parse(buffer.str());
+            temp_settings = json::parse(buffer.str());
             break;
         } catch (int i) { cvWaitKey(200); }
         if (attempt >= JSON_LOAD_ATTEMPT -1) {
@@ -101,26 +144,6 @@ void JsonSettings::refreshAllData(string filename) {
             return;
         }
     }
-    enabled = settings["command"]["enabled"];
-    refresh_interval = settings["command"]["refresh_frame_interval"];
-    
-    framerate = settings["capture"]["framerate"];
-    exposure_us = settings["capture"]["exposure_us"];
-    gain = settings["capture"]["gain"];
-    gamma_y = settings["capture"]["gamma_y"];
-    sharpness = settings["capture"]["sharpness"];
-
-    image_queue_size = settings["system"]["image_queue_size"];
-
-    threshold = settings["processing"]["threshold"];
-    histogramMax = settings["processing"]["histogram_max"];
-
-    write_location = settings["calibration"]["write_location"];
-    pixel_ratio = settings["calibration"]["pixel_ratio"];
-
-    left = settings["ximea_cameras"]["left"];
-    right = settings["ximea_cameras"]["right"];
-
-    //dont reload ibeam offset, that's subject to change 
+    settings = temp_settings;
 }
 

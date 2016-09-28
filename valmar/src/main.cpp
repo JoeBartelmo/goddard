@@ -1,12 +1,12 @@
 #include "includes.hpp"
 #include "measurements.cpp"
+#include "util.cpp"
+
 #if !defined(JSON_SETTINGS)
     #define JSON_SETTINGS
     #include "jsonHandler.hpp"
     #define JSON_LOAD_ATTEMPT 10
 #endif
-
-#define DELTA_DOUBLE_THRESHOLD 0.00005
 
 const char* leftCamera = "left";
 const char* rightCamera = "right";
@@ -29,60 +29,11 @@ int getScalarHistogram(const Mat& image, unsigned char upperRange) {
     return (int)histSum;
 }
 
-//We need to pass in ptr b/c stream will automatically close at end of scope otherwise
-void assignSettings(string settingsFile, xiAPIplusCameraOcv *cam) {
-    settings.refreshAllData(settingsFile);
-#if DEBUG
-    printf("#####################################\n");
-    printf("Printing Settings of Camera currently:\n");
-    printf("#####################################\n");
-#endif
-
-
-    if ((int)(*cam).GetExposureTime() != settings.getExposureTime()) {
-#if DEBUG
-        printf("\tExposure: %d\n", (int)(*cam).GetExposureTime());
-#endif
-        (*cam).SetExposureTime(settings.getExposureTime());
-    }
-
-    //The only one i can't seem to adjust right    
-    //if ((int)(*cam).GetFrameRate() != settings.getFrameRate()) {
-    //    (*cam).SetFrameRate(settings.getExposureTime());
-    //}
-
-    if ((int)(*cam).GetGain() != settings.getGain()) {
-#if DEBUG
-        printf("\tGain: %d\n", (int)(*cam).GetGain());
-#endif
-        (*cam).SetGain(settings.getGain());
-    }
-
-    if (abs((*cam).GetGammaLuminosity() - settings.getGammaLuminosity()) > DELTA_DOUBLE_THRESHOLD) {
-#if DEBUG
-        printf("\tGammaY: %f\n", (float)(*cam).GetGain());
-#endif
-        //(*cam).SetGammaLuminosity(settings.getGammaLuminosity());
-    }
-    
-    if (abs((*cam).GetSharpness() - settings.getSharpness()) > DELTA_DOUBLE_THRESHOLD) {
-#if DEBUG
-        printf("\tSharpness: %f\n", (float)(*cam).GetSharpness());
-#endif
-        (*cam).SetSharpness(settings.getSharpness());
-    }
-#if DEBUG
-    printf("#####################################\n");
-    printf("#####################################\n");
-#endif
-}
-
 /*
 * Opens up cameras, takes a photo, then kills app
 * TODO: Make use calibration
 */
-int _tmain(int argc, _TCHAR* argv[])
-{  
+int _tmain(int argc, _TCHAR* argv[]) {  
     //load settings
     string settingsFile = "command.json";
     string defaultImage = "psnr_img";
@@ -101,11 +52,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
     leftCam.OpenBySN(settings.getCamera(leftCamera));
     //rightCam.OpenBySN(settings.getCamera(rightCamera));
-
-    // Retrieving a handle to the camera device
-    printf("Opening first camera...\n");
-    
-    assignSettings(settingsFile, &leftCam);
+   
+    if (!checkFileExists("left_calibration_coefficients.yml")/* || !checkFileExists("right_calibration_coefficients.yml")*/) {
+        printf("No camera calibration file found, run ./calibrate to generate calibration coefficients...\n");
+        return EXIT_FAILURE;
+    }
+ 
+    //calculate maps for remapping
+    assignSettings(settings, settingsFile, &leftCam);
     try {
         printf("Starting acquisition...\n");
         leftCam.StartAcquisition();
@@ -116,12 +70,45 @@ int _tmain(int argc, _TCHAR* argv[])
         exp.PrintError(); // report error if some call fails
         return EXIT_FAILURE;
     }
- 
-    printf("Waiting for PSNR Trigger...\n");
- 
+
+// #################DISTORTION###################################
+    Mat leftCameraMatrix, rightCameraMatrix, leftDistCoeffs, rightDistCoeffs, map1, map2, map3, map4;
+    Size imageSize = leftCam.GetNextImageOcvMat().size();
+    double leftConversionFactor, rightConversionFactor; 
+    Rect leftCropRegion, rightCropRegion;
+    
+    FileStorage reader("left_calibration_coefficients.yml", FileStorage::READ);
+    reader["distribution_coefficients"] >> leftDistCoeffs;
+    reader["camera_matrix"] >> leftCameraMatrix;
+    //reader["corners"] >> imagePoints;
+    reader["inches_conversion_factor"] >> leftConversionFactor;
+    reader.release();
+
+    //calculate maps for remapping
+    initUndistortRectifyMap(leftCameraMatrix, leftDistCoeffs, Mat(),
+            getOptimalNewCameraMatrix(leftCameraMatrix, leftDistCoeffs, imageSize, 1, imageSize, &leftCropRegion),
+            imageSize, CV_16SC2, map1, map2);
+
+
+    /*uncomment when right camera hooked up
+    FileStorage reader("right_calibration_coefficients.yml", FileStorage::READ);
+    reader["distribution_coefficients"] >> rightDistCoeffs;
+    reader["camera_matrix"] >> rightCameraMatrix;
+    //reader["corners"] >> imagePoints;
+    reader["inches_conversion_factor"] >> rightConversionFactor;
+    reader.release();
+
+    Mat right_correct_view, map3, map4;
+    initUndistortRectifyMap(rightCameraMatrix, rightDistCoeffs, Mat(),
+            getOptimalNewCameraMatrix(leftCameraMatrix, rightDistCoeffs, imageSize, 1, imageSize, &rightCropRegion),
+            imageSize, CV_16SC2, map3, map4);
+    */
+// ###############################################################
     int refresh_tick = 0;
     int hist;
-    register Mat leftFrame, distances;//, rightFrame;
+    vector<int> distances;
+    register Mat leftFrame, vertical_left, vertical_right, ROI;//, rightFrame;
+    Mat undistortLeft, undistortRight;
     while(settings.isEnabled()) {
         // getting image from camera
         try {
@@ -130,12 +117,25 @@ int _tmain(int argc, _TCHAR* argv[])
             hist = (getScalarHistogram(leftFrame, settings.getHistogramMax()));// + getScalarHistogram(rightFrame)) / 2;
             if (hist >= settings.getThreshold()) {
                 printf("Histogram threshold of %d reached threshold of %d\n", hist, settings.getThreshold());
+                //undistortImages
+                remap(leftFrame, undistortLeft, map1, map2, INTER_LINEAR); // remap using previously calculated maps
                 
-                if(calculateRawDistances(leftFrame, distances)) {
+                ROI = Mat(undistortLeft, leftCropRegion);
+                ROI.copyTo(undistortLeft);
+                //remap(rightFrame, undistortRight, map3, map4, INTER_LINEAR); // remap using previously calculated maps
+
+                //ROI(undistortLeft, leftCropRegion);
+                //ROI.copyTo(undistortLeft);
+                vertical_left = retrieveVerticalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getHorizontalMorph(), settings.getVerticalMorph());
+                //vertical_right = retrieveVerticalEdges(undistortRight,255, settings.getHistogramMax() + 5);
+                if(calculateRawDistances(vertical_left, distances, settings.getHoughLineRho(), settings.getHoughLineTheta(),
+                        settings.getHoughLineThreshold(), settings.getHoughLineMinLength(), settings.getHoughLineMaxGap())) {
                     //succesfully calculated distances
+                    cout << "Distances: ";
                     printf("Houghline success!\n");
                 }
             }
+            distances.clear();
         }
         catch(xiAPIplus_Exception& exp){
             printf("Error:\n");
@@ -143,7 +143,7 @@ int _tmain(int argc, _TCHAR* argv[])
             cvWaitKey(200);
         }
         if (refresh_tick >= settings.getRefreshInterval()) {
-            assignSettings(settingsFile, &leftCam);
+            assignSettings(settings, settingsFile, &leftCam);
             refresh_tick = 0;
         }
         refresh_tick++;
