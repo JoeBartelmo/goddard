@@ -89,8 +89,8 @@ class Jetson(object):
                                 'stream off': self._stream.close,
                                 'motor off': self._pinHash['motorRelay'].toggleOff,
                                 'motor on' : self._pinHash['motorRelay'].toggleOn,
-                                'laser off': self._pinHash['laserRelay'].toggleOff,
-                                'laser on' : self._pinHash['laserRelay'].toggleOn,
+                                #'laser off': self._pinHash['laserRelay'].toggleOff,
+                                #'laser on' : self._pinHash['laserRelay'].toggleOn,
                                 'led off': self._pinHash['ledRelay'].toggleOff,
                                 'led on' : self._pinHash['ledRelay'].toggleOn,
                                 'reset arduino': self._arduino.resetArduino,
@@ -103,16 +103,39 @@ class Jetson(object):
                                 'valmar off': self._valmar.disable,
                                 'valmar on': self._valmar.enable,
                                 'scan on': self.scan,
-                                'scan off': self._watchdog.scanDisable
+                                'scan off': self._watchdog.scanDisable,
+                                'help': self.listCommands
                              }
 
+    def listCommands(self):
+        logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
+                    "system restart:\t\tRestart M.A.R.S. Tk1\n" + \
+                    "motor [on|off]:\t\tIff on, then speed can be adjusted on motor\n" + \
+                    "forward [0-9]:\t\tAssigns a forward speed to M.A.R.S.\n" + \
+                    "backward [0-9]:\t\tAssigns a backward speed to M.A.R.S.\n" + \
+                    "brake [on|off]:\t\tIff on, then motor cannot be enabled\n" + \
+                    "led [on|off]:\t\tIff on, then brightness of leds can be set\n" + \
+                    "brightness [0-9]:\tSets brightness of leds (useful for valmar)\n" + \
+                    "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
+                    "hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
+                    "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
+                    "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
+                    "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
+                    "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
+                    "list logs:\t\tDisplay all logs for all teams\n" + \
+                    "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
+
     def scan(self):
-        #disengage brake
-        #motor on
-        #forward 5
         #enable watchdog
-        #enable leds 5
-        pass
+        self._watchdog.scanEnable()        
+        #disengage brake
+        self.recieveInput('brake off')
+        #enable leds brightness @ 9 
+        self.recieveInput('led on')
+        self.recieveInput('brightness 9')
+        #motor on forward half thrusters
+        self.recieveInput('motor on')
+        self.recieveInput('forward 5')
 
     def safeInput(self):
         """
@@ -179,7 +202,7 @@ class Jetson(object):
             if telemetry is not None:
                 #inject telemetry updates
                 telemetry.update(self._watchdog.watch(telemetry))
-                telemetry.update(self._valmar.updateTelemetry())
+                telemetry["BeamGapData"] = self._valmar.getBeamGapData()
                 logger.debug("Displaying Telemetry...")
                 telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
                 logger.debug("Saving telemetry...")
@@ -310,7 +333,10 @@ class Jetson(object):
         time.sleep(2) #necessary to make sure Mars moves to a stop
 
         logger.info("Closing stream...")
-        self._sysCommands['stream close']()
+        self._sysCommands['stream off']()
+
+        logger.info("Closing valmar...");
+        self._valmar.disable()
 
         logger.info(("Turning off LEDs..."))
         self._led.issue(self._arduino, "brightness 0")
@@ -339,7 +365,7 @@ class Jetson(object):
         logger.warning("Laser circuit opened")
         self._stream.close()
         logger.warning("Closing video stream")
-        self._valmar.issueCommand("enable",False)
+        self._valmar.disable()
         logger.warning("Pausing VALMAR gap measurement system")
 
         self._pauseTelemetry = True

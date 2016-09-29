@@ -29,14 +29,25 @@ int getScalarHistogram(const Mat& image, unsigned char upperRange) {
     return (int)histSum;
 }
 
-/*
-* Opens up cameras, takes a photo, then kills app
-* TODO: Make use calibration
+void writeToPipe(int pipe, vector<double>& distances) {
+    double* array = &distances[0];
+    json data = { "distances" , distances };
+    const char* asChar = ((string)data.dump()).c_str();
+    write(pipe, asChar, strlen(asChar));
+}
+
+/**
+* Loads in distortion coefficients
+* Connects to Fifo
+* while valmar is enabled
+*       Finds histogram
+*               if threshold is met
+*                       run hough line transform
+*                       find distances, and report to fifo
 */
 int _tmain(int argc, _TCHAR* argv[]) {  
     //load settings
     string settingsFile = "command.json";
-    string defaultImage = "psnr_img";
     switch(argc) {
         case 2:
             settingsFile = argv[1];
@@ -53,7 +64,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
     leftCam.OpenBySN(settings.getCamera(leftCamera));
     //rightCam.OpenBySN(settings.getCamera(rightCamera));
    
-    if (!checkFileExists("left_calibration_coefficients.yml")/* || !checkFileExists("right_calibration_coefficients.yml")*/) {
+    if (!checkFileExists(settings.getCoefficientLoc() + "left_calibration_coefficients.yml")/* || !checkFileExists(settings.getCoefficientLoc() + "right_calibration_coefficients.yml")*/) {
         printf("No camera calibration file found, run ./calibrate to generate calibration coefficients...\n");
         return EXIT_FAILURE;
     }
@@ -71,13 +82,25 @@ int _tmain(int argc, _TCHAR* argv[]) {
         return EXIT_FAILURE;
     }
 
+#if !DEBUG
+// ################ FIFO ############
+    printf("Connecting to Fifo as writeonly\n");
+    int pipe = open(settings.getOutputFifoLoc(), O_WRONLY);
+    if (pipe < 0) {
+        printf("Error ocurred while attempting to connect to Fifo\n");
+        return pipe;
+    }
+#endif
+
+// ##################################
+
 // #################DISTORTION###################################
     Mat leftCameraMatrix, rightCameraMatrix, leftDistCoeffs, rightDistCoeffs, map1, map2, map3, map4;
     Size imageSize = leftCam.GetNextImageOcvMat().size();
     double leftConversionFactor, rightConversionFactor; 
     Rect leftCropRegion, rightCropRegion;
     
-    FileStorage reader("left_calibration_coefficients.yml", FileStorage::READ);
+    FileStorage reader(settings.getCoefficientLoc() + "left_calibration_coefficients.yml", FileStorage::READ);
     reader["distribution_coefficients"] >> leftDistCoeffs;
     reader["camera_matrix"] >> leftCameraMatrix;
     //reader["corners"] >> imagePoints;
@@ -91,7 +114,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
 
     /*uncomment when right camera hooked up
-    FileStorage reader("right_calibration_coefficients.yml", FileStorage::READ);
+    FileStorage reader(settings.getCoefficientLoc() + "right_calibration_coefficients.yml", FileStorage::READ);
     reader["distribution_coefficients"] >> rightDistCoeffs;
     reader["camera_matrix"] >> rightCameraMatrix;
     //reader["corners"] >> imagePoints;
@@ -106,9 +129,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
 // ###############################################################
     int refresh_tick = 0;
     int hist;
-    vector<int> distances;
+    vector<double> distances;
     register Mat leftFrame, vertical_left, vertical_right, ROI;//, rightFrame;
     Mat undistortLeft, undistortRight;
+    printf("Beginning valmar...\n");
     while(settings.isEnabled()) {
         // getting image from camera
         try {
@@ -129,10 +153,12 @@ int _tmain(int argc, _TCHAR* argv[]) {
                 vertical_left = retrieveVerticalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getHorizontalMorph(), settings.getVerticalMorph());
                 //vertical_right = retrieveVerticalEdges(undistortRight,255, settings.getHistogramMax() + 5);
                 if(calculateRawDistances(vertical_left, distances, settings.getHoughLineRho(), settings.getHoughLineTheta(),
-                        settings.getHoughLineThreshold(), settings.getHoughLineMinLength(), settings.getHoughLineMaxGap())) {
+                        settings.getHoughLineThreshold(), settings.getHoughLineMinLength(), settings.getHoughLineMaxGap(), leftConversionFactor)) {
                     //succesfully calculated distances
-                    cout << "Distances: ";
                     printf("Houghline success!\n");
+#if !DEBUG
+                    writeToPipe(pipe, distances);
+#endif
                 }
             }
             distances.clear();

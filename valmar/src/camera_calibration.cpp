@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
 
 
     bool calibrate = true;
-    if (checkFileExists((camera + "_calibration_coefficients.yml").c_str())) {
+    if (checkFileExists(settings.getCoefficientLoc() + camera + "_calibration_coefficients.yml")) {
         printf("\n\nDetected %s exists, would you like to overwrite it?\ny/N: ", (camera + "_calibration_coefficients.yml").c_str());
         char input;
         cin >> input;
@@ -196,8 +196,7 @@ int main(int argc, char* argv[])
     if (calibrate) {
         while(c != 'q' || c != 'Q') {
             view = cam.GetNextImageOcvMat(); // get an image
-            
-            imshow("Image View", view);
+                imshow("Image View", view);
             c = (char)waitKey(30);
             if(c == 'c' || c == 'C') {
                 printf("Frame Grabbed\n");
@@ -230,7 +229,7 @@ int main(int argc, char* argv[])
         runCalibration(imageSize, cameraMatrix, distCoeffs, imagePoints, boardSize, squareSize);
     }
     else {
-        FileStorage reader(camera + "_calibration_coefficients.yml", FileStorage::READ);
+        FileStorage reader(settings.getCoefficientLoc() + camera + "_calibration_coefficients.yml", FileStorage::READ);
         reader["distribution_coefficients"] >> distCoeffs;
         reader["camera_matrix"] >> cameraMatrix;
         //reader["corners"] >> imagePoints;
@@ -239,7 +238,7 @@ int main(int argc, char* argv[])
     }
     
     if (!writer.isOpened()) {
-        writer = FileStorage(camera + "_calibration_coefficients.yml", FileStorage::WRITE);
+        writer = FileStorage(settings.getCoefficientLoc() + camera + "_calibration_coefficients.yml", FileStorage::WRITE);
         writer << "distribution_coefficients" << distCoeffs;
         writer << "camera_matrix" << cameraMatrix;
         //writer << "corners" << imagePoints;

@@ -57,6 +57,9 @@ class JsonSettings {
         int getVerticalMorph();
         int getHorizontalMorph();
 
+        const char* getOutputFifoLoc();
+        string getCoefficientLoc();
+
         char* getCamera(const char* camera);
 };
 

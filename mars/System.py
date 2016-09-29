@@ -91,8 +91,8 @@ class System(object):
         myMotor = Motor()
         myMars = Mars(myArduino, config, myLED, myMotor, myPinHash, self._watchdogQueue, self._marsOnlineQueue)
         time.sleep(.5)
-        myValmar = Valmar(config, myMars)
-
+        myValmar = Valmar(config)
+        myValmar.enable()
 
         devices = {
                     'Motor': myMotor,

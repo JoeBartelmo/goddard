@@ -108,6 +108,16 @@ int JsonSettings::getVerticalMorph() {
 int JsonSettings::getHorizontalMorph() {
     return settings["processing"]["erosion_kernal_size"]["horizontal"];
 }
+
+const char* JsonSettings::getOutputFifoLoc() {
+    string s = settings["output"];
+    return s.c_str();
+}
+
+string JsonSettings::getCoefficientLoc() {
+    return settings["calibration"]["coefficient_location"];
+}
+
 //getsCameraSerialNumber
 char* JsonSettings::getCamera(const char* camera) {
     //ximeas api wants a char* not a const char* :(

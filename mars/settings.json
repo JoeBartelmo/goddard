@@ -13,7 +13,7 @@
   },
   "valmar":{
     "path": "/phobos/goddard/valmar/target/valmar",
-    "command_path": "/phobos/goddard/valmar/command.json",
+    "command_path": "/phobos/goddard/valmar/target/command.json",
     "beam_gap_path": "/phobos/goddard/valmar/beam.gap"
   },
   "maven": {
@@ -40,7 +40,11 @@
 
     "batt_percent_alert":20,
     "batt_percent_warning":15,
-    "batt_percent_critical":10
+    "batt_percent_critical":10,
+
+    "distance_alert": 20,
+    "distance_warning": 10,
+    "distance_critical": 5
   },
   "constants": {
     "baud_rate": 9600,

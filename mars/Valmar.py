@@ -18,6 +18,7 @@
 import json
 import subprocess
 import logging
+import os
 
 logger = logging.getLogger('mars_logging')
 
@@ -32,34 +33,38 @@ class Valmar(object):
         self._path = self._config.valmar.path
         self._commandPath = self._config.valmar.command_path
         self._beamGapPipe = self._config.valmar.beam_gap_path
-        self._validCommands = {"enabled": "boolean", 
-                                "refresh_frame_interval": "int",
+        self._validCommands = {"enabled": {
+                                    "type": "boolean",
+                                    "parent": "command"
+                                },
+                                "refresh_frame_interval": {
+                                    "type": "int",
+                                    "parent": "command"
+                                },
                                 "gain": {
                                     "type": "int",
-                                    "parent": ""
+                                    "parent": "capture"
                                 },
                                 "sharpness": {
                                     "type":"float",
-                                    "parent": ""
+                                    "parent": "capture"
                                 },
-                                "psnr_threshold": {
-                                    "type":"float",
-                                    "parent": ""
+                                "threshold": {
+                                    "type":"int",
+                                    "parent": "processing"
                                 }
         }
         self._init = False
         self._bufferSize = bufferSize
-        self._io = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+        self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
 
     def refresh(self):
-        if (self._init):
-            self.close()
-        self.enable()
-        newCall = 'nohup' + self._path + ' >/dev/null 2>&1 &'
-        logger.info('Launching Valmar with: ' + newCall)
-
-        subprocess.call([newCall], shell=True)
-        self._init = True
+        if self._init == True:
+            self.disable()
+        else:
+            newCall = 'nohup ' + self._path + ' ' + self._commandPath + ' > /dev/null &'
+            logger.info('Launching Valmar with: ' + newCall)
+            subprocess.call([newCall], shell=True)
 
     def issueCommand(self, parameter, value):
         '''
@@ -67,7 +72,7 @@ class Valmar(object):
         Valmar reads from this JSON every 100 frames
         '''
         if parameter in self._validCommands:
-            typeOf = self._validCommands[parameter]
+            typeOf = self._validCommands[parameter]["type"]
             try:
                 if 'int' in typeOf:
                     var = int(value)
@@ -75,14 +80,17 @@ class Valmar(object):
                     var = float(value)
                 elif 'boolean' in typeOf:
                     var = bool(value)
+                else:
+                    raise ValueError
             except ValueError:
                 logger.warning('Supplied value for ' + parameter + ' was not valid type');
                 return
-            with open(self._commandPath, 'rw') as commandFile:
-                self._commands = json.load(commandFile)
-                self._commands[parameter] = var
+            with open(self._commandPath, 'r+') as commandFile:
+                commands = json.load(commandFile)
+                commands[self._validCommands[parameter]["parent"]][parameter] = value
                 commandFile.seek(0, 0)
-                commandFile.write(json.dumps(self._commands))
+                commandFile.write(json.dumps(commands, indent=2, separators=(',', ': ')))
+                commandFile.truncate()
         else:
             logger.warning('Valmar setting "' + parameter + '" does not exist')
 
@@ -97,15 +105,17 @@ class Valmar(object):
                 buffer = None
             else:
                 raise
-
         if buffer is None:
             return None
-        else:
+        elif len(buffer) > 0:
             #data is piped through as json
             beamGapData = json.load(buffer)
 
     def enable(self):
         self.issueCommand("enabled", True)
+        self.refresh()
+        self._init = True
 
     def disable(self):
         self.issueCommand("enabled", False)
+        self._init = False

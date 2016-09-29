@@ -91,7 +91,7 @@ int findPoint(Vec4f line, int x){
         uses multiple for loops to go through the image row by row
         and subtract distances left to right
 */
-int calculateRawDistances(const Mat src_image, vector<int> &distances, int rho, double theta, int threshold, int min_line_length, int max_line_break) {
+int calculateRawDistances(const Mat src_image, vector<double> &distances, int rho, double theta, int threshold, int min_line_length, int max_line_break, double ratio) {
     Mat line_image(src_image.rows,src_image.cols,CV_8UC3); //matrix specifically for lines, same shape as src
     vector<Vec4i> lines;
 #if defined DEBUG 
@@ -131,9 +131,8 @@ int calculateRawDistances(const Mat src_image, vector<int> &distances, int rho, 
     }
  
     for(int col = 0; col < abs(end - start); col++){ // loops for the length of the first line 
-            int pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col)); 
-            distances.push_back(pixelDistance);
-            cout << pixelDistance << '\n';
+            double pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col)); 
+            distances.push_back(pixelDistance * ratio);
     }
     return 1;
 }

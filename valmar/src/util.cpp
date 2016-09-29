@@ -78,5 +78,9 @@ bool checkFileExists(const char *fileName) {
     ifstream infile(fileName);
     return infile.good();
 }
+
+bool checkFileExists(string fileName) {
+    return checkFileExists(fileName.c_str());
+}
 #endif
 
