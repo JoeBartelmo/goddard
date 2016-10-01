@@ -98,6 +98,7 @@ class Valmar(object):
         '''
         Opens the FIFO and reads from it if possible
         '''
+        """
         try:
             buffer = os.read(self._io, self._bufferSize)
         except OSError as err:
@@ -110,6 +111,9 @@ class Valmar(object):
         elif len(buffer) > 0:
             #data is piped through as json
             beamGapData = json.load(buffer)
+        """
+        pass
+
 
     def enable(self):
         self.issueCommand("enabled", True)
