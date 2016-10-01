@@ -56,22 +56,7 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
     //applying a gaussian blue prior to sobel
     GaussianBlur( src_image, working_image, Size(3,3), 0, 0, BORDER_DEFAULT );
     Sobel( working_image, working_image, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT );
-    working_image.convertTo(working_image, CV_8S);
 #if defined DEBUG    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     displayAndSave(working_image,"edge_detected.png");
     cout << "detected edges" << endl;
 #endif
@@ -81,7 +66,9 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
 
  //   erode(working_image, working_image, morph_kernel, Point(-1,-1));
     dilate(working_image, working_image, morph_kernel, Point(-1,-1));
+    cout << "TRYING TO DEBUG" << endl;
     erode(working_image, working_image, morph_kernel, Point(-1,-1));
+
 
     //crop edges because ximea picks up a border (~2px)
     Mat ROI(working_image, Rect(0,5,working_image.cols,working_image.rows - 10));
@@ -112,7 +99,8 @@ int findPoint(vector<double> line, int x){
         uses multiple for loops to go through the image row by row
         and subtract distances left to right
 */
-int calculateRawDistances(const Mat src_image, vector<double> &distances, int rho, double theta, int threshold, int min_line_length, int max_line_break, double ratio) {
+int calculateRawDistances(Mat src_image, vector<double> &distances, int rho, double theta, int threshold, int min_line_length, int max_line_break, double ratio) {
+    src_image.convertTo(src_image, CV_8UC3);
     Mat line_image(src_image.rows,src_image.cols,CV_8UC3); //matrix specifically for lines, same shape as src
 
     vector<Vec4i> originalLines;
