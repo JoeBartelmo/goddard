@@ -27,7 +27,7 @@ DaqTelemetry *daqTelemetry;
 int enablePin = 13; //enable/disable motor
 int revPin = 11; //seting fwd/rev
 int brakePin = 12; //brake pin
-int speedPin = 9; //speedPin
+int speedPin = 6; //speedPin
 int voltagePin = A0; //ammeter voltage pin
 int currentPin = A1; //ammeter current pin
 int encoderPin = A5; //pin for motor controller
