@@ -52,8 +52,26 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
     }
 
     //Generating edge map
-    Canny(working_image, working_image, threshold1, threshold2, KERNAL_SIZE);
+    
+    //applying a gaussian blue prior to sobel
+    GaussianBlur( src_image, working_image, Size(3,3), 0, 0, BORDER_DEFAULT );
+    Sobel( working_image, working_image, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT );
+    working_image.convertTo(working_image, CV_8S);
 #if defined DEBUG    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     displayAndSave(working_image,"edge_detected.png");
     cout << "detected edges" << endl;
 #endif
