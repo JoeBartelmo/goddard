@@ -130,7 +130,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
     int refresh_tick = 0;
     int hist;
     vector<double> distances;
-    register Mat leftFrame, vertical_left, vertical_right, ROI;//, rightFrame;
+    register Mat leftFrame, horizontal_left, horizontal_right, ROI;//, rightFrame;
     Mat undistortLeft, undistortRight;
     printf("Beginning valmar...\n");
     while(settings.isEnabled()) {
@@ -150,9 +150,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
                 //ROI(undistortLeft, leftCropRegion);
                 //ROI.copyTo(undistortLeft);
-                vertical_left = retrieveVerticalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getHorizontalMorph(), settings.getVerticalMorph());
-                //vertical_right = retrieveVerticalEdges(undistortRight,255, settings.getHistogramMax() + 5);
-                if(calculateRawDistances(vertical_left, distances, settings.getHoughLineRho(), settings.getHoughLineTheta(),
+                horizontal_left = retrieveHorizontalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getHorizontalMorph(), settings.getHorizontalMorph());
+                //horizontal_right = retrieveHorizontalEdges(undistortRight,255, settings.getHistogramMax() + 5);
+                if(calculateRawDistances(horizontal_left, distances, settings.getHoughLineRho(), settings.getHoughLineTheta(),
                         settings.getHoughLineThreshold(), settings.getHoughLineMinLength(), settings.getHoughLineMaxGap(), leftConversionFactor)) {
                     //succesfully calculated distances
                     printf("Houghline success!\n");

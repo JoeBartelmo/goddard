@@ -10,12 +10,17 @@ CALIB_SOURCES=src/camera_calibration.cpp
 CALIB_SOURCES+=$(MAIN_SOURCES)
 
 MAIN_OBJECTS=$(MAIN_SOURCES:.cpp=.o)
+CALIB_OBJECTS=$(CALIB_SOURCES:.cpp=.o)
 PROGRAM=valmar
 CALIB=calibrate
-
-all: $(PROGRAM)
+ALL=all
 
 $(PROGRAM): $(MAIN_SOURCES)
+	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
+	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM)-debug -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG
+
+
+$(ALL): $(MAIN_SOURCES)
 	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
 	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM)-debug -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG
 	$(CXX) $(CALIB_SOURCES) -o target/$(CALIB) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
@@ -30,5 +35,6 @@ $(CALIB): $(MAIN_SOURCES)
 
 clean:
 	rm -f $(PROGRAM) $(MAIN_OBJECTS)
+	rm -f $(CALIB) $(CALIB_OBJECTS)
 
 
