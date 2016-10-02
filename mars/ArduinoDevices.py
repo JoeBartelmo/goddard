@@ -87,18 +87,22 @@ class Motor(object):
         :return:
         """
 
-        if self._enabled == 0:
-            return logger.info("Motor must be enabled before you can move! Use: enable motor")
-        if self._brake == 1:
-            return logger.info("Brake must be disabled to move! Use: disable brak")
+        # uncomment if braking and enable check wanted
+#         if self._enabled == 0:
+#             return logger.info("Motor must be enabled before you can move! Use: enable motor")
+#         if self._brake == 1:
+#             return logger.info("Brake must be disabled to move! Use: disable brak")
+
         
         splitCodes = myCode.split(' ')
 
         if len(splitCodes) == 2 and RepresentsInt(splitCodes[1]):
             self._enabled = 1
             self._direction = 1 if 'forward' == splitCodes[0] else 0
+            self._brake = 0
             self._speed = splitCodes[1]
             self.write()
+            
         elif "brake" == splitCodes[0]:
             self.brake()
         else:
@@ -150,7 +154,7 @@ class Motor(object):
         :return:
         """
         self._arduino.write("M0010")
-        logger.warning("Brake has been enabled")
+        logger.warning("Brake has been engaged")
 
     def write(self):
         """
@@ -158,7 +162,7 @@ class Motor(object):
         :return:
         """
         command = 'M' + str(self._enabled) + str(self._direction) + str(self._brake) + str(self._speed)
-        logger.info('Writing the following command to the Arduino: ' + command)
+        logger.info('writing motion code {0} to arduino '.format(command))
         self._lastCommand = command
         self._arduino.write(command)
 
