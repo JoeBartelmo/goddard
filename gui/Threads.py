@@ -45,7 +45,7 @@ class VideoThread(threading.Thread):
         if self._openCvCapture.isConnected():
             self._vidcap = self._openCvCapture.getVideoCapture()
             logger.debug('Starting VideoThread @ ' + str(time.time()))
-            while self.stopped() is False:
+            while self.stopped() == False:
                 flag, frame = self._vidcap.read()
 
                 if not flag:
@@ -53,12 +53,12 @@ class VideoThread(threading.Thread):
                 
                 self._queue.put(frame)
 
+            logger.debug('Killing Video Thread')
             self._vidcap.release()
             self._openCvCapture.disconnect()
-            logger.debug('Killing Video Thread')
 
     def empty_queue(self):
-        while self._queue.empty() is False:
+        while self._queue.empty() == False:
             try:
                 __ = self._queue.get(False)
             except Empty:
@@ -96,7 +96,7 @@ class TelemetryThread(threading.Thread):
         self.transformFunction = None
 
     def run(self):
-        while self.stopped() is False:
+        while self.stopped() == False:
             try:
                 record = self._queue.get(False)
                 telemetryData = json.loads(record.msg)

@@ -53,7 +53,6 @@ def start(client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
         mainApplication.close_()
         root.destroy()
 
-
     # define mainapp instance
     mainApplication = MainApplication(root, client_queue_cmd, client_queue_log, client_queue_telem, server_ip) 
     mainApplication.grid(column = 0, row = 0, sticky="nsew")

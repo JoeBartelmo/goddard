@@ -206,13 +206,16 @@ class MainApplication(tk.Frame):
         big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
 
         imageFromArray = Image.fromarray(big_frame)
-        tkImage = ImageTk.PhotoImage(image=imageFromArray)
-        self.image_label.configure(image=tkImage)
+        try:
+            tkImage = ImageTk.PhotoImage(image=imageFromArray)
+            self.image_label.configure(image=tkImage)
         
-        self.image_label._image_cache = tkImage  # avoid garbage collection
+            self.image_label._image_cache = tkImage  # avoid garbage collection
 
-        self.update()
-        
+            self.update()
+        except RuntimeError:
+            logger.warning('Unable to update image frame. Assuming application has been killed unexpectidly.')
+            return
         self.after(delay, self.display_streams, delay)
 
     def start_streams(self):
@@ -250,6 +253,7 @@ class MainApplication(tk.Frame):
 
     def close_(self):
         logger.debug('GUI: Stopping all video streams...')
+        self.runStreams = False 
         #stop the threads
         for stream in self.streams:
             stream.stop()
