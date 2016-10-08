@@ -18,7 +18,9 @@
 import json
 import subprocess
 import logging
+import errno
 import os
+import struct
 
 logger = logging.getLogger('mars_logging')
 
@@ -28,7 +30,7 @@ class Valmar(object):
     and Mars
     '''
 
-    def __init__(self, config, bufferSize = 8096):
+    def __init__(self, config):
         self._config = config
         self._path = self._config.valmar.path
         self._commandPath = self._config.valmar.command_path
@@ -55,17 +57,27 @@ class Valmar(object):
                                 }
         }
         self._init = False
-        self._bufferSize = bufferSize
+        self._bufferSize = 4#always start by reading an integer
         self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
 
     def refresh(self):
         if self._init == True:
             self.disable()
         else:
+            #delete fifo
+            if os.path.exists(self._beamGapPipe):
+                os.unlink(self._beamGapPipe)
+            os.mkfifo(self._beamGapPipe)
             newCall = 'nohup ' + self._path + ' ' + self._commandPath + ' > /dev/null &'
             logger.info('Launching Valmar with: ' + newCall)
             subprocess.call([newCall], shell=True)
-
+    
+    def swap32(self, x):
+        return (((x << 24) & 0xFF000000) |
+                ((x <<  8) & 0x00FF0000) |
+                ((x >>  8) & 0x0000FF00) |
+                ((x >> 24) & 0x000000FF))
+    
     def issueCommand(self, parameter, value):
         '''
         Our Commands enable them to change settings in the JSON file
@@ -98,23 +110,33 @@ class Valmar(object):
         '''
         Opens the FIFO and reads from it if possible
         '''
-        """
         try:
-            buffer = os.read(self._io, self._bufferSize)
+            #first bit of data is an integer, which we convert to python land
+            dist_length = os.read(self._io, self._bufferSize)
         except OSError as err:
             if err.errno == errno.EAGAIN or err.errno == errno.EWOULDBLOCK:
-                buffer = None
+                dist_length = None
             else:
                 raise
-        if buffer is None:
+        if dist_length is None:
             return None
-        elif len(buffer) > 0:
-            #data is piped through as json
-            beamGapData = json.load(buffer)
-        """
-        pass
-
-
+        elif len(dist_length) == 4:
+            #data is piped through as an array, we need to parse to list.
+            buff = None
+            dist_length = struct.unpack('i', dist_length)[0]
+            logger.debug("Receiving Data from valmar...")
+            if dist_length == 0:
+                return None
+            while buff is None or len(buff) < 0:
+                try:
+                    #first bit of data is an integer, which we convert to python land
+                    buff = os.read(self._io, dist_length)
+                except OSError as err:
+                    if err.errno != errno.EAGAIN and err.errno != errno.EWOULDBLOCK:
+                        raise
+            logger.debug(buff)
+            return json.loads(buff)
+    
     def enable(self):
         self.issueCommand("enabled", True)
         self.refresh()

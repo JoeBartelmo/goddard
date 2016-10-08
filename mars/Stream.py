@@ -22,16 +22,16 @@ logger = logging.getLogger('mars_logging')
 
 class Stream (object):
 
-    def __init__(self, config, timestamp):
-        self._streamCodes = ['low res stream', 'high res stream']
+    def __init__(self, config, timestamp, clientIp = None):
         self._config = config
-        self._bitrate = 'None yet'
-        self._resolution = 'None yet'
         self._timestamp = timestamp
         self._init = False
         self._indexPath = self._config.maven.path
         self._logPath = self._config.logging.output_path + 'output/' + self._config.user_input.log_name + '-' + self._timestamp + '/video'
-
+        if clientIp is None:
+            self._clientIp = '127.0.0.1';
+        else:
+            self._clientIp = clientIp
 
     def refresh(self):
         """
@@ -41,47 +41,16 @@ class Stream (object):
         if (self._init):
             self.close()
         logger.info('re-initializing steam with new inputs')
-        newCall = 'nohup' + ' node '+ self._indexPath + ' -w '  + self._resolution[0] + ' -h ' + self._resolution[1] + ' -b ' \
-                  + str(self._bitrate) + ' -f ' + self._logPath + ' >/dev/null 2>&1 &'
+        newCall = 'nohup' + ' node '+ self._indexPath + ' -i ' + self._clientIp + ' -f ' + self._logPath + ' >/dev/null 2>&1 &'
         logger.info('Launching Maven with: ' + newCall)
 
         subprocess.call([newCall], shell=True)
-
-
-    def issue(self, myCode):
-        """
-        Update the bitrate and resolution given the code from terminal and then refresh the stream
-        :param myCode:
-        :return:
-        """
-        rawBit = raw_input("What bitrate? (1-9)")
-        if RepresentsInt(rawBit) and rawBit > 1 and rawBit < 10:
-            self._bitrate = int(rawBit) * 1000 #converting Mb/s to Kb/s
-
-        #update res 640x480
-        if myCode == 'low res stream':
-
-            logger.info('re-initializing steam with new inputs')
-            self._resolution = ['640', '480']
-
-        #update res 1280x960
-        elif myCode == 'high res stream':
-
-            logger.info('re-initializing steam with new inputs')
-            self._resolution = ['1280', '960']
-
-        #Refresh stream
-        self.refresh()
-        self._lastCommand = myCode
-
 
     def open(self):
         """
         Open stream with default parameters
         :return:
         """
-        self._resolution = ['640', '480']
-        self._bitrate = 4000
         self.refresh()
         self._init = True
 

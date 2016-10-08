@@ -1,6 +1,26 @@
+/**
+* Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+* associated documentation files (the "Software"), to deal in the Software without restriction,
+* including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+* and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+* subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all copies or substantial 
+* portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+* LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+* WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
 #include "includes.hpp"
 #include "measurements.cpp"
 #include "util.cpp"
+#include <chrono>
 
 #if !defined(JSON_SETTINGS)
     #define JSON_SETTINGS
@@ -8,8 +28,11 @@
     #define JSON_LOAD_ATTEMPT 10
 #endif
 
+//camera names
 const char* leftCamera = "left";
 const char* rightCamera = "right";
+//keeps track of current ibeam
+int iBeamCounter = 0;
 
 JsonSettings* ptrSettings = new JsonSettings();
 JsonSettings settings = *ptrSettings;
@@ -29,11 +52,42 @@ int getScalarHistogram(const Mat& image, unsigned char upperRange) {
     return (int)histSum;
 }
 
-void writeToPipe(int pipe, vector<double>& distances) {
-    double* array = &distances[0];
-    json data = { "distances" , distances };
-    const char* asChar = ((string)data.dump()).c_str();
-    write(pipe, asChar, strlen(asChar));
+void writeToPipe(int pipe, vector<double> &array, double processingTime, int framesToProcess,
+        xiAPIplusCameraOcv *leftCam/*, xiAPIplusCameraOcv *rightCam*/, 
+        double displacementLeft/*, double displacementRight*/, int frameLeft
+        /*, int frameRight*/) {
+    json data;
+    data["valmar_enabled"] = settings.isEnabled();
+    data["ibeam_counter"] = ++iBeamCounter;
+    data["beam_gap"] = array;
+    data["histogram_threshold"] = settings.getHistogramMax();
+    data["avg_processing_time"] = processingTime;
+    data["frames_to_process"] = framesToProcess;
+
+    data["left"]["frame_number"] = frameLeft;
+    data["left"]["framerate"] = (*leftCam).GetFrameRate();
+    data["left"]["exposure"] = (*leftCam).GetExposureTime(); 
+    data["left"]["sharpness"] = (*leftCam).GetSharpness(); 
+    data["left"]["gamma_y"] = (*leftCam).GetGammaLuminosity(); 
+    data["left"]["gain"] = (*leftCam).GetGain();
+    data["left"]["pixel_displacement_ratio"] = displacementLeft;
+    /* 
+    data["right"]["frame_number"] = frameRight;
+    data["right"]["framerate"] = (*rightCam).GetFrameRate();
+    data["right"]["exposure"] = (*rightCam).GetExposureTime(); 
+    data["right"]["sharpness"] = (*rightCam).GetSharpness(); 
+    data["right"]["gamma_y"] = (*rightCam).GetGammaLuminosity(); 
+    data["right"]["gain"] = (*rightCam).GetGain();
+    data["right"]["pixel_displacement_ratio"] = displacementRight;
+    */
+    uint32_t length = (uint32_t)strlen(((string)data.dump()).c_str());
+#if !DEBUG
+    write(pipe, (char*)(&length), sizeof(length));
+    write(pipe, ((string)data.dump()).c_str(), length);
+#else
+    printf("Size of %d would have been sent. along with: %s\n", (unsigned int)length, ((string)data.dump()).c_str());
+#endif
+    array.clear();
 }
 
 /**
@@ -90,6 +144,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
         printf("Error ocurred while attempting to connect to Fifo\n");
         return pipe;
     }
+#else 
+    int pipe = 0;
 #endif
 
 // ##################################
@@ -129,17 +185,33 @@ int _tmain(int argc, _TCHAR* argv[]) {
 // ###############################################################
     int refresh_tick = 0;
     int hist;
-    vector<double> distances;
+    vector<double> distances = vector<double>();
+    vector<double> temp_distances = vector<double>();
+    bool threshold_triggered = false;
+
     register Mat leftFrame, horizontal_left, horizontal_right, ROI;//, rightFrame;
     Mat undistortLeft, undistortRight;
     printf("Beginning valmar...\n");
+
+    //stopwatch
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    //totalFrames
+    int totalFrames = 0, leftFrameNumber = 0, rightFrameNumber = 0, leftCount = 0, rightCount = 0;
+
     while(settings.isEnabled()) {
         // getting image from camera
         try {
             leftFrame = leftCam.GetNextImageOcvMat();
             //rightFrame = rightCam.getNextImageOcvMat();
+            leftCount++;
+            rightCount++;
             hist = (getScalarHistogram(leftFrame, settings.getHistogramMax()));// + getScalarHistogram(rightFrame)) / 2;
             if (hist >= settings.getThreshold()) {
+                if (!threshold_triggered) {
+                    threshold_triggered = true;
+                    start = std::chrono::system_clock::now();
+                }
+                totalFrames += 1;
                 printf("Histogram threshold of %d reached threshold of %d\n", hist, settings.getThreshold());
                 //undistortImages
                 remap(leftFrame, undistortLeft, map1, map2, INTER_LINEAR); // remap using previously calculated maps
@@ -150,18 +222,29 @@ int _tmain(int argc, _TCHAR* argv[]) {
 
                 //ROI(undistortLeft, leftCropRegion);
                 //ROI.copyTo(undistortLeft);
-                horizontal_left = retrieveHorizontalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getHorizontalMorph(), settings.getHorizontalMorph());
+                horizontal_left = retrieveHorizontalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
+                                        settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(1), settings.getDilationMat(1));
                 //horizontal_right = retrieveHorizontalEdges(undistortRight,255, settings.getHistogramMax() + 5);
-                if(calculateRawDistances(horizontal_left, distances, settings.getHoughLineRho(), settings.getHoughLineTheta(),
-                        settings.getHoughLineThreshold(), settings.getHoughLineMinLength(), settings.getHoughLineMaxGap(), leftConversionFactor)) {
+                if(calculateRawDistances(horizontal_left, temp_distances, settings.getHoughLineMaxGap(), leftConversionFactor)) {
                     //succesfully calculated distances
+                    if (temp_distances.size() > distances.size()) {
+                        distances = temp_distances;
+                        leftFrameNumber = leftCount;
+                    }
                     printf("Houghline success!\n");
-#if !DEBUG
-                    writeToPipe(pipe, distances);
-#endif
                 }
             }
-            distances.clear();
+            else if(threshold_triggered) {
+                threshold_triggered = false;
+                end = std::chrono::system_clock::now();
+                std::chrono::duration<double> elapsed_seconds = end-start;
+                writeToPipe(pipe, distances, elapsed_seconds.count(), totalFrames,
+                        &leftCam/*, &rightCam*/, 
+                        leftConversionFactor/*, rightConversionFactor*/, leftFrameNumber
+                        /*, rightFrameNumber*/);
+                totalFrames = 0;
+                temp_distances.clear();
+            }
         }
         catch(xiAPIplus_Exception& exp){
             printf("Error:\n");

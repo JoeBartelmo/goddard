@@ -17,6 +17,9 @@
 * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
+
+// We wanted a quick application that could function seperately of all of mars/server just in case.
+
 var cli = require('cli');
 var exec = require('child_process').exec;
 var fs = require('fs'); 
@@ -42,20 +45,18 @@ function getSerialIDForCamera(camera) {
 }
 
 //I don't like any of this...
-function generateVLCStreamCommands(options, cameras) {
-  //like srsly kill me
-  var vlcCommands = []
+function generateGStreamCommands(options, cameras) {
+  var gstCommands = [];
   cameras.forEach(function (camera) {
     var defer = q.defer();
     getSerialIDForCamera(camera).then(function startStream(cameraInfo) {
       //console.log(cameraInfo);
       if(cameraInfo && cameraInfo.name) {
-        cli.info(cameraInfo.name + ' recognized with serial ' + cameraInfo.id + '.\n\tOpened on Port: ' + (parseInt(options.port) + cameraInfo.port_increment));
-        var cmd = "cvlc "+ (options.verbose ? '-vvv' : '');
-            cmd += "v4l2://"+camera+":width="+options.width+":height="+options.height+":fps="+options.fps + ' --live-caching 200 ';
-            cmd += "--sout '#transcode{vcodec=hv32,venc=x264{preset=ultrafast}vb="+options.bitrate;
-            cmd += ",acodec=none}:duplicate{dst=file{dst=" + options.filename + '-' + cameraInfo.name.replace(/ /g, '') + ".mp4},dst=rtp{sdp=rtsp://:";
-            cmd += (parseInt(options.port)+cameraInfo.port_increment)+"/}}'";
+        var port = (parseInt(options.port) + cameraInfo.port_increment * 10);
+        cli.info(cameraInfo.name + ' recognized with serial ' + cameraInfo.id + '.\n\tOpened on Port: ' + port);
+        var cmd =  'splitter. v4l2src device=' + camera  + ' ! \'video/x-raw, width='+options.width+', height='+options.height+', framerate=' + options.fps + '/1\' ! tee name=' + cameraInfo.gst_tee + ' ! queue ';
+            cmd += '! omxvp8enc bitrate=' + options.bitrate + ' ! rtpvp8pay pt=96 ! queue ! udpsink host=' + options.ip + ' bind-port=' + port + ' port=' + port + ' loop=false '+ cameraInfo.gst_tee + '. ';
+            cmd += '! queue ! omxh264enc bitrate=' + options.bitrate + ' ! mp4mux ! queue ! filesink location=' + options.filename + '-' + cameraInfo.name.replace(/ /g, '') + '.mp4';
         cli.info(cmd)
         defer.resolve(cmd);
       }
@@ -64,15 +65,15 @@ function generateVLCStreamCommands(options, cameras) {
         defer.resolve(undefined);
       }
     });
-    vlcCommands.push(defer.promise);
+    gstCommands.push(defer.promise);
   });
-  return q.all(vlcCommands);
+  return q.all(gstCommands);
 }
 
 //We don't use pkill here to avoid killing processess that aren't ours
 function killPID(pid) {
   if(pid.length > 0) {
-    var command = 'kill ' + pid;
+    var command = 'kill -2 ' + pid;
     exec(command, function callback(err, result) {
         var result = (err || result || 'success').toString();
         if(result.indexOf('No such process') > -1) {
@@ -104,13 +105,14 @@ function closeOpenStreams() {
 }
 
 cli.parse({
-  width: ['w', 'Width of video to streams', 'int', 640],
-  height: ['h', 'Height of the video streams', 'int', 480],
-  bitrate: ['b', 'Requested bitrate from streams', 'int', 4000],
+  ip: ['i', 'IP address of the client to receive these streams', 'ip'],
+  width: ['w', 'Width of video to streams', 'int', 432],
+  height: ['h', 'Height of the video streams', 'int', 240],
+  bitrate: ['b', 'Requested bitrate from streams', 'int', 1500000],
   filename: ['f', 'Filename base to write the streams (test#.mp4)', 'string', 'test'],
-  fps: ['fps', 'Frames per second that the camera should attempt to capture', 'int', 45],
+  fps: ['fps', 'Frames per second that the camera should attempt to capture', 'int', 30],
   port: ['p', 'Default starting port to broadcast over -- increments by 1 for each camera', 'int', 8554],
-  verbose: [false, 'If on, will log out all of VLCs garbage', 'bool', false],
+  verbose: [false, 'If on, will log out all of GStreamer\'s debug information', 'bool', false],
   close: [false, 'When a stream is launched the Processs ID is tracked, if there is an interrupt of communication between client and server, this will explicitly close any opened streams']
 });
 
@@ -123,6 +125,9 @@ cli.main(function mainEntryPoint(args, options) {
     closeOpenStreams();
   }
   else {
+    if (options.ip == null) {
+        return cli.fatal('You must run this cli application with a designated Ip address (eg: node index.js -ip 192.168.1.1)');
+    }
     //start by grabbing all camera
     fs.readdir('/dev/', function getCameras(err, files) {
       if(err) {
@@ -135,15 +140,23 @@ cli.main(function mainEntryPoint(args, options) {
         }
       });
       cli.info('Found Cameras: ' + cameras);
-      return generateVLCStreamCommands(options, cameras).then(function runCommands(commands) {
+      return generateGStreamCommands(options, cameras).then(function runCommands(commands) {
+        var toExecute = 'gst-launch-1.0 -e ';
+        if (options.verbose === true) {
+            toExecute += '-v ';
+        }
+        //provide root t-split to be explicit when viewing the command outside of mars
+        toExecute += ' tee name=splitter ';
+            
         commands.forEach(function (command) {
-          exec(command);
+            toExecute += command + ' ';
         });
-
+        exec(toExecute);
+        cli.info(toExecute);
         //just use a pipe so i don't have to launch an fs writer
-        exec('pgrep -f vlc > do-not-delete-manually.hyperloop', function(err, pids, stderr) {
+        exec('pgrep -f gst-launch-1.0 > do-not-delete-manually.hyperloop', function(err, pids, stderr) {
           if(err) {
-             cli.fatal('Could not obtain the VLC pids');
+             cli.fatal('Could not obtain the GStreamer pids');
           }
         });
 

@@ -58,10 +58,10 @@ client = None
 #defines whether or not we have closed threads already
 closedThreads = False
 
-def startMars(configuration): 
+def startMars(configuration, ipAddress): 
     print 'Mars as found to not be online, starting...'
     global handler
-    handler = MarsThread(configuration, commandQueue, connectionQueue, onlineQueue, True)
+    handler = MarsThread(configuration, commandQueue, connectionQueue, onlineQueue, ipAddress, True)
     handler.start()
 
 def closeAllThreads():
@@ -108,9 +108,9 @@ try:
                     try:
                         online = onlineQueue.get(timeout=2)
                         if online == 0:
-                            startMars(data)
+                            startMars(data, client_ip)
                     except Empty:
-                        startMars(data)
+                        startMars(data, client_ip)
             else:
                 print 'There is already a client connected, booting new client'
 except KeyboardInterrupt:

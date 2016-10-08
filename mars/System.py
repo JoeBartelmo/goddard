@@ -32,7 +32,7 @@ logger = logging.getLogger('mars_logging')
 
 class System(object):
 
-    def __init__(self, config, timestamp, q = None, watchdogQueue = None, marsOnlineQueue = None):
+    def __init__(self, config, timestamp, q = None, watchdogQueue = None, marsOnlineQueue = None, ipAddress = None):
 
         #assign queues
         self._watchdogQueue = watchdogQueue
@@ -42,7 +42,7 @@ class System(object):
         self._devices = self.initDevices(config)
 
         #Prepare stream
-        self._devices['Stream'] = Stream(config, timestamp)
+        self._devices['Stream'] = Stream(config, timestamp, ipAddress)
 
         logger.info("Connecting Jetson")
         self._jetson = Jetson(self._devices, config, timestamp, q)

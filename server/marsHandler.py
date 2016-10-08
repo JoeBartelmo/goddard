@@ -31,7 +31,7 @@ class MarsThread(threading.Thread):
     We want to easily reconnnect, so we stick with queues here, mars won't stop
     until mars is explicitly stopped or watchdog stop is triggered
     '''
-    def __init__(self, configuration, marsCommandQueue, marsConnectionQueue, marsOnlineQueue, debugEnabled = False):
+    def __init__(self, configuration, marsCommandQueue, marsConnectionQueue, marsOnlineQueue, ipAddress, debugEnabled = False):
         super(MarsThread, self).__init__()
         self._stop = threading.Event()
 
@@ -40,9 +40,10 @@ class MarsThread(threading.Thread):
         self.marsConnectionQueue = marsConnectionQueue
         self.marsOnlineQueue = marsOnlineQueue
         self.debugEnabled = debugEnabled
+        self.ipAddress = ipAddress
 
     def run(self):
-        Mars.run(self.config, self.marsCommandQueue, self.marsConnectionQueue, self.marsOnlineQueue, self.debugEnabled)
+        Mars.run(self.config, self.marsCommandQueue, self.marsConnectionQueue, self.marsOnlineQueue, self.debugEnabled, self.ipAddress)
         '''
         Here we are on death. Usually Because mars quit, we would expect all logging to stop,
         but it persists because we still have the server up.

@@ -1,28 +1,30 @@
 {
   "user_input" : {
-    "log_name": "goddard-client",
+    "log_name": "insert_pod_team_name_here",
     "current_battery": 192.0
   },
   "logging": {
-    "index_path": "/phobos/goddard/maven/index.js",
-    "output_path": "/phobos",
+    "output_path":"/phobos/goddard/mars",
     "connection_path":"/phobos/goddard/mars/connection"
   },
   "conversions": {
     "code_to_rpm" : 111.1,
     "rpm_to_speed" : 0.0020228
-
   },
   "valmar":{
-    "command_path": "/phobos/goddard/valmar/command.json",
-    "telemetry_path": "/phobos/goddard/valmar/telemetry.json",
+    "path": "/phobos/goddard/valmar/target/valmar",
+    "command_path": "/phobos/goddard/valmar/target/command.json",
     "beam_gap_path": "/phobos/goddard/valmar/beam.gap"
+  },
+  "maven": {
+    "path":"/phobos/goddard/maven/index.js"
   },
   "watchdog": {
     "enable_watchdog":false,
     "recall_code":"M1005",
     "display_log_timeout":10.0,
     "braking_distance":3.8,
+    "connection_timeout":30.0,
 
     "under_voltage_alert": 12.0,
     "under_voltage_warning": 11.0,
@@ -38,7 +40,11 @@
 
     "batt_percent_alert":20,
     "batt_percent_warning":15,
-    "batt_percent_critical":10
+    "batt_percent_critical":10,
+
+    "distance_alert": 20,
+    "distance_warning": 10,
+    "distance_critical": 5
   },
   "constants": {
     "baud_rate": 9600,

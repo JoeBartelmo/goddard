@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     }
 
     if (calibrate) {
-        while(c != 'q' || c != 'Q') {
+        while(c != 'q' && c != 'Q') {
             view = cam.GetNextImageOcvMat(); // get an image
                 imshow("Image View", view);
             c = (char)waitKey(30);
@@ -232,8 +232,6 @@ int main(int argc, char* argv[])
         FileStorage reader(settings.getCoefficientLoc() + camera + "_calibration_coefficients.yml", FileStorage::READ);
         reader["distribution_coefficients"] >> distCoeffs;
         reader["camera_matrix"] >> cameraMatrix;
-        //reader["corners"] >> imagePoints;
-        reader["board_size"] >> boardSize;
         reader.release();
     }
     
@@ -241,8 +239,6 @@ int main(int argc, char* argv[])
         writer = FileStorage(settings.getCoefficientLoc() + camera + "_calibration_coefficients.yml", FileStorage::WRITE);
         writer << "distribution_coefficients" << distCoeffs;
         writer << "camera_matrix" << cameraMatrix;
-        //writer << "corners" << imagePoints;
-        writer << "board_size" << boardSize;
     }
 
     //calculate maps for remapping

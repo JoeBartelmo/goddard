@@ -71,24 +71,8 @@ double JsonSettings::getPixelConversionFactor() {
     return (double)settings["calibration"]["conversion_factor"];
 }
 
-int JsonSettings::getHoughLineRho() {
-    return settings["processing"]["hough_line"]["rho"];
-}
-
-int JsonSettings::getHoughLineThreshold() {
-    return settings["processing"]["hough_line"]["threshold"];
-}
-
-int JsonSettings::getHoughLineMinLength() {
-    return settings["processing"]["hough_line"]["min_line_length"];
-}
-
 int JsonSettings::getHoughLineMaxGap() {
     return settings["processing"]["hough_line"]["max_line_gap"];
-}
-
-double JsonSettings::getHoughLineTheta() {
-    return (double)settings["processing"]["hough_line"]["theta"];
 }
 
 int JsonSettings::getCannyThreshold(int i) {
@@ -101,12 +85,32 @@ int JsonSettings::getCannyThreshold(int i) {
     return -1;
 }
 
-int JsonSettings::getVerticalMorph() {
-    return settings["processing"]["erosion_kernal_size"]["vertical"];
+// 0 for Pre
+// 1 for Post
+Mat JsonSettings::getErosionMat(int mode) {
+    if (mode == 0) {
+        return getStructuringElement(MORPH_RECT, Size(settings["processing"]["erosion_kernel_size"]["horizontal"], 
+                                                                settings["processing"]["erosion_kernel_size"]["vertical"]));
+    }
+    else if(mode == 1) {
+        return getStructuringElement(MORPH_RECT, Size(settings["processing"]["erosion_kernel_size_post"]["horizontal"], 
+                                                                settings["processing"]["erosion_kernel_size_post"]["vertical"]));
+    }
+    return Mat();
 }
 
-int JsonSettings::getHorizontalMorph() {
-    return settings["processing"]["erosion_kernal_size"]["horizontal"];
+// 0 for Pre
+// 1 for Post
+Mat JsonSettings::getDilationMat(int mode) {
+    if (mode == 0) {
+        return getStructuringElement(MORPH_RECT, Size(settings["processing"]["dilation_kernel_size"]["horizontal"], 
+                                                                settings["processing"]["dilation_kernel_size"]["vertical"]));
+    }
+    else if(mode == 1) {
+        return getStructuringElement(MORPH_RECT, Size(settings["processing"]["dilation_kernel_size_post"]["horizontal"], 
+                                                                settings["processing"]["dilation_kernel_size_post"]["vertical"]));
+    }
+    return Mat();
 }
 
 const char* JsonSettings::getOutputFifoLoc() {
@@ -142,7 +146,6 @@ void JsonSettings::refreshAllData(string filename) {
     int attempt;    
     for(attempt = 0; attempt < JSON_LOAD_ATTEMPT; attempt++) {
         try {
-            printf("Attempting to load in file %s\n", filename.c_str());
             std::ifstream t(filename);
             std::stringstream buffer;
             buffer << t.rdbuf();
