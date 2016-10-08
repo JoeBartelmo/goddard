@@ -1,0 +1,15 @@
+%YAML:1.0
+distribution_coefficients: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ -7.1093540732350557e-01, -3.8340410579320765e+00, 0., 0.,
+       1.3216680232202509e+02 ]
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1.4716892360096788e+03, 0., 3.2350000000000000e+02, 0.,
+       1.4716892360096788e+03, 2.4350000000000000e+02, 0., 0., 1. ]
+board_size: [ 9, 6 ]
+inches_conversion_factor: 1.4457921850312403e-03

@@ -27,7 +27,7 @@
 Mat primary_src_image = imread("fourWhiteDotsRotated.png",CV_LOAD_IMAGE_GRAYSCALE);
 
 void displayAndSave(Mat image, String image_name){
-    cout << "displaying and saving "+image_name << endl;
+    //cout << "displaying and saving "+image_name << endl;
     cv::imwrite(image_name,image);
     imshow(image_name, image);
     cvWaitKey(1);
@@ -37,7 +37,7 @@ void displayAndSave(Mat image, String image_name){
 /*
 * Takes a matrix and detects the 2 lines in the ibeam gap
 */
-Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2, int horizontal_size, int vertical_size) {
+Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2, Mat erode_kernel, Mat dilate_kernel, Mat erode_kernel_post, Mat dilate_kernel_post) {
     register Mat working_image = src_image;
 #if defined DEBUG
     displayAndSave(src_image, "original.png");
@@ -47,27 +47,25 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
         cvtColor(src_image, working_image, CV_BGR2GRAY);
 #if defined DEBUG
         displayAndSave(working_image, "grayscale.png");     
-        cout << "converted to grayscale" << endl;
+        //cout << "converted to grayscale" << endl;
 #endif
     }
 
     //Generating edge map
-    
+    Canny(working_image, working_image, threshold1, threshold2, KERNAL_SIZE);
     //applying a gaussian blue prior to sobel
-    GaussianBlur( src_image, working_image, Size(3,3), 0, 0, BORDER_DEFAULT );
-    Sobel( working_image, working_image, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT );
+  //  GaussianBlur( src_image, working_image, Size(3,3), 0, 0, BORDER_DEFAULT );
+//    Sobel( working_image, working_image, CV_16S, 0, 1, CV_SCHARR, 1, 0, BORDER_DEFAULT );
 #if defined DEBUG    
     displayAndSave(working_image,"edge_detected.png");
-    cout << "detected edges" << endl;
+    //cout << "detected edges" << endl;
 #endif
 
-    //pulling out horizontal edges 
-    Mat morph_kernel = getStructuringElement(MORPH_RECT, Size(horizontal_size, vertical_size));
+    dilate(working_image, working_image, dilate_kernel, Point(-1,-1));
+    erode(working_image, working_image, erode_kernel, Point(-1,-1));
 
- //   erode(working_image, working_image, morph_kernel, Point(-1,-1));
-    dilate(working_image, working_image, morph_kernel, Point(-1,-1));
-    cout << "TRYING TO DEBUG" << endl;
-    erode(working_image, working_image, morph_kernel, Point(-1,-1));
+    dilate(working_image, working_image, dilate_kernel_post, Point(-1,-1)); 
+    erode(working_image, working_image, erode_kernel_post, Point(-1,-1)); 
 
 
     //crop edges because ximea picks up a border (~2px)
@@ -76,7 +74,7 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
 
 #if defined DEBUG
     displayAndSave(working_image, "cropped_final.png");
-    cout << "cropped final" << endl;
+    //cout << "morphed final" << endl;
 #endif
 
     return working_image;
@@ -85,8 +83,8 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
 /*
 * Calculates Integer point location from vector given an offset of y
 */
-int findPoint(vector<double> line, int x){
-    return ((((line[3]-line[1])/(line[2]-line[0]))*((float)x-line[0]))+line[1]);
+int findPoint(int *line, int col){
+    return (((((float)line[3]-(float)line[1])/((float)line[2]-(float)line[0]))*((float)col-(float)line[0]))+(float)line[1]);
 }
 
 /*
@@ -99,44 +97,80 @@ int findPoint(vector<double> line, int x){
         uses multiple for loops to go through the image row by row
         and subtract distances left to right
 */
-int calculateRawDistances(Mat src_image, vector<double> &distances, int rho, double theta, int threshold, int min_line_length, int max_line_break, double ratio) {
+int calculateRawDistances(Mat src_image, vector<double> &distances, int max_line_break, double ratio) {
     src_image.convertTo(src_image, CV_8UC3);
     Mat line_image(src_image.rows,src_image.cols,CV_8UC3); //matrix specifically for lines, same shape as src
 
-    vector<Vec4i> originalLines;
-#if defined DEBUG 
-    cout << "About to perform Hough transform" << endl;
-#endif
 
-//    HoughLinesP(src_image, lines, rho, theta, threshold, min_line_length, max_line_break);
-      HoughLinesP(src_image, originalLines, rho, theta, threshold, min_line_length, max_line_break);
+    //lines in startX, startY, endX, endY order
+    int lines[2][4] = { {-1, -1, -1, -1}, {-1, -1, -1, -1}};
 
-    vector<int> linesXs;
-    vector<int> linesYs;
+    //find starting coordinates
+    //for this we iterate over only half the image so we don't get a false positive
+    for (size_t c = 0; c < src_image.cols / 2 && (lines[0][0] == -1 || lines[1][0] == -1); c++ ){
+        for(size_t r = 0; r < src_image.rows; r++ ){
+             if(src_image.at<uchar>(r,c) != 0) {
+                 if(lines[0][0] == -1){
+                     lines[0][0] = c;
+                     lines[0][1] = r;
+                 }
+                 //we do need to make sure they are a reasonable distance apart to deem them as lines.
+                 else if(abs(lines[0][1] - (int)r) >= max_line_break) {
+                    lines[1][0] = c;
+                    lines[1][1] = r;
+                    break;
+                 }
+             }
+         }
+     } 
 
-    for(size_t l = 0; l < originalLines.size(); l++ ){
-        linesXs.push_back(originalLines[l][0]);
-        linesYs.push_back(originalLines[l][1]);
-        linesXs.push_back(originalLines[l][2]);
-        linesYs.push_back(originalLines[l][3]); 
+    if (lines[0][0] == -1 || lines[1][0] == -1) {
+        printf("Could not find 2 distinct lines\n");
+        return -1;
     }
-    double xMin, xMax;
-    Point xMinLoc, xMaxLoc;
-    minMaxLoc(linesXs, &xMin, &xMax, &xMinLoc, &xMaxLoc);
-    //yForXmin = lines[xMinLoc][1]
-    //yForXmax = lines[xMaxLoc][1]
-    double yMin, yMax;
-    Point yMinLoc, yMaxLoc;
-    minMaxLoc(linesYs, &yMin, &yMax, &yMinLoc, &yMaxLoc);
-    //xForYmin = lines[yMinLoc][0]
-    //xForYmax = lines[yMaxLoc][0]
-    vector<vector<double>> lines = {{xMin, yMin, xMax, yMin},{xMin, yMax, xMax, yMax}};
 
-    //Calculating distances
-    //if(lines.size() < 2) { //rejecting if there are more than two lines in this image
-    //    printf("Must have at least 2 lines. Given frame had %d lines. Computation is impossible.\n", lines.size());
-    //    return 0; 
-    //}
+    /*
+        So now that we have a start point, we need to keep track of potential endpoints
+        We don't want our two lines to get switched, we also need to know which of the 
+        two lines is the lower line, and which is the upper line.
+    */
+    int potentialForTop[2] = {-1, -1};//y-coordinate
+    int line1OnTop = lines[0][1] < lines[1][1];
+    // End Coordinates - we want to iterate utnil
+    for(size_t c = (src_image.cols - 1); c >= src_image.cols / 2 && (lines[0][3] == -1 || lines[1][3] == -1); c--){
+        for(size_t r = 0; r < src_image.rows; r++){
+            if(src_image.at<uchar>(r,c) != 0) {
+                //remember we don't know which ones on top, and i don't want to decide here
+                if(lines[0][3] == -1 && lines[1][3] == -1) {
+                    if (potentialForTop[0] == -1) {
+                        potentialForTop[0] = c;
+                        potentialForTop[1] = r;
+                    }
+                    //now that we have a potential, we need to see a distance of at least max_line_break before we know for sure
+                    else if (abs(potentialForTop[1] - (int)r) >= max_line_break) {
+                        //now we may assign both, we have both coordinates
+                        //note: there is an easier way to display this with boolean logic
+                        //      but I felt it was more explicit and readable to display as such
+                        int isPotentialOnTop = potentialForTop[1] < r;
+                        if (line1OnTop) {
+                            lines[0][2] = isPotentialOnTop ? potentialForTop[0] : c;
+                            lines[0][3] = isPotentialOnTop ? potentialForTop[1] : r;
+                            lines[1][2] = isPotentialOnTop ? c : potentialForTop[0];
+                            lines[1][3] = isPotentialOnTop ? r : potentialForTop[1];
+                        }
+                        else {
+                            lines[1][2] = isPotentialOnTop ? potentialForTop[0] : c;
+                            lines[1][3] = isPotentialOnTop ? potentialForTop[1] : r;
+                            lines[0][2] = isPotentialOnTop ? c : potentialForTop[0];
+                            lines[0][3] = isPotentialOnTop ? r : potentialForTop[1];
+                        }
+                        break;
+                   }
+               }
+           }
+        }
+    }
+
     int start = lines[0][0] < lines[1][0] ? lines[1][0] : lines[0][0];
     int end = lines[0][2] < lines[1][2] ? lines[0][2] : lines[1][2];
     if(!distances.empty()) {
@@ -144,7 +178,6 @@ int calculateRawDistances(Mat src_image, vector<double> &distances, int rho, dou
     }
 #if defined DEBUG
     cout << "SIZE OF DISTANCES:" << distances.size() << endl;
-    cout << "SIZE OF LINES:" << lines.size() << endl;
     cout << "Hough performed" << endl;
     //cout << "LINE1:" << lines[0] <<  endl;
     //cout << "LINE2:" << lines[1] <<  endl;
@@ -152,24 +185,24 @@ int calculateRawDistances(Mat src_image, vector<double> &distances, int rho, dou
     cout << "END:" << end << endl;
     Mat line_overlay_image;
     cvtColor(src_image,line_overlay_image,CV_GRAY2RGB);
-    for(size_t i = 0; i < lines.size(); i++ ){
-        vector<double> single_line = lines[i];
-        line(line_overlay_image, Point(single_line[0], single_line[1]), Point(single_line[2], single_line[3]), Scalar(0,0,255), 3, CV_AA);
+    for(size_t i = 0; i < 2; i++ ){
+        line(line_overlay_image, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,0,255), 3, CV_AA);
     }
     displayAndSave(line_overlay_image,"image_with_lines.png");
 
 #endif 
-    if(lines.size() != 2) { //rejecting if there are more than two lines in this image
-        printf("Must have 2 lines. Given frame had %d lines. Computation is impossible.\n", lines.size());
-        return 0; 
-    }
  
     for(int col = 0; col < abs(end - start); col++){ // loops for the length of the first line 
-            double pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col)); 
-            distances.push_back(pixelDistance * ratio);
+            int pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col));
+            distances.push_back((double)pixelDistance * ratio);
     }
     return 1;
-}
+} 
+
+
+
+
+
 
 /*
 int main(int argc, char const *argv[])
@@ -180,9 +213,9 @@ int main(int argc, char const *argv[])
         return EXIT_FAILURE;
     }
 
-    Mat horizontal_image = retrieveHorizontalEdges(primary_src_image,225,255,5);
-    Mat* distances;
-    if(calculateRawDistances(horizontal_image, distances) == 0) {
+    Mat horizontal_image = retrieveHorizontalEdges(primary_src_image,225,255,5,2,2,2,2,14,30,15);
+    vector<double> distances;
+    if(calculateRawDistances(horizontal_image, distances, 2.0) == 0) {
         return EXIT_FAILURE;
     }
     cout << "raw_distances = " << endl << distances << endl << "end of distance matrix" << endl; 
@@ -191,5 +224,5 @@ int main(int argc, char const *argv[])
      
     return EXIT_SUCCESS;;
 }
-*/
 
+*/

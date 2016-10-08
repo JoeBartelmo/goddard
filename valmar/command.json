@@ -1,1 +1,54 @@
-{"capture": {"exposure_us": 2000, "framerate": 100, "gain": 2, "sharpness": 0.5, "gamma_y": 1.0}, "calibration": {"write_location": "/phobos/goddard/mars/files/", "conversion_factor": 0.1875, "checkerboard": {"width": 4, "height": 3}}, "processing": {"histogram_max": 120, "threshold": 6000, "hough_line": {"threshold": 10, "theta": 0.0003469817, "max_line_gap": 3, "rho": 1, "min_line_length": 400}, "erosion_kernal_size": {"horizontal": 2, "vertical": 1}, "vertical_edge_thresholds": {"canny_2": 10500, "canny_1": 100}}, "command": {"refresh_frame_interval": 10, "enabled": true}, "ximea_cameras": {"right": "15533850", "left": "12531150"}, "output": "/phobos/goddard/valmar/beam.gap"}
+{
+  "capture": {
+    "exposure_us": 1000,
+    "framerate": 100,
+    "gain": 2,
+    "sharpness": 0.5,
+    "gamma_y": 1.0
+  },
+  "calibration": {
+    "write_location": "/phobos/goddard/mars/files/",
+    "checkerboard": {
+      "width": 9,
+      "height": 6
+    },
+    "conversion_factor": 0.1875,
+    "coefficient_location": "/phobos/goddard/valmar/"
+  },
+  "processing": {
+    "erosion_kernel_size_post": {
+      "horizontal": 2,
+      "vertical": 13
+    },
+    "vertical_edge_thresholds": {
+      "canny_2": 7000,
+      "canny_1": 1000
+    },
+    "dilation_kernel_size": {
+      "horizontal": 2,
+      "vertical": 2
+    },
+    "histogram_max": 120,
+    "hough_line": {
+      "max_line_gap": 30
+    },
+    "threshold": 30000,
+    "dilation_kernel_size_post": {
+      "horizontal": 30,
+      "vertical": 15
+    },
+    "erosion_kernel_size": {
+      "horizontal": 5,
+      "vertical": 2
+    }
+  },
+  "command": {
+    "refresh_frame_interval": 10,
+    "enabled": false
+  },
+  "ximea_cameras": {
+    "right": "12531150",
+    "left": "15533850"
+  },
+  "output": "/phobos/goddard/valmar/beam.gap"
+}

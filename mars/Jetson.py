@@ -126,6 +126,9 @@ class Jetson(object):
                     "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
 
     def scan(self):
+        """
+        Performs a set list of commands to automate mars
+        """
         #enable watchdog
         self._watchdog.scanEnable()        
         #disengage brake
@@ -147,9 +150,10 @@ class Jetson(object):
         #Prompt for input
         if self._q is None:
             try:
-                controlCode = raw_input("LED, motion, stream, or control code: \n")
+                controlCode = raw_input("Please Enter Command or \"help\"): \n")
             except KeyboardInterrupt:
                 self.exit()
+                return
         else:
             controlCode = self._q.get()
         myCodeInput = self.recieveInput(controlCode)
@@ -171,8 +175,6 @@ class Jetson(object):
             return self._motor.movement(controlCode)
         elif "brightness" in controlCode:
             return self._led.issue(self._arduino, controlCode)
-        elif controlCode in self._stream._streamCodes:
-            return self._stream.issue(controlCode)
         elif controlCode in self._sysCommands:
             self._sysCommands[controlCode]()
         elif 'graph' in controlCode:
@@ -202,8 +204,11 @@ class Jetson(object):
             if telemetry is not None:
                 #inject telemetry updates
                 telemetry.update(self._watchdog.watch(telemetry))
-                telemetry["BeamGapData"] = self._valmar.getBeamGapData()
+                telemetry["Valmar"] = self._valmar.getBeamGapData()
+                if telemetry["Valmar"] is not None:
+                    logger.debug('Valmar hit next beam')
                 logger.debug("Displaying Telemetry...")
+                #the logger sends the data over tcp
                 telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
                 logger.debug("Saving telemetry...")
                 self.saveStats(self._mars._telemetry)

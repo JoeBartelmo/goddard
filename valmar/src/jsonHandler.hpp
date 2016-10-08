@@ -47,15 +47,11 @@ class JsonSettings {
         int getCheckerboardHeight();
         double getPixelConversionFactor();
 
-        int getHoughLineRho();
-        int getHoughLineThreshold();
-        int getHoughLineMinLength();
         int getHoughLineMaxGap();
-        double getHoughLineTheta();
         
         int getCannyThreshold(int i);
-        int getVerticalMorph();
-        int getHorizontalMorph();
+        Mat getErosionMat(int mode);
+        Mat getDilationMat(int mode);
 
         const char* getOutputFifoLoc();
         string getCoefficientLoc();
