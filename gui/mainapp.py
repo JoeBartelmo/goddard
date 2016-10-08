@@ -25,14 +25,13 @@ import Tkinter as tk
 from Threads import VideoThread
 from TelemetryWidget import TelemetryWidget
 from ControlWidget import ControlWidget
-from img_proc.misc import demosaic
-
+from img_proc.misc import *
 
 import logging
 logger = logging.getLogger('mars_logging')
 
 
-CAMERA_PORT_MAP = {'Left Camera': 8554, 'Right Camera': 8555, 'Front Camera': 8556}
+CAMERA_LOC_MAP = {'Left Camera': '../gui/left.sdp', 'Right Camera': '../gui/right.sdp', 'Front Camera': '../gui/center.sdp'}
 
 class MainApplication(tk.Frame):
     '''
@@ -176,15 +175,15 @@ class MainApplication(tk.Frame):
         a, b, c = self.stream_order
         
         try:
-            l_frame = demosaic(self.streams[a]._queue.get(False))
+            l_frame = color_correct(self.streams[a]._queue.get(False))
         except Empty:
             l_frame = None
         try:
-            c_frame = demosaic(self.streams[b]._queue.get(False))
+            c_frame = color_correct(self.streams[b]._queue.get(False))
         except Empty:
             c_frame = None
         try:
-            r_frame = demosaic(self.streams[c]._queue.get(False))
+            r_frame = color_correct(self.streams[c]._queue.get(False))
         except Empty:
             r_frame = None
 
@@ -232,9 +231,9 @@ class MainApplication(tk.Frame):
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
         iteration = 0
-        for camera in CAMERA_PORT_MAP:
+        for camera in CAMERA_LOC_MAP:
             #logger.info('Attempting to connect to ' + camera + ' on port ' + str(CAMERA_PORT_MAP[camera]))
-            captureCv = VideoThread(camera, 'rtsp://' + self.server_ip + ':' + str(CAMERA_PORT_MAP[camera]) + '/', Queue())
+            captureCv = VideoThread(camera, CAMERA_LOC_MAP[camera], Queue())
             self.streams[iteration] = captureCv
             iteration += 1
 

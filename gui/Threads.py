@@ -50,10 +50,7 @@ class VideoThread(threading.Thread):
 
                 if not flag:
                     continue
-
-                if self.transformFunction is not None:
-                    frame = self.transformFunction(frame)
-
+                
                 self._queue.put(frame)
 
             self._vidcap.release()
