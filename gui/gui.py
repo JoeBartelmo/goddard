@@ -59,7 +59,10 @@ def start(client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
     # menu
     menu_ = TopMenu(root, '../gui/operations.json', client_queue_cmd, 'Commands')
     ### Add custom commands here
-    menu_.add_menu_item('Refresh Streams', mainApplication.start_streams)
+    menu_.add_menu_item('Refresh Streams', mainApplication.start_streams, None)
+    menu_.add_menu_item('Left Focus', mainApplication.focus_left, 'Camera')
+    menu_.add_menu_item('Center Focus', mainApplication.focus_center, 'Camera')
+    menu_.add_menu_item('Right Focus', mainApplication.focus_right, 'Camera')
     ###
     menu_.finalize_menu_items()
     root.config(menu=menu_)
