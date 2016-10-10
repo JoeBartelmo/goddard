@@ -24,6 +24,12 @@ import logging
 logger = logging.getLogger('mars_logging')
 
 class VideoThread(threading.Thread):
+    '''
+    Thread Responsible for maintaining connection for a given RTP stream.
+    It makes reference calls to the openCvCapture module to start/stop
+    the stream in a resonable timeframe, also keeps the GUI responsive
+    during a refresh or initialization.
+    '''
     def __init__(self, name, rtspLocation, queue):
         super(VideoThread, self).__init__()
         self._vidcap = None
@@ -87,13 +93,25 @@ class VideoThread(threading.Thread):
 
 
 class TelemetryThread(threading.Thread):
-    def __init__(self, telem_widget, client_queue):
+    '''
+    Thread responsible for updating the telemetry widget.
+
+    Additionally, and this is kind of unfortunate. We need
+    to be able to update a seperate queue for the BeamGapWidget.
+
+    This cannot be done on the client side because we use the
+    listener class to grab the data, in that class it is unknown 
+    as to whether or not the listener is receiving the telmetry data.
+
+    So in this class I extract Valmar from the telemetry data and
+    pipe it into a seperate queue.
+    '''
+    def __init__(self, telem_widget, client_queue, beam_gap_queue):
         super(TelemetryThread, self).__init__()
         self._queue = client_queue
+        self._beam_gap_queue = beam_gap_queue
         self._widget = telem_widget
         self._stop = threading.Event()
-
-        self.transformFunction = None
 
     def run(self):
         while self.stopped() == False:
@@ -101,6 +119,12 @@ class TelemetryThread(threading.Thread):
                 record = self._queue.get(False)
                 telemetryData = json.loads(record.msg)
                 self._widget.set_telemetry_data(telemetryData)
+
+                #extract valmar data and pipe it into beamgapqueue
+                if telemetryData["Valmar"] is not None:
+                    self._beam_gap_queue.put(telemetryData["Valmar"])
+                    #literally only a warning so it stands out in log
+                    logger.warning('Received Beam Gap Data!')
             except Empty:
                 pass
 

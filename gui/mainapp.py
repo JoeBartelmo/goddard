@@ -38,12 +38,17 @@ CAMERAS = [LEFT_CAM, CENTER_CAM, RIGHT_CAM]
 
 class MainApplication(tk.Frame):
     '''
-    Responsible for launching all 3 streams and reconnecting when needed.
+    Main application handle, contains the frame that contains all other widgets
     '''
-    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
+    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, client_queue_beam, server_ip):
         tk.Frame.__init__(self, parent)
         self.parent = parent
+        #this is now depricated, we no longer need the ip, but we may in the future so i'm leaving it here
         self.server_ip = server_ip
+        self.client_queue_cmd = client_queue_cmd
+        self.client_queue_log = client_queue_log
+        self.client_queue_telem = client_queue_telem
+        self.client_queue_beam = client_queue_beam
         #we found 720/640 to give the most aesthetic view
         self.imageHeight  = 720 
         self.imageWidth = 640
@@ -52,7 +57,7 @@ class MainApplication(tk.Frame):
         self.streams = [None, None, None]
         self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
         
-        self.init_ui(client_queue_cmd, client_queue_log, client_queue_telem, server_ip)
+        self.init_ui()
 
         self.fast = cv2.FastFeatureDetector()
         
@@ -71,7 +76,7 @@ class MainApplication(tk.Frame):
      
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
-    def init_ui(self, client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
+    def init_ui(self):
         """ Initialize visual elements of widget. """
 
         logger.info('Appending photo image widget to main app')
@@ -83,12 +88,12 @@ class MainApplication(tk.Frame):
 
         logger.info('Launching telemetry widget')
         # telemetry display widget
-        self.telemetry_w = TelemetryWidget(self, client_queue_telem)
+        self.telemetry_w = TelemetryWidget(self, self.client_queue_telem, self.client_queue_beam)
         self.telemetry_w.grid(row=0, column=1, sticky='nsew')
 
         logger.info('Launching Control Widget')
         # control and logging widget
-        self.command_w = ControlWidget(self, client_queue_cmd, client_queue_log)
+        self.command_w = ControlWidget(self, self.client_queue_cmd, self.client_queue_log)
         self.command_w.grid(row=1, column=1, sticky='nsew') 
 
         logger.info('Finalizing frame...')

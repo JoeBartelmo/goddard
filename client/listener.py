@@ -32,10 +32,16 @@ MARS_TIMEOUT = 5
 
 
 class ListenerThread(threading.Thread):
-    def __init__(self, q, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
+    '''
+    Thread is responsible for receiving data from the server. 
+    The data is transmitted using the logging module in python,
+    this handles deserialization of the logging object and pipes
+    the data into a queue for the GUI to read.
+    '''
+    def __init__(self, queue, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
-        self.q = q
+        self.q = queue
         self.serverAddr = serverAddr
         self.port = port
         self.name = name

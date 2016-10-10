@@ -30,6 +30,17 @@ from socket import error as socket_error
 logger = logging.getLogger('mars_logging') 
 
 class FileListenerThread(threading.Thread):
+    '''
+    The file listener is a thread responsible for
+    receiving files that mars generates. This is outside
+    the bounds of the listener.py module because we do not
+    use the logging module serialization/deserializtion.
+
+    Instead, we base64 encode the files and send them over
+
+    TODO:  In a future iteration I plan on doing some element
+    of compression before sending over the files.
+    '''
     def __init__(self, serverAddr, port):
         super(FileListenerThread, self).__init__()
         self._stop = threading.Event()
