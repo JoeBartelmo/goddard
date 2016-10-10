@@ -21,7 +21,7 @@ apt-add-repository multiverse
 apt-get update
 
 #install essentials
-apt-get install git vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel
+apt-get install feh git vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel
 
 
 #install vlc and node
