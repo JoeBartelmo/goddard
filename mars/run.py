@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 '''
 ark9719
 6/17/2016
@@ -54,12 +71,12 @@ def initOutput(config, q = None, debugMode = False):
     return timestamp
 
 
-def run(json_string, q = None, watchDogQueue = None, marsRunningQueue = None, debugMode = False):
+def run(json_string, q = None, watchDogQueue = None, marsRunningQueue = None, debugMode = False, ipAddress = None):
     config = parseConfig(json_string)
 
     timestamp = initOutput(config, q, debugMode)
 
-    System(config, timestamp, q, watchDogQueue, marsRunningQueue)
+    System(config, timestamp, q, watchDogQueue, marsRunningQueue, ipAddress)
 
 def parseObject(jsonObject):
     with open(jsonObject) as f:
@@ -83,9 +100,9 @@ if __name__=='__main__':
     #TODO: Use python cli module eventually
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         debugEnabled = True
-    elif len(sys.argv) > 1:
+    elif len(sys.argv) > 1 or len(sys.argv) == 0:
         displayUsage()
-        sys.exit(1)      
+        sys.exit(1)
     json_config = sys.argv[0]
 
     if json_config.lower().endswith('.json'):
@@ -98,5 +115,5 @@ if __name__=='__main__':
     else:
         json_string = ''.join(sys.argv)
     
-    run(json_string, None, None, None, debugEnabled)
+    run(json_string, None, None, None, debugEnabled, None)
 

@@ -1,3 +1,22 @@
+/**
+* Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+* associated documentation files (the "Software"), to deal in the Software without restriction,
+* including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+* and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+* subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all copies or substantial 
+* portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+* LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+* WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
 #include "MemoryFree.h"
 #include "DaqTelemetry.h"
 
@@ -8,7 +27,7 @@ DaqTelemetry *daqTelemetry;
 int enablePin = 13; //enable/disable motor
 int revPin = 11; //seting fwd/rev
 int brakePin = 12; //brake pin
-int speedPin = 9; //speedPin
+int speedPin = 6; //speedPin
 int voltagePin = A0; //ammeter voltage pin
 int currentPin = A1; //ammeter current pin
 int encoderPin = A5; //pin for motor controller
@@ -125,17 +144,17 @@ void control_input()
         digitalWrite(brakePin, brake); //NOTE BRAKE IS AN ACTIVE HIGH BRAKE PIN(12)
 
         //SPEED PIN(5)
-        int speedDutyCycle = charToInt(speedValue) * 25.5; //converts input ao a 0-255 scale
+        int speedDutyCycle = int(charToInt(speedValue) * 25.5); //converts input ao a 0-255 scale
         analogWrite(speedPin, speedDutyCycle); //sets up PWM on the speedPin
-        break;
 
         //Changing the global direction for reference in the DAQ
         directionOfTravel = codeArray[2] == '0' ? 0 : 1; // one is forwards, zero is backwards
+        break;
       }
     //LED code
     case 'L': {
         char ledValue = codeArray[1];
-        char ledDutyCycle = charToInt(ledValue) * 25.5;
+        int ledDutyCycle = int(charToInt(ledValue) * 25.5);
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
         break;
       }

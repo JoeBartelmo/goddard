@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import cv2
 from PIL import Image, ImageTk
 import numpy
@@ -8,35 +25,39 @@ import Tkinter as tk
 from Threads import VideoThread
 from TelemetryWidget import TelemetryWidget
 from ControlWidget import ControlWidget
-from img_proc.misc import demosaic
-
+from img_proc.misc import *
 
 import logging
 logger = logging.getLogger('mars_logging')
 
+LEFT_CAM  =  '../gui/left.sdp'
+RIGHT_CAM =  '../gui/right.sdp'
+CENTER_CAM = '../gui/center.sdp'
 
-CAMERA_PORT_MAP = {'Left Camera': 8554, 'Right Camera': 8555, 'Front Camera': 8556}
+CAMERAS = [LEFT_CAM, CENTER_CAM, RIGHT_CAM]
 
 class MainApplication(tk.Frame):
     '''
-    Responsible for launching all 3 streams and reconnecting when needed.
+    Main application handle, contains the frame that contains all other widgets
     '''
-    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
+    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, client_queue_beam, server_ip):
         tk.Frame.__init__(self, parent)
         self.parent = parent
-        self.stream_order = [0,1,2]
+        #this is now depricated, we no longer need the ip, but we may in the future so i'm leaving it here
         self.server_ip = server_ip
-        #for aspect ratio resizing of image
+        self.client_queue_cmd = client_queue_cmd
+        self.client_queue_log = client_queue_log
+        self.client_queue_telem = client_queue_telem
+        self.client_queue_beam = client_queue_beam
         #we found 720/640 to give the most aesthetic view
         self.imageHeight  = 720 
         self.imageWidth = 640
-        self.aspectRatio = 720/640
  
         #Left Camera, Center Camera, Right Camera
         self.streams = [None, None, None]
         self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
         
-        self.init_ui(client_queue_cmd, client_queue_log, client_queue_telem, server_ip)
+        self.init_ui()
 
         self.fast = cv2.FastFeatureDetector()
         
@@ -46,46 +67,40 @@ class MainApplication(tk.Frame):
         self.start_telemetry()
 
     def image_resize(self, event):
+        '''
+        Handles the 'OnResize' for the ImageTk window
+        '''
         if abs(event.width - self.imageWidth) > 2 or abs(event.height - self.imageHeight) > 2:
             self.imageHeight = event.height
             self.imageWidth = event.width
      
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
-    def init_ui(self, client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
+    def init_ui(self):
         """ Initialize visual elements of widget. """
 
         logger.info('Appending photo image widget to main app')
         # Image display label
         self.initial_im = tk.PhotoImage()
         self.image_label = tk.Label(self, image=self.initial_im)
-        #self.image_label.grid(row=0, column=0, rowspan=2, sticky='nw')
         self.image_label.grid(row=0, column=0, rowspan = 2, sticky = 'nsew')
         self.image_label.bind('<Configure>', self.image_resize)
 
         logger.info('Launching telemetry widget')
         # telemetry display widget
-        self.telemetry_w = TelemetryWidget(self, client_queue_telem)
-        #self.telemetry_w.grid(row=0, column=1, padx=5, pady=5, sticky='nesw')
+        self.telemetry_w = TelemetryWidget(self, self.client_queue_telem, self.client_queue_beam)
         self.telemetry_w.grid(row=0, column=1, sticky='nsew')
 
         logger.info('Launching Control Widget')
         # control and logging widget
-        self.command_w = ControlWidget(self, client_queue_cmd, client_queue_log)
-        #self.command_w.grid(row=1, column=1, rowspan=2, padx=5, pady=5, sticky='nw')
+        self.command_w = ControlWidget(self, self.client_queue_cmd, self.client_queue_log)
         self.command_w.grid(row=1, column=1, sticky='nsew') 
 
         logger.info('Finalizing frame...')
         # radiobuttons for choosing which stream is in focus
-        #frame = tk.Frame(self, bd=2, relief='groove')
         self.stream_active = tk.IntVar()
-        self.stream_active.set(0)
-        self.pump = tk.IntVar()
-        #frame.grid(row=1, column=0, sticky='s')
-        
-        #tk.Radiobutton(frame, text='Left', variable=self.stream_active, value=0, command=self.choose_focus).grid(row=0, column=0, padx=5, pady=5)
-        #tk.Radiobutton(frame, text='Center', variable=self.stream_active, value=1, command=self.choose_focus).grid(row=0, column=1, padx=5, pady=5)
-        #tk.Radiobutton(frame, text='Right', variable=self.stream_active, value=0, command=self.choose_focus).grid(row=0, column=2, padx=5, pady=5)
+        self.focus_center()
+        #self.pump = tk.IntVar()
         #tk.Checkbutton(frame, text='Pumpkin', variable=self.pump).grid(row=0, column=4)
         self.grid(row = 0, column=0, sticky="nsew")
         logger.info('Client GUI Initialized')
@@ -94,8 +109,6 @@ class MainApplication(tk.Frame):
         for i in range(0,2):
             self.grid_columnconfigure(i, weight=1)
             self.grid_rowconfigure(i, weight=1)
-        
-        #self.bind('<Configure>', self._resize)
 
     def toggle_pumpkin(self, event):
         if self.pump.get() == 1:
@@ -116,62 +129,73 @@ class MainApplication(tk.Frame):
             for s in self.streams:
                 s.transform(None)
 
-    def choose_focus(self):
-        """ Change stream focus. """
-        if self.stream_active.get() == 0:  # center focus
-            self.stream_order = [0,1,2]
-        elif self.stream_active.get() == 1:  # left focus
-            self.stream_order = [1,0,2]
-        elif self.stream_active.get() == 2:  # right focus
-            self.stream_order = [0,2,1]
-        else:
-            self.stream_order = [0,1,2]
-    
-    def addText(self, l_frame, c_frame, r_frame):
-        """ Change text on boxes """
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        center = (10, (self.imageWidth / 2) + 70)
-        topleft = (10, (self.imageHeight / 3) - 10)
-        topright = (10, (self.imageHeight / 3) - 10)
+    def focus_left(self):
+        self.stream_active.set(0)
+    def focus_center(self):
+        self.stream_active.set(1)
+    def focus_right(self):
+        self.stream_active.set(2)
 
-        def setText(l_text, r_text, c_text):
-            if l_frame is not None:
-                cv2.putText(l_frame, l_text, topleft, font, 0.5, (255,0,0), 1)
-            if c_frame is not None:
-                cv2.putText(c_frame, c_text, center, font, 0.5, (255,0,0), 1)
-            if r_frame is not None:
-                cv2.putText(r_frame, r_text, topright, font, 0.5, (255,0,0), 1)
+    def get_stream_order(self):
+        if self.stream_active.get() == 0:
+            return (1, 0, 2)
+        elif self.stream_active.get() == 1:
+            return (0, 1, 2)
+        elif self.stream_active.get() == 2:
+            return (0, 2, 1)
+    
+    def addText(self, big_frame):
+        """ Change text on boxes to their designated names """
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        center = (10, (self.imageHeight - 10))
+        topright = ((self.imageWidth / 2) + 10, (self.imageHeight / 3) - 10)
+        topleft = (10, (self.imageHeight / 3 - 10))
+
+        def setText(l_text, c_text, r_text):
+            cv2.putText(big_frame, l_text, topleft, font, 0.5, (255,0,0), 1)
+            cv2.putText(big_frame, c_text, center, font, 0.5, (255,0,0), 1)
+            cv2.putText(big_frame, r_text, topright, font, 0.5, (255,0,0), 1)
 
         if self.stream_active.get() == 0:  # left focus
-            setText('Center', 'Right', 'Left')
+            setText('Center', 'Lefta', 'Right')
+        #default
         elif self.stream_active.get() == 1:  # center focus
-            setText('Left', 'Right', 'Center')
+            setText('Left', 'Center', 'Right')
         elif self.stream_active.get() == 2:  # right focus
-            setText('Right', 'Center', 'Left')
+            setText('Left', 'Right', 'Center')
 
-        return (l_frame, c_frame, r_frame)
+        return big_frame
 
     def display_streams(self, delay=0):
+        '''
+        Where the Image window gets updated.
+        
+        Check to see if we're obtaining data
+        attempt to grab a non-blocking frame from each camera
+        On success, color correct, and pipe into it's designated portion of the image.
+        
+        We then have to do some slight manipulation with a matrix to get it to fit
+        properly. Then we slam it on the ImageTk window.
+        '''
         if self.runStreams == False:
             self.runStreams = True
             return
 
-        a, b, c = self.stream_order
+        leftFrame, centerFrame, rightFrame = self.get_stream_order()
         
         try:
-            l_frame = demosaic(self.streams[a]._queue.get(False))
+            l_frame = color_correct(self.streams[leftFrame]._queue.get(False))
         except Empty:
             l_frame = None
         try:
-            c_frame = demosaic(self.streams[b]._queue.get(False))
+            c_frame = color_correct(self.streams[centerFrame]._queue.get(False))
         except Empty:
             c_frame = None
         try:
-            r_frame = demosaic(self.streams[c]._queue.get(False))
+            r_frame = color_correct(self.streams[rightFrame]._queue.get(False))
         except Empty:
             r_frame = None
 
-        
         thirdHeight = int(self.imageHeight / 3)
         halfWidth = int(self.imageWidth / 2)
         
@@ -184,19 +208,22 @@ class MainApplication(tk.Frame):
         if r_frame is not None:
             r_frame = cv2.resize(r_frame, (self.imageWidth - halfWidth, thirdHeight))
             self.displayed_image[:thirdHeight,halfWidth:self.imageWidth,:] = r_frame
-
-        self.addText(l_frame, c_frame, r_frame)
         
         big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
 
-        imageFromArray = Image.fromarray(big_frame)
-        tkImage = ImageTk.PhotoImage(image=imageFromArray)
-        self.image_label.configure(image=tkImage)
-        
-        self.image_label._image_cache = tkImage  # avoid garbage collection
+        self.addText(big_frame)
 
-        self.update()
+        imageFromArray = Image.fromarray(big_frame)
+        try:
+            tkImage = ImageTk.PhotoImage(image=imageFromArray)
+            self.image_label.configure(image=tkImage)
         
+            self.image_label._image_cache = tkImage  # avoid garbage collection
+
+            self.update()
+        except RuntimeError:
+            logger.warning('Unable to update image frame. Assuming application has been killed unexpectidly.')
+            return
         self.after(delay, self.display_streams, delay)
 
     def start_streams(self):
@@ -214,19 +241,17 @@ class MainApplication(tk.Frame):
                     s = None
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
-        iteration = 0
-        for camera in CAMERA_PORT_MAP:
+        for camera in range(0, len(CAMERAS)):
             #logger.info('Attempting to connect to ' + camera + ' on port ' + str(CAMERA_PORT_MAP[camera]))
-            captureCv = VideoThread(camera, 'rtsp://' + self.server_ip + ':' + str(CAMERA_PORT_MAP[camera]) + '/', Queue())
-            self.streams[iteration] = captureCv
-            iteration += 1
+            captureCv = VideoThread(CAMERAS[camera], CAMERAS[camera], Queue())
+            self.streams[camera] = captureCv
 
         for s in self.streams:
             s.start()
 
         self.runStreams = True
         
-        self.after(100, self.display_streams)   # TODO decide on appropriate interval
+        self.after(100, self.display_streams)
 
     def start_telemetry(self):
         """ after 5 seconds, start telemtry updates. """
@@ -234,6 +259,7 @@ class MainApplication(tk.Frame):
 
     def close_(self):
         logger.debug('GUI: Stopping all video streams...')
+        self.runStreams = False 
         #stop the threads
         for stream in self.streams:
             stream.stop()

@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import threading
 import struct
 import pickle
@@ -15,10 +32,16 @@ MARS_TIMEOUT = 5
 
 
 class ListenerThread(threading.Thread):
-    def __init__(self, q, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
+    '''
+    Thread is responsible for receiving data from the server. 
+    The data is transmitted using the logging module in python,
+    this handles deserialization of the logging object and pipes
+    the data into a queue for the GUI to read.
+    '''
+    def __init__(self, queue, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
-        self.q = q
+        self.q = queue
         self.serverAddr = serverAddr
         self.port = port
         self.name = name

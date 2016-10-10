@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import logging
 
 logger = logging.getLogger('mars_logging')
@@ -41,7 +58,7 @@ class Motor(object):
     """
 
     def __init__(self):
-        self._motorCodes = ['enable brake', 'disable brake', 'enable motor', 'disable motor']
+        self._motorCodes = ['brake on', 'brake off', 'motor on', 'motor off']
         self._speed = 0
         self._lastCommand = 'M0000'
         self._direction = 0
@@ -57,9 +74,9 @@ class Motor(object):
         """
         self._arduino = arduino
 
-        if myCode in ('enable motor', 'disable motor'):
+        if myCode in ('motor on', 'motor off'):
             self.toggleMotor(myCode)
-        elif myCode in ('enable brake', 'disable brake'):
+        elif myCode in ('brake on', 'brake off'):
             self.toggleBrake(myCode)
 
 
@@ -71,9 +88,9 @@ class Motor(object):
         """
 
         if self._enabled == 0:
-            return logger.info("Motor must be enabled before you can move! Use: enable motor")
+            return logger.info("Motor must be enabled before you can move! Use: motor on")
         if self._brake == 1:
-            return logger.info("Brake must be disabled to move! Use: disable brak")
+            return logger.info("Brake must be disabled to move! Use: brake off")
         
         splitCodes = myCode.split(' ')
 
@@ -93,9 +110,9 @@ class Motor(object):
         :param myCode:
         :return:
         """
-        if myCode == 'enable motor':
+        if myCode == 'motor on':
             self._enabled = 1
-        elif myCode == 'disable motor':
+        elif myCode == 'motor off':
             self._enabled = 0
 
         self.write()
@@ -106,9 +123,9 @@ class Motor(object):
         :param myCode:
         :return:
         """
-        if myCode == 'enable brake':
+        if myCode == 'brake on':
             self._brake = 1
-        elif myCode == 'disable brake':
+        elif myCode == 'brake off':
             self._brake = 0
 
         self.write()
@@ -122,8 +139,6 @@ class Motor(object):
         self._direction = 0
         self._brake = 1
         self._speed = 0
-
-        logger.info("motor ready for commands")
 
         self.write()
 

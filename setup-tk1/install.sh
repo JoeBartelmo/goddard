@@ -1,17 +1,42 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 #install git and base repositories
 apt-add-repository universe
 apt-add-repository multiverse
 apt-get update
 
 #install essentials
-apt-get install git-all feh vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel
-
+apt-get install git-all feh vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
 #install vlc and node
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh | bash
 source ~/.bashrc
 source /home/ubuntu/.bashrc
 nvm install 4.4.3
+
+#install x264encoding
+wget https://gstreamer.freedesktop.org/src/gst-omx/gst-omx-1.2.0.tar.xz
+tar -xf gst-omx-1.2.0.tar.xz
+cd gst-omx-1.2.0
+./configure --with-omx-target=generic
+make
+make install
+cd ..
 
 #install dtrx -- few of us prefer this package, not required
 wget http://brettcsmith.org/2007/dtrx/dtrx-7.1.tar.gz

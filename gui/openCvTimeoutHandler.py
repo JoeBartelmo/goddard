@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import threading
 import logging
 from threading import Thread
@@ -46,7 +63,7 @@ class OpenCvCapture(threading.Thread):
     '''
     This Thread launches an _openCvCapture Thread and controls the timeout
     '''
-    def __init__(self, name, rtspLocation,timeout = 1.5):
+    def __init__(self, name, rtspLocation,timeout = 3.5):
         super(OpenCvCapture, self).__init__()
         self.captureThread = _openCvCapture(name, rtspLocation)
         self.timeout = timeout
@@ -63,7 +80,7 @@ class OpenCvCapture(threading.Thread):
             if self.isConnected():
                 logger.info('Succesfully connected to ' + self.name)
             else:
-                logger.error('Could not connect to RTSP stream ' + self.name + ' within ' + str(self.timeout) + ' seconds')
+                logger.error('Could not connect to RTP stream ' + self.name + ' within ' + str(self.timeout) + ' seconds')
 
     def getVideoCapture(self):
         return self.captureThread.getVideoCapture()

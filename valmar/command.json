@@ -1,25 +1,54 @@
 {
-    "command":{
-        "enabled": true
+  "capture": {
+    "exposure_us": 1000,
+    "framerate": 100,
+    "gain": 2,
+    "sharpness": 0.5,
+    "gamma_y": 1.0
+  },
+  "calibration": {
+    "write_location": "/phobos/goddard/mars/files/",
+    "checkerboard": {
+      "width": 9,
+      "height": 6
     },
-    "capture" : {
-        "framerate": 100,
-        "exposure_us": 10000,
-        "gain": 2,
-        "gamma_y": 0.97,
-        "sharpness":0
+    "conversion_factor": 0.1875,
+    "coefficient_location": "/phobos/goddard/valmar/"
+  },
+  "processing": {
+    "erosion_kernel_size_post": {
+      "horizontal": 2,
+      "vertical": 13
     },
-    "system" : {
-        "image_queue_size" : 150
+    "vertical_edge_thresholds": {
+      "canny_2": 7000,
+      "canny_1": 1000
     },
-    "processing" : {
-        "psnr_threshold": 5,
-        "num_frames_to_process" : 100
+    "dilation_kernel_size": {
+      "horizontal": 2,
+      "vertical": 2
     },
-    "calibration": {
-        "write_location": "/phobos/PyDetect/mars/files/",
-        "pixel_ratio":5.0,
-        "ibeam_offset" : 0
+    "histogram_max": 120,
+    "hough_line": {
+      "max_line_gap": 30
+    },
+    "threshold": 30000,
+    "dilation_kernel_size_post": {
+      "horizontal": 30,
+      "vertical": 15
+    },
+    "erosion_kernel_size": {
+      "horizontal": 5,
+      "vertical": 2
     }
+  },
+  "command": {
+    "refresh_frame_interval": 10,
+    "enabled": false
+  },
+  "ximea_cameras": {
+    "right": "12531150",
+    "left": "15533850"
+  },
+  "output": "/phobos/goddard/valmar/beam.gap"
 }
-

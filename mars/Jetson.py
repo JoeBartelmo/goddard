@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 '''
 ark9719
 6/17/2016
@@ -68,12 +85,12 @@ class Jetson(object):
         self._sysCommands = {'system shutdown': self.systemShutdown,
                                 'system restart': self.systemRestart,
                                 'recall': self._watchdog.recall,
-                                'stream open': self._stream.open,
-                                'stream close': self._stream.close,
+                                'stream on': self._stream.open,
+                                'stream off': self._stream.close,
                                 'motor off': self._pinHash['motorRelay'].toggleOff,
                                 'motor on' : self._pinHash['motorRelay'].toggleOn,
-                                'laser off': self._pinHash['laserRelay'].toggleOff,
-                                'laser on' : self._pinHash['laserRelay'].toggleOn,
+                                #'laser off': self._pinHash['laserRelay'].toggleOff,
+                                #'laser on' : self._pinHash['laserRelay'].toggleOn,
                                 'led off': self._pinHash['ledRelay'].toggleOff,
                                 'led on' : self._pinHash['ledRelay'].toggleOn,
                                 'reset arduino': self._arduino.resetArduino,
@@ -84,9 +101,44 @@ class Jetson(object):
                                 'watchdog off': self._watchdog.disable,
                                 'watchdog on': self._watchdog.enable,
                                 'valmar off': self._valmar.disable,
-                                'valmar on': self._valmar.enable
+                                'valmar on': self._valmar.enable,
+                                'scan on': self.scan,
+                                'scan off': self._watchdog.scanDisable,
+                                'help': self.listCommands
                              }
 
+    def listCommands(self):
+        logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
+                    "system restart:\t\tRestart M.A.R.S. Tk1\n" + \
+                    "motor [on|off]:\t\tIff on, then speed can be adjusted on motor\n" + \
+                    "forward [0-9]:\t\tAssigns a forward speed to M.A.R.S.\n" + \
+                    "backward [0-9]:\t\tAssigns a backward speed to M.A.R.S.\n" + \
+                    "brake [on|off]:\t\tIff on, then motor cannot be enabled\n" + \
+                    "led [on|off]:\t\tIff on, then brightness of leds can be set\n" + \
+                    "brightness [0-9]:\tSets brightness of leds (useful for valmar)\n" + \
+                    "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
+                    "hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
+                    "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
+                    "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
+                    "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
+                    "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
+                    "list logs:\t\tDisplay all logs for all teams\n" + \
+                    "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
+
+    def scan(self):
+        """
+        Performs a set list of commands to automate mars
+        """
+        #enable watchdog
+        self._watchdog.scanEnable()        
+        #disengage brake
+        self.recieveInput('brake off')
+        #enable leds brightness @ 9 
+        self.recieveInput('led on')
+        self.recieveInput('brightness 9')
+        #motor on forward half thrusters
+        self.recieveInput('motor on')
+        self.recieveInput('forward 5')
 
     def safeInput(self):
         """
@@ -98,9 +150,10 @@ class Jetson(object):
         #Prompt for input
         if self._q is None:
             try:
-                controlCode = raw_input("LED, motion, stream, or control code: \n")
+                controlCode = raw_input("Please Enter Command or \"help\"): \n")
             except KeyboardInterrupt:
                 self.exit()
+                return
         else:
             controlCode = self._q.get()
         myCodeInput = self.recieveInput(controlCode)
@@ -122,8 +175,6 @@ class Jetson(object):
             return self._motor.movement(controlCode)
         elif "brightness" in controlCode:
             return self._led.issue(self._arduino, controlCode)
-        elif controlCode in self._stream._streamCodes:
-            return self._stream.issue(controlCode)
         elif controlCode in self._sysCommands:
             self._sysCommands[controlCode]()
         elif 'graph' in controlCode:
@@ -153,8 +204,11 @@ class Jetson(object):
             if telemetry is not None:
                 #inject telemetry updates
                 telemetry.update(self._watchdog.watch(telemetry))
-                telemetry.update(self._valmar.updateTelemetry())
+                telemetry["Valmar"] = self._valmar.getBeamGapData()
+                if telemetry["Valmar"] is not None:
+                    logger.debug('Valmar hit next beam')
                 logger.debug("Displaying Telemetry...")
+                #the logger sends the data over tcp
                 telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
                 logger.debug("Saving telemetry...")
                 self.saveStats(self._mars._telemetry)
@@ -284,7 +338,10 @@ class Jetson(object):
         time.sleep(2) #necessary to make sure Mars moves to a stop
 
         logger.info("Closing stream...")
-        self._sysCommands['stream close']()
+        self._sysCommands['stream off']()
+
+        logger.info("Closing valmar...");
+        self._valmar.disable()
 
         logger.info(("Turning off LEDs..."))
         self._led.issue(self._arduino, "brightness 0")
@@ -313,7 +370,7 @@ class Jetson(object):
         logger.warning("Laser circuit opened")
         self._stream.close()
         logger.warning("Closing video stream")
-        self._valmar.issueCommand("enable",False)
+        self._valmar.disable()
         logger.warning("Pausing VALMAR gap measurement system")
 
         self._pauseTelemetry = True
@@ -349,4 +406,4 @@ class Jetson(object):
 
     def listLogs(self):
         logger.info(self.graphUtil.get_all_outputs())
- 
+

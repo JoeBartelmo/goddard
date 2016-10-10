@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -15,44 +14,8 @@
 # IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing.
 
-#i messed up fdisk somehow :shrug:
-mount -t ext4 /dev/sda1 /phobos
-
-#Adjust as needed
-pins=(57 160 161 162 163 164 165 166)
-cores=(0 1 2 3)
-
-#blows open permissions for all else
-chmod 777 -R "/sys/class/gpio"
-
-#sets up, and blows open permissions for each pin
-for index in "${pins[@]}"; do
-    echo "$index" > "/sys/class/gpio/export"
-    chmod 777 "/sys/class/gpio/gpio$index/value"
-    chmod 777 "/sys/class/gpio/gpio$index/direction"
-    echo "out" > "/sys/class/gpio/gpio$index/direction"
-    echo "0" > "/sys/class/gpio/gpio$index/value"
-done
-
-#Enable all cores
-echo "0" > "/sys/devices/system/cpu/cpuquiet/tegra_cpuquiet/enable"
-echo "performance" > "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
-
-for index in "${cores[@]}"; do
-    echo "1" > "/sys/devices/system/cpu/cpu$index/online"
-done
-
-exit 0
-
+#automatically takes care of everything for lazy people like us
+make
+cp command.json target/
+mkfifo beam.gap

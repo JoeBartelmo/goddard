@@ -1,3 +1,20 @@
+# Copyright (c) 2016, Jeffrey Maggio and Joseph Bartelmo
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+# associated documentation files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 import threading
 import struct
 import pickle
@@ -5,7 +22,6 @@ import logging
 from threading import Thread
 import socket
 import logging
-from ColorLogger import initializeLogger 
 from select import select
 import struct
 import errno
@@ -14,6 +30,17 @@ from socket import error as socket_error
 logger = logging.getLogger('mars_logging') 
 
 class FileListenerThread(threading.Thread):
+    '''
+    The file listener is a thread responsible for
+    receiving files that mars generates. This is outside
+    the bounds of the listener.py module because we do not
+    use the logging module serialization/deserializtion.
+
+    Instead, we base64 encode the files and send them over
+
+    TODO:  In a future iteration I plan on doing some element
+    of compression before sending over the files.
+    '''
     def __init__(self, serverAddr, port):
         super(FileListenerThread, self).__init__()
         self._stop = threading.Event()

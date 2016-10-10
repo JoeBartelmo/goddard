@@ -3,14 +3,26 @@ Valmar must start at the same time as the Mars controller. Either via the server
 
 VALMAR functionality
 	generation of telemetry
-	generation of an beam-gap output in an ASCII file format, preferably a .csv
+	generation of an beam-gap output alongside output telemetry 
 	logging to console
 	check file for commands from the operator/controller. I created a JSON object for this purpose
 	archival of all pertinent imagery and console logs
 
 
 File structure for interfacing with the Mars controller:
-	"Valmar-command.json" -- commands and modifies parameters (enable/disable, exposure, psnr_threshold, etc)
-	"Valmar-telemetry.csv" -- telemetry for Goddard to parse and save
-	"Valmar-beam.gap" -- whatever beam gap output valmar creates. This will be read by Goddard and sent back to the operator.
+	"command.json" -- commands and modifies parameters (enable/disable, exposure, psnr_threshold, etc)
+	[depricated and removed] "Valmar-telemetry.csv" -- telemetry for Goddard to parse and save
+	[depricated and removed] "Valmar-beam.gap" -- whatever beam gap output valmar creates. This will be read by Goddard and sent back to the operator.
 
+
+Flow of the program is as such:
+    1) Attempt connection to the Ximea
+    2) Load in command.json settings
+    3) Attempt to calibrate the camera via chessboard pattern on rail
+    4) Enter main camera loop
+        a) Take image
+        b) Compare to calibrated image via psnr
+        c) Iff psnr threshold is met, pipe next x frames to our functions that determine matrix beam gap length
+        d) Append data (if any) to a pipe that Mars can digest and return information with
+        e) Check to see if command.json has changed, if it has, load in new settings to camera.
+    5) On break, close aquisitions and free memory
