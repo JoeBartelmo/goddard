@@ -58,7 +58,6 @@ class Valmar(object):
         }
         self._init = False
         self._bufferSize = 4#always start by reading an integer
-        self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
 
     def refresh(self):
         if self._init == True:
@@ -68,9 +67,12 @@ class Valmar(object):
             if os.path.exists(self._beamGapPipe):
                 os.unlink(self._beamGapPipe)
             os.mkfifo(self._beamGapPipe)
-            newCall = 'nohup ' + self._path + ' ' + self._commandPath + ' > /dev/null &'
+            while not os.path.exists(self._beamGapPipe):
+                time.sleep(1)
+            newCall = self._path + ' ' + self._commandPath + ' &'
             logger.info('Launching Valmar with: ' + newCall)
             subprocess.call([newCall], shell=True)
+            self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
     
     def swap32(self, x):
         return (((x << 24) & 0xFF000000) |

@@ -201,7 +201,6 @@ int main(int argc, char* argv[])
             if(c == 'c' || c == 'C') {
                 printf("Frame Grabbed\n");
                 vector<Point2f> pointBuf;
-
                 bool found = findChessboardCorners( view, boardSize, pointBuf,
                         CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
 
@@ -271,7 +270,7 @@ int main(int argc, char* argv[])
             printf("Frame Grabbed\n");
             imageSize = rview.size();  // Format input image.
 
-
+            cout << boardSize << endl;
             bool found = findChessboardCorners( rview, boardSize, rectified_points,
                 CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
 

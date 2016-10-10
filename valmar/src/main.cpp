@@ -57,28 +57,28 @@ void writeToPipe(int pipe, vector<double> &array, double processingTime, int fra
         double displacementLeft/*, double displacementRight*/, int frameLeft
         /*, int frameRight*/) {
     json data;
-    data["valmar_enabled"] = settings.isEnabled();
-    data["ibeam_counter"] = ++iBeamCounter;
-    data["beam_gap"] = array;
-    data["histogram_threshold"] = settings.getHistogramMax();
-    data["avg_processing_time"] = processingTime;
-    data["frames_to_process"] = framesToProcess;
+    data["Enabled"] = settings.isEnabled();
+    data["IbeamCounter"] = ++iBeamCounter;
+    data["BeamGap"] = array;
+    data["HistogramThreshold"] = settings.getHistogramMax();
+    data["AvgProcessingTime"] = processingTime;
+    data["FramesToProcess"] = framesToProcess;
 
-    data["left"]["frame_number"] = frameLeft;
-    data["left"]["framerate"] = (*leftCam).GetFrameRate();
-    data["left"]["exposure"] = (*leftCam).GetExposureTime(); 
-    data["left"]["sharpness"] = (*leftCam).GetSharpness(); 
-    data["left"]["gamma_y"] = (*leftCam).GetGammaLuminosity(); 
-    data["left"]["gain"] = (*leftCam).GetGain();
-    data["left"]["pixel_displacement_ratio"] = displacementLeft;
+    data["Left"]["FrameNumber"] = frameLeft;
+    data["Left"]["Framerate"] = (*leftCam).GetFrameRate();
+    data["Left"]["Exposure"] = (*leftCam).GetExposureTime(); 
+    data["Left"]["Sharpness"] = (*leftCam).GetSharpness(); 
+    data["Left"]["GammaY"] = (*leftCam).GetGammaLuminosity(); 
+    data["Left"]["Gain"] = (*leftCam).GetGain();
+    data["Left"]["PixelDisplacementRatio"] = displacementLeft;
     /* 
-    data["right"]["frame_number"] = frameRight;
-    data["right"]["framerate"] = (*rightCam).GetFrameRate();
-    data["right"]["exposure"] = (*rightCam).GetExposureTime(); 
-    data["right"]["sharpness"] = (*rightCam).GetSharpness(); 
-    data["right"]["gamma_y"] = (*rightCam).GetGammaLuminosity(); 
-    data["right"]["gain"] = (*rightCam).GetGain();
-    data["right"]["pixel_displacement_ratio"] = displacementRight;
+    data["Right"]["FrameNumber"] = frameRight;
+    data["Right"]["Framerate"] = (*rightCam).GetFrameRate();
+    data["Right"]["Exposure"] = (*rightCam).GetExposureTime(); 
+    data["Right"]["Sharpness"] = (*rightCam).GetSharpness(); 
+    data["Right"]["GammaY"] = (*rightCam).GetGammaLuminosity(); 
+    data["Right"]["Gain"] = (*rightCam).GetGain();
+    data["Right"]["PixelDisplacementRatio"] = displacementRight;
     */
     uint32_t length = (uint32_t)strlen(((string)data.dump()).c_str());
 #if !DEBUG
@@ -112,6 +112,21 @@ int _tmain(int argc, _TCHAR* argv[]) {
             printf("Usage:\tvalmar [command.json]\n");
             return EXIT_FAILURE;
     }
+
+#if !DEBUG
+// ################ FIFO ############
+    printf("Connecting to Fifo as writeonly\n");
+    int pipe = open(settings.getOutputFifoLoc(), O_WRONLY);
+    if (pipe < 0) {
+        printf("Error ocurred while attempting to connect to Fifo\n");
+        return pipe;
+    }
+#else 
+    int pipe = 0;
+#endif
+
+// ##################################
+// ############### CAPTURE CAMERAS #############
     xiAPIplusCameraOcv leftCam;
     //xiAPIplusCameraOcv rightCam;
 
@@ -135,20 +150,6 @@ int _tmain(int argc, _TCHAR* argv[]) {
         exp.PrintError(); // report error if some call fails
         return EXIT_FAILURE;
     }
-
-#if !DEBUG
-// ################ FIFO ############
-    printf("Connecting to Fifo as writeonly\n");
-    int pipe = open(settings.getOutputFifoLoc(), O_WRONLY);
-    if (pipe < 0) {
-        printf("Error ocurred while attempting to connect to Fifo\n");
-        return pipe;
-    }
-#else 
-    int pipe = 0;
-#endif
-
-// ##################################
 
 // #################DISTORTION###################################
     Mat leftCameraMatrix, rightCameraMatrix, leftDistCoeffs, rightDistCoeffs, map1, map2, map3, map4;
