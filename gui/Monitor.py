@@ -1,9 +1,13 @@
 import Tkinter as Tk
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("TkAgg")
+
 from matplotlib.backend.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib import style
+from matplotib.figure import Figure
+
 
 from MarsConstants import MARS_PRIMARY
-
 MARS_PRIMARY = MARS_PRIMARY()
 #MARS_MOTOR = MARS_MOTOR()
 #MARS_DISP = MARS_DISP()
@@ -22,31 +26,37 @@ MARS_PRIMARY = MARS_PRIMARY()
 """
 
 class Monitor(object):
-    def __init__(self, telemetrySrc, plotter=MARS_PRIMARY() )
-        self._telemetrySrc
+    def __init__(self, telemetrySrc, plotter=MARS_PRIMARY )
+        self._telemetrySrc = telemetrySrc
         self._plotter = plotter
+        self._updates = None
 
-    def update(self)
-        retrieve_values()
-        plot()
 
     def retrieve_values(self)
         """
         updates telemetry values from src
         """
         with open(self._telemetrySrc, 'r', as srcFile:
-            self._values = json.load(srcFile)
-        return self._values
+            self._updates = json.load(srcFile)
+        return self._updates
 
-    def plot(self):
-        for plotNum in range(1,plotter._numPlots+1):
-            ID1 = plotter._valueIDs[ plotNum[0] ]
-            ID2 = plotter._valueIDs[ plotNum[1] ]
-            value1 = self._values[ ID1 ]
-            value2 = self._values[ ID2 ]
-            self._plotter.draw(plotNum,value1,value2)
+    def update(self):
+        updates = retrieve_values()
+
+        for key in self._plotter._subplotIDs:
+            xKey,yKey = key.split(":")
+            x = updates[xKey]
+            y = updates[yKey]
+
+            self._plotter.graph(key,x,y)
+            
 
     def display(self):
         window = Tk()
         myLabel = Label(window, text="MARS STATUS")
         myLabel.pack()
+
+
+
+
+
