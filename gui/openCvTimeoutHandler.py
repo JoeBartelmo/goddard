@@ -63,7 +63,7 @@ class OpenCvCapture(threading.Thread):
     '''
     This Thread launches an _openCvCapture Thread and controls the timeout
     '''
-    def __init__(self, name, rtspLocation,timeout = 1.5):
+    def __init__(self, name, rtspLocation,timeout = 3.5):
         super(OpenCvCapture, self).__init__()
         self.captureThread = _openCvCapture(name, rtspLocation)
         self.timeout = timeout
@@ -80,7 +80,7 @@ class OpenCvCapture(threading.Thread):
             if self.isConnected():
                 logger.info('Succesfully connected to ' + self.name)
             else:
-                logger.error('Could not connect to RTSP stream ' + self.name + ' within ' + str(self.timeout) + ' seconds')
+                logger.error('Could not connect to RTP stream ' + self.name + ' within ' + str(self.timeout) + ' seconds')
 
     def getVideoCapture(self):
         return self.captureThread.getVideoCapture()

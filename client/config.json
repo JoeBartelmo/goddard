@@ -2,15 +2,15 @@
   "user_input" : {
     "log_name": "insert_pod_team_name_here",
     "current_battery": 192.0
-  },
+  },  
   "logging": {
-    "output_path":"/phobos/goddard/mars",
+    "output_path":"/phobos/",
     "connection_path":"/phobos/goddard/mars/connection"
-  },
+  },  
   "conversions": {
     "code_to_rpm" : 111.1,
     "rpm_to_speed" : 0.0020228
-  },
+  },  
   "valmar":{
     "path": "/phobos/goddard/valmar/target/valmar",
     "command_path": "/phobos/goddard/valmar/target/command.json",
@@ -30,9 +30,9 @@
     "under_voltage_warning": 11.0,
     "under_voltage_critical": 10.5,
 
-    "over_voltage_alert": 36,
-    "over_voltage_warning": 40,
-    "over_voltage_critical": 45,
+    "over_voltage_alert": 36, 
+    "over_voltage_warning": 40, 
+    "over_voltage_critical": 45, 
 
     "over_current_alert":12.0,
     "over_current_warning":15.0,
@@ -48,9 +48,10 @@
   },
   "constants": {
     "baud_rate": 9600,
-    "timeout": 10,
+    "timeout": 10, 
     "total_battery": 192.0,
     "track_length": 1500.0
-  },
+  },  
   "file_forward_location": "/phobos/goddard/mars/files/"
 }
+

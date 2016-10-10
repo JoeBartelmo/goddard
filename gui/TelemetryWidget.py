@@ -30,7 +30,7 @@ class TelemetryWidget(tk.Frame):
         parent: parent window
         client_queue_in: get info from the client
     """
-    def __init__(self, parent, client_queue_in):
+    def __init__(self, parent, client_queue_in, client_queue_beam):
         tk.Frame.__init__(self, parent, bd=2, relief='groove')
         self.parent = parent
 
@@ -45,7 +45,7 @@ class TelemetryWidget(tk.Frame):
 
         #start grabbing data
         self.telem_queue = client_queue_in
-        self.tthread = TelemetryThread(self, client_queue_in)
+        self.tthread = TelemetryThread(self, client_queue_in, client_queue_beam)
         self.update_telemetry_loop()
 
     def set_telemetry_ui(self, json_object = None):

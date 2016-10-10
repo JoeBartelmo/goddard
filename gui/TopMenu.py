@@ -40,6 +40,7 @@ class TopMenu(tk.Menu):
         self.command_menu = tk.Menu(self, tearoff = 0)
         self.client_menu = tk.Menu(self, tearoff = 0)
         self.init_ui(config_file, name)
+        self.existing_roots = {'Mars Commands': self.command_menu}
 
     def init_ui(self, config_file, name):
         commands_config = self.load_commands(config_file)
@@ -55,7 +56,7 @@ class TopMenu(tk.Menu):
                     options.add_command(label=opt, command=self.commandFunc(copyval, opt))
                 self.command_menu.add_cascade(label=key, menu=options)
 
-    def add_menu_item(self, commandName, function, menuRoot = 'client'):
+    def add_menu_item(self, commandName, function, menuRoot = 'Client Commands'):
         '''
         Adds a new menu item to the TopMenu. 
         name: Displayed name of the command
@@ -65,11 +66,14 @@ class TopMenu(tk.Menu):
             server: Server Commands Item
             None: Root level
         '''
-        if menuRoot == 'client':
-            self.client_menu.add_command(label=commandName, command = function)
-        if menuRoot == 'server':
-            self.command_menu.add_command(label=commandName, command = function)
-        elif menuRoot is None:
+        if menuRoot is not None:
+            if menuRoot in self.existing_roots:
+               self.existing_roots[menuRoot].add_command(label=commandName, command=function)
+            else:
+                menu = tk.Menu(self, tearoff = 0)
+                menu.add_command(label = commandName, command = function)
+                self.existing_roots[menuRoot] = menu
+        else:
             self.add_command(label=commandName, command = function)
 
     def finalize_menu_items(self):  
@@ -77,9 +81,8 @@ class TopMenu(tk.Menu):
         Adds the menu items this menu
         '''
         #updates topmenu with given command_menu
-        self.add_cascade(label = self.name, menu=self.command_menu)
-        #seperate clientside Commands
-        self.add_cascade(label = 'Client Commands', menu = self.client_menu)
+        for key in self.existing_roots:
+            self.add_cascade(label=key , menu=self.existing_roots[key])
     
     def commandFunc(self, cmd, option=False):
         '''

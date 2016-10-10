@@ -20,19 +20,20 @@ import os
 import tkMessageBox
 from mainapp import MainApplication
 from TopMenu import TopMenu
+from BeamGapWidget import BeamGapWidget
 
 import logging
 
 MARS_EXIT_COMMAND = 'exit'
 
-def start(client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
+def start(client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, server_ip):
     """
     Start graphical interface for client.
 
     Args:
         client_queue_in: queue to get telemetry and logging info
         client_queue_out: queue to communicate commands
-        server_ip: server IP address for rtsp stream access
+        server_ip: server IP address for rtp stream access
     """
     logger = logging.getLogger('mars_logging')
     logger.info('Creating GUI')
@@ -52,15 +53,20 @@ def start(client_queue_cmd, client_queue_log, client_queue_telem, server_ip):
         menu_.destroy() 
         mainApplication.close_()
         root.destroy()
-
-
+    def beamGapGraph():
+        top = BeamGapWidget(root, beam_gap_queue)
+        top.title("VALMAR Beam Gap")
     # define mainapp instance
-    mainApplication = MainApplication(root, client_queue_cmd, client_queue_log, client_queue_telem, server_ip) 
+    mainApplication = MainApplication(root, client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, server_ip) 
     mainApplication.grid(column = 0, row = 0, sticky="nsew")
     # menu
     menu_ = TopMenu(root, '../gui/operations.json', client_queue_cmd, 'Commands')
     ### Add custom commands here
-    menu_.add_menu_item('Refresh Streams', mainApplication.start_streams)
+    menu_.add_menu_item('Refresh Streams', mainApplication.start_streams, None)
+    menu_.add_menu_item('Left Focus', mainApplication.focus_left, 'Camera')
+    menu_.add_menu_item('Center Focus', mainApplication.focus_center, 'Camera')
+    menu_.add_menu_item('Right Focus', mainApplication.focus_right, 'Camera')
+    menu_.add_menu_item('IBeam View', beamGapGraph, None)
     ###
     menu_.finalize_menu_items()
     root.config(menu=menu_)
@@ -86,9 +92,10 @@ if __name__=='__main__':
     cmd_queue = Queue()
     log_queue = Queue()
     telem_queue = Queue()
+    beam_gap_queue = Queue()
     server_ip = 'hyperlooptk1.student.rit.edu'
 
-    start(cmd_queue, log_queue, telem_queue, server_ip)
+    start(cmd_queue, log_queue, telem_queue, beam_gap_queue, server_ip)
 
     while not cmd_queue.empty():
         print cmd_queue.get()    

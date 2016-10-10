@@ -109,6 +109,7 @@ if __name__ == '__main__':
     guiTelemetryInput = Queue()
     guiLoggingInput = Queue()
     guiOutput = Queue()
+    guiBeamGapInput = Queue()
 
     #thread responsibel for handling telemetry from mars
     telemThread = ListenerThread(guiTelemetryInput, serverAddr, TELEMETRY_PORT, logMode, 'Telemetry Receive', displayInConsole = False)
@@ -147,7 +148,7 @@ if __name__ == '__main__':
                 if command == MARS_KILL_COMMAND:
                     break 
         else:
-            gui.start(guiOutput, guiLoggingInput, guiTelemetryInput, serverAddr)
+            gui.start(guiOutput, guiLoggingInput, guiTelemetryInput, guiBeamGapInput, serverAddr)
         
     except KeyboardInterrupt:
         closeAllThreads()
