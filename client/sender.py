@@ -25,12 +25,9 @@ import time
 import struct
 import errno
 from socket import error as socket_error
+from constants import *
 
 logger = logging.getLogger('mars_logging')
-
-PING_RATE = .5
-SOCKET_TIMEOUT = 5
-FLOAT_PACKER = struct.Struct('f')
 
 class SenderThread(threading.Thread):
     '''
@@ -41,6 +38,7 @@ class SenderThread(threading.Thread):
     def __init__(self, serverAddr, port, commandQueue, connection):
         super(SenderThread, self).__init__()
         self._stop = threading.Event()
+        self._init = threading.Event()
         self.serverAddr = serverAddr
         self.port = port
         self.commandQueue = commandQueue
@@ -53,7 +51,9 @@ class SenderThread(threading.Thread):
 
         2) Check to see if there's anything on our Command Queue, if there is, send it.
         '''
-        logger.debug('Launching client ping thread on port ' + str(self.port))
+        self._init.clear()
+        self._stop.clear()
+        logger.warning('Launching client ping thread on port ' + str(self.port))
         sock = socket.create_connection((self.serverAddr, self.port))
 
         while self.stopped() == False:
@@ -63,8 +63,10 @@ class SenderThread(threading.Thread):
                     datetime = self.microtime()
                     sock.sendall(FLOAT_PACKER.pack(datetime))
                 else:
-                    print 'Client could not ping server'
+                    logger.error('Client could not ping server')
                     self.stop()
+                if not self.isInit():
+                    self._init.set()
                 time.sleep(PING_RATE)
             except socket_error as serr:
                 if serr.errno == errno.ECONNREFUSED or serr.errno == errno.EPIPE:
@@ -78,12 +80,15 @@ class SenderThread(threading.Thread):
                 self.connection.sendall(command)
 
         sock.close()
-        logger.debug('Sender thread stopped')
         self.stop()
+        logger.debug('Sender thread stopped')
 
     def microtime(self):
         unixtime = datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
         return unixtime.days*24*60*60 + unixtime.seconds + unixtime.microseconds/1000000.0
+
+    def isInit(self):
+        return self._init.isSet()
 
     def stop(self):
         self._stop.set()

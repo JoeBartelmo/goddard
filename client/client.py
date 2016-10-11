@@ -27,17 +27,10 @@ import gui
 sys.path.insert(1, '../shared')
 from ColorLogger import initializeLogger 
 from sender import SenderThread
-
-#ports we use for communication between client and server
-MARS_PORT      = 1337
-DEBUG_PORT     = 1338
-TELEMETRY_PORT = 1339
-FILE_PORT      = 1340
-PING_PORT      = 1341
-#command to shutdown mars
-MARS_KILL_COMMAND = 'exit'
-#time in seconds to verify we weren't able to connect
-TIME_TO_VERIFY_ESTABLISHED_CONNECTION = 4
+from threadManager import ThreadManager
+from constants import *
+import errno
+from socket import error as socket_error
 
 #defines whether or not we have closed threads already
 closedThreads = False
@@ -47,11 +40,11 @@ def closeAllThreads():
     '''
     global closedThreads
     if closedThreads == False:
-        if senderThread.stopped() == False:
+        if senderThread.is_alive():
             print 'Closing Sender thread...'
             senderThread.stop()
             senderThread.join()
-        if telemThread.stopped() == False:
+        if telemThread.is_alive():
             print 'Closing Telemetry Thread...'
             telemThread.stop()
             telemThread.join()
@@ -59,7 +52,7 @@ def closeAllThreads():
             print 'Closing Mars log thread...'
             debugThread.stop()
             debugThread.join()
-        if fileListenerThread.stopped() == False:
+        if fileListenerThread.is_alive():
             print 'Closing File Listener thread...'
             fileListenerThread.stop()
             fileListenerThread.join()
@@ -117,39 +110,39 @@ if __name__ == '__main__':
     debugThread = ListenerThread(guiLoggingInput, serverAddr, DEBUG_PORT, logMode, 'Logging Receive')
     #thread responsible for handling files sent from mars
     fileListenerThread = FileListenerThread(serverAddr, FILE_PORT)
-    #socket that will send data to the server
-    commandSocket = socket.create_connection((serverAddr, MARS_PORT))
+    try:
+        #socket that will send data to the server
+        commandSocket = socket.create_connection((serverAddr, MARS_PORT))
+    except socket_error as serr:
+        if serr.errno != errno.ECONNREFUSED and serr.errno != -2:
+            raise serr
+        logger.critical('Was Unable to connect to ' + serverAddr + ':' + str(MARS_PORT))
+        sys.exit()
     #socket that will maintain ping to server and send commands to server
     senderThread = SenderThread(serverAddr, PING_PORT, guiOutput, commandSocket)
-    senderThread.start()
+    senderThread.start()#we need to start this up to establish communication
+
+    threads = [senderThread, telemThread, debugThread, fileListenerThread]
+    manager = ThreadManager(threads)
     try:    
         # Send configuration data
         with open('config.json', 'r') as content_file:
             message = content_file.read().replace('\n','').replace(' ', '')
         commandSocket.sendall(message)
 
-        telemThread.start()
-        debugThread.start()
-        fileListenerThread.start()
-       
-        #Verify we have succesfully connected
-        for index in range(0, TIME_TO_VERIFY_ESTABLISHED_CONNECTION):
-            if telemThread.stopped() or debugThread.stopped() or fileListenerThread.stopped() \
-                or senderThread.stopped():
-                closeAllThreads()
-                sys.exit(1)
-            time.sleep(1)
-     
-        # start gui
-        if cliMode:
-            while True:
-                command = raw_input('Type Your Command:')
-                guiOutput.put(command)
-                if command == MARS_KILL_COMMAND:
-                    break 
+        if manager.startThreadsSync() == True:
+            manager.start()
+            # start gui
+            if cliMode:
+                while True:
+                    command = raw_input('Type Your Command:')
+                    guiOutput.put(command)
+                    if command == MARS_KILL_COMMAND:
+                        break 
+            else:
+                gui.start(guiOutput, guiLoggingInput, guiTelemetryInput, serverAddr)
         else:
-            gui.start(guiOutput, guiLoggingInput, guiTelemetryInput, guiBeamGapInput, serverAddr)
-        
+            logger.critical('Could not establish connection with mars, aborting.\n\tPossible Problems: Bad config.json, outdated client')
     except KeyboardInterrupt:
         closeAllThreads()
     finally:
