@@ -26,6 +26,7 @@ import struct
 import errno
 from socket import error as socket_error
 from constants import *
+from Queue import Empty
 
 logger = logging.getLogger('mars_logging')
 
@@ -51,12 +52,10 @@ class SenderThread(threading.Thread):
 
         2) Check to see if there's anything on our Command Queue, if there is, send it.
         '''
-        self._init.clear()
-        self._stop.clear()
         logger.warning('Launching client ping thread on port ' + str(self.port))
         sock = socket.create_connection((self.serverAddr, self.port))
 
-        while self.stopped() == False:
+        while self.stopped() != True:
             try:
                 readyState = select([],[sock,],[], SOCKET_TIMEOUT)
                 if readyState[1]:
@@ -75,13 +74,16 @@ class SenderThread(threading.Thread):
                 raise serr
 
             if not self.commandQueue.empty():
-                command = self.commandQueue.get()
-                logger.info('Sending Command "' + command  + '" to the server')
-                self.connection.sendall(command)
+                try:
+                    command = self.commandQueue.get(False)
+                    logger.info('Sending Command "' + command  + '" to the server')
+                    self.connection.sendall(command)
+                except Empty:
+                    pass
 
         sock.close()
         self.stop()
-        logger.debug('Sender thread stopped')
+        logger.warning('Sender thread stopped')
 
     def microtime(self):
         unixtime = datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)

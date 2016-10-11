@@ -36,7 +36,7 @@ class ListenerThread(threading.Thread):
     this handles deserialization of the logging object and pipes
     the data into a queue for the GUI to read.
     '''
-    def __init__(self, queue, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
+    def __init__(self, queue, serverAddr, port, logLevel, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
         self.q = queue
@@ -52,8 +52,6 @@ class ListenerThread(threading.Thread):
         
     
     def run(self):
-        self._stop.clear()
-        self._init.clear()
         logger.debug('Client side Listener Thread "'+self.name+'" waiting for connection...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -64,7 +62,7 @@ class ListenerThread(threading.Thread):
         listener.listen(1)
         
         socketReady = select([listener], [], [], SOCKET_TIMEOUT)
-        if socketReady[0] and socketReady[0] is listener:
+        if socketReady[0]:
             listenerConnection, address = listener.accept()
             listenerConnection.setblocking(0)
             listenerConnection.settimeout(SOCKET_TIMEOUT)
@@ -74,7 +72,7 @@ class ListenerThread(threading.Thread):
             self.stop()
             listenerConnection = None
 
-        while self.stopped() is False:
+        while self.stopped() != True:
             isReady = select([listenerConnection],[],[],SOCKET_TIMEOUT)
             if isReady[0]:
                 try:

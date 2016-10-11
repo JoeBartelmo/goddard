@@ -23,7 +23,7 @@ from listener import ListenerThread
 import logging
 from Queue import Queue
 sys.path.insert(0, '../gui')
-import gui
+from gui import GUI
 sys.path.insert(1, '../shared')
 from ColorLogger import initializeLogger 
 from sender import SenderThread
@@ -31,6 +31,7 @@ from threadManager import ThreadManager
 from constants import *
 import errno
 from socket import error as socket_error
+import threading
 
 #defines whether or not we have closed threads already
 closedThreads = False
@@ -40,24 +41,11 @@ def closeAllThreads():
     '''
     global closedThreads
     if closedThreads == False:
-        if senderThread.is_alive():
-            print 'Closing Sender thread...'
-            senderThread.stop()
-            senderThread.join()
-        if telemThread.is_alive():
-            print 'Closing Telemetry Thread...'
-            telemThread.stop()
-            telemThread.join()
-        if debugThread.is_alive():
-            print 'Closing Mars log thread...'
-            debugThread.stop()
-            debugThread.join()
-        if fileListenerThread.is_alive():
-            print 'Closing File Listener thread...'
-            fileListenerThread.stop()
-            fileListenerThread.join()
-        print 'Closing command socket...'
+        if manager is not None and manager.is_alive():
+            manager.stop()
+            manager.join()
         commandSocket.close()
+    sys.exit()
 
 def displayUsage(unknownObj = None):
     '''
@@ -103,6 +91,7 @@ if __name__ == '__main__':
     guiLoggingInput = Queue()
     guiOutput = Queue()
     guiBeamGapInput = Queue()
+    destroyGUI = threading.Event()
 
     #thread responsibel for handling telemetry from mars
     telemThread = ListenerThread(guiTelemetryInput, serverAddr, TELEMETRY_PORT, logMode, 'Telemetry Receive', displayInConsole = False)
@@ -123,7 +112,11 @@ if __name__ == '__main__':
     senderThread.start()#we need to start this up to establish communication
 
     threads = [senderThread, telemThread, debugThread, fileListenerThread]
-    manager = ThreadManager(threads)
+    if cliMode:
+        manager = ThreadManager(threads)
+    else:
+        myGUI = GUI(guiOutput, guiLoggingInput, guiTelemetryInput, guiBeamGapInput, destroyGUI, serverAddr)
+        manager = ThreadManager(threads, myGUI)
     try:    
         # Send configuration data
         with open('config.json', 'r') as content_file:
@@ -132,15 +125,7 @@ if __name__ == '__main__':
 
         if manager.startThreadsSync() == True:
             manager.start()
-            # start gui
-            if cliMode:
-                while True:
-                    command = raw_input('Type Your Command:')
-                    guiOutput.put(command)
-                    if command == MARS_KILL_COMMAND:
-                        break 
-            else:
-                gui.start(guiOutput, guiLoggingInput, guiTelemetryInput, serverAddr)
+            manager.startInterface(guiOutput, cliMode)
         else:
             logger.critical('Could not establish connection with mars, aborting.\n\tPossible Problems: Bad config.json, outdated client')
     except KeyboardInterrupt:

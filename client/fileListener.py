@@ -50,9 +50,6 @@ class FileListenerThread(threading.Thread):
         self._init = threading.Event()
     
     def run(self):
-        self._init.clear()
-        self._stop.clear()
-
         logger.debug('Client side FileListener Thread waiting for connectionn...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -63,7 +60,7 @@ class FileListenerThread(threading.Thread):
         listener.listen(1)
 
         socketReady = select([listener], [],[], SOCKET_TIMEOUT)
-        if socketReady[0] and socketReady[0] is listener:
+        if socketReady[0]:
             listenerConnection, address = listener.accept()
             listenerConnection.setblocking(0)
             listenerConnection.settimeout(SOCKET_TIMEOUT)
@@ -74,7 +71,7 @@ class FileListenerThread(threading.Thread):
             listenerConnection = None
             self.stop()
 
-        while self.stopped() == False:
+        while self.stopped() != True:
             isReady = select([listenerConnection],[],[],SOCKET_TIMEOUT)
             if isReady[0]:
                 try:
