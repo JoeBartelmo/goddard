@@ -19,54 +19,68 @@ import threading
 import socket
 import logging
 import time
+from constants import *
 
 logger = logging.getLogger('mars_logging') 
 
 class ThreadManager(threading.Thread):
-    def __init__(self, threads):
+    def __init__(self, threads, gui = None):
         '''
         Each thread should be a thread with a stop() and stopped() and isInit()
         '''
         super(ThreadManager, self).__init__()
         self._stop = threading.Event()
-        self._init = threading.Event()
         self._threads = threads
+        self._gui = gui
 
     def startThreadsSync(self):
         for i in range(0, len(self._threads)):
             if not self._threads[i].is_alive():
-                logger.info('Starting Thread ' + str(i))
                 self._threads[i].start()
         logger.info('Waiting for all threads to finish initilization...')
-        threadsStarted = True
         #Gives threads time to determien whether or not they have started, or cant start
         for i in range(0, len(self._threads)):
             while not self._threads[i].isInit() and not self._threads[i].stopped():
                 time.sleep(0.1)
             if self._threads[i].stopped():
-                threadsStarted = False
-                break
-        return threadsStarted
+                return False
+        logger.info('Client Socket-Binding Threads Initialized!')
+        return True
+
+    def startInterface(self, guiOutput, cliMode = False):
+        if cliMode:
+            while True:
+                time.sleep(0.5)
+                command = raw_input('Type Your Command:')
+                guiOutput.put(command)
+                if command == MARS_KILL_COMMAND:
+                    break 
+        else:
+           self._gui.start()
 
     def run(self):
         '''
         Launch each thread and keep track of whether or not thy are stopped
         If one is stopped, signal to close the other threads.
         '''
-        logger.info('Launching socket manager...')
-        self._stop.clear()
-        while self.stopped() == False:
+        logger.warning('Launching socket manager...')
+        while self.stopped() != True:
             for i in range(0, len(self._threads)):
-                if self._threads[i].stopped():
+                if self._threads[i].stopped() == True:
+                    logger.error('Detected a thread stopped')
                     self.stop()
+                    break
+                time.sleep(1)
+        logger.warning('Stopping all Threads.')
+        if self._gui is not None:
+            self._gui.destroyEvent.set()
         for i in range(0, len(self._threads)):
-            self._threads[i].stop()
-
-    def isInit(self):
-        return self._init.isSet()
+            if self._threads[i].is_alive() and self._threads[i].isInit():
+                self._threads[i].stop()
+                self._threads[i].join()
 
     def stop(self):
         self._stop.set()
 
     def stopped(self):
-        self._stop.isSet()
+        return self._stop.isSet()
