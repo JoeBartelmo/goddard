@@ -69,7 +69,7 @@ class Valmar(object):
             os.mkfifo(self._beamGapPipe)
             while not os.path.exists(self._beamGapPipe):
                 time.sleep(1)
-            newCall = self._path + ' ' + self._commandPath + ' &'
+            newCall = 'nohup ' + self._path + ' ' + self._commandPath + ' &'
             logger.info('Launching Valmar with: ' + newCall)
             subprocess.call([newCall], shell=True)
             self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
