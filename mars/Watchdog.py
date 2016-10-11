@@ -32,6 +32,7 @@ class Watchdog(object):
         self._displayLogTimeout = self._levels.display_log_timeout
         self._connectionDownTime = 0
         self._lastConnection = time.time()
+        self._distance = 0
 
         self._shouldBrake = 0
         self._loggerTime = 0
@@ -47,12 +48,11 @@ class Watchdog(object):
                                     'batteryPercentageLevel': 0
                                     }
         self._pinHash = pinHash
-
+        self._scan = False
 
     def systemShutdown(self):
         logger.info("initiating safe shutdown")
         ### add functionality to cut power to motor controller
-        logger.info("shutting downn this computer")
         logger.info("this connection will be lost")
         self._pinHash['motorRelay'].toggleOff()
         self._pinHash['laserRelay'].toggleOff()
@@ -71,7 +71,6 @@ class Watchdog(object):
         return self._electricStats
 
     def sniff(self, telemetry):
-
         sysV = telemetry['SystemVoltage']
         sysI = telemetry['SystemCurrent']
         sensorDistance = telemetry['SensorDistance']
@@ -87,6 +86,7 @@ class Watchdog(object):
         self.barkAtUnderVoltage()
         self.barkAtOverCurrent()
         self.barkAtBattPercent()
+        self.barkAtDistance()
         if all(value == 0 for value in self._electricStats.values()) == True:
             self._pinHash['warningLED'].toggleOff() # turning off warning LED if all values == 0
 
@@ -135,11 +135,11 @@ class Watchdog(object):
             self._electricStats['batteryPercentageLevel'] = 0
 
     def sniffDistance(self, sensorDistance):
-        if sensorDistance.replace('\r', '').replace('\n', '') == 'out of range':
-            self._shouldBrake = 0
+        formatDistance = sensorDistance.replace('\r', '').replace('\n', '')
+        if formatDistance == 'out of range' or float(formatDistance) < 0:
+            self._distance = self._levels.distance_alert + 5
         else:
-            if sensorDistance < self._levels.braking_distance:
-                self._shouldBrake = 1
+            self._distance = float(formatDistance)
 
     def sniffConnection(self, connectionStatus):
         if connectionStatus != -1:
@@ -204,8 +204,26 @@ class Watchdog(object):
         elif value == 1:
             logger.warning("battery may be close to dying, please check")
 
-
-
+    def scanEnable(self):
+        self._scan = True
+    
+    def scanDisable(self):
+        self._scan = False
+ 
+    def barkAtDistance(self):
+        if self._distance <= self._levels.distance_alert and distance > self._levels.distance_warning:
+            logger.warning("Distance at alert level")
+        elif self._distance <= self._levels.distance_warning and distance > self._levels.distance_critical:
+            logger.critical("Distance at warning level")
+        elif self._distance <= self._levels.distance_critical:
+            logger.critical("Distance at Critical Levels")
+            if self._scan == True:
+                #recall instead
+                logger.critical("Scan enabled, recalling mars")
+                self.recall()
+            else:
+                self._arduino.write("M0010")
+                logger.warning("Brake has been enabled")
 
     def barkAtOverVoltage(self):
         value = self._electricStats['overVoltageLevel']

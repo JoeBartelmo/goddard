@@ -21,14 +21,22 @@ apt-add-repository multiverse
 apt-get update
 
 #install essentials
-apt-get install feh git vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel
-
+apt-get install feh git vlc build-essential checkinstall curl libssl-dev tightvncserver python-pip python-dev python-imaging-tk libvlc-dev libvlc5 libgtk2.0 gnome-devel libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
 #install vlc and node
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh | bash
 source ~/.bashrc
 source /home/ubuntu/.bashrc
 nvm install 4.4.3
+
+#install x264encoding
+wget https://gstreamer.freedesktop.org/src/gst-omx/gst-omx-1.2.0.tar.xz
+tar -xf gst-omx-1.2.0.tar.xz
+cd gst-omx-1.2.0
+./configure --with-omx-target=generic
+make
+make install
+cd ..
 
 #install dtrx -- few of us prefer this package, not required
 wget http://brettcsmith.org/2007/dtrx/dtrx-7.1.tar.gz

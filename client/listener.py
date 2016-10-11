@@ -23,24 +23,28 @@ from threading import Thread
 import socket
 import logging
 from select import select
+from constants import *
 from socket import error as socket_error
 import errno
 
 logger = logging.getLogger('mars_logging')
-#time at which we should think mars disconnected from us
-MARS_TIMEOUT = 5
-
 
 class ListenerThread(threading.Thread):
-    def __init__(self, q, serverAddr, port, logLevel, errorQueue, name = 'Thread', displayInConsole = True):
+    '''
+    Thread is responsible for receiving data from the server. 
+    The data is transmitted using the logging module in python,
+    this handles deserialization of the logging object and pipes
+    the data into a queue for the GUI to read.
+    '''
+    def __init__(self, queue, serverAddr, port, logLevel, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
-        self.q = q
+        self.q = queue
+        self._init = threading.Event()
         self.serverAddr = serverAddr
         self.port = port
         self.name = name
         self.displayInConsole = displayInConsole
-        self.socketTimeout = 3
         self.logLevel = logLevel
         #ideally we want to stop repeat logs on mars side, but for short term
         #this will make client more responsive
@@ -51,19 +55,25 @@ class ListenerThread(threading.Thread):
         logger.debug('Client side Listener Thread "'+self.name+'" waiting for connection...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if self.serverAddr != 'localhost':
+        if self.serverAddr != 'localhost' and self.serverAddr != '127.0.0.1':
             listener.bind(('', self.port))
         else:
             listener.bind(('localhost', self.port))
         listener.listen(1)
+        
+        socketReady = select([listener], [], [], SOCKET_TIMEOUT)
+        if socketReady[0]:
+            listenerConnection, address = listener.accept()
+            listenerConnection.setblocking(0)
+            listenerConnection.settimeout(SOCKET_TIMEOUT)
+            self._init.set()
+            logger.warning('Client side Listener Thread "'+self.name+'" connected!')
+        else:
+            self.stop()
+            listenerConnection = None
 
-        listenerConnection, address = listener.accept()
-        listenerConnection.setblocking(0)
-        listenerConnection.settimeout(self.socketTimeout)
-
-        logger.warning('Client side Listener Thread "'+self.name+'" connected!')
-        while self.stopped() is False:
-            isReady = select([listenerConnection],[],[],self.socketTimeout)
+        while self.stopped() != True:
+            isReady = select([listenerConnection],[],[],SOCKET_TIMEOUT)
             if isReady[0]:
                 try:
                     chunk = listenerConnection.recv(4)
@@ -88,14 +98,19 @@ class ListenerThread(threading.Thread):
                         break
                     raise serr
 
-        listenerConnection.shutdown(2)
+        if listenerConnection is not None:
+            listenerConnection.shutdown(2)
+            listenerConnection.close()
+        
         listener.shutdown(2)
-
-        listenerConnection.close()
         listener.close()
+
         logger.warning('Client Side Listener Thread "'+self.name+'" Stopped')
         
         self.stop()
+
+    def isInit(self):
+        return self._init.isSet()
 
     def stop(self):
         self._stop.set()

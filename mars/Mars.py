@@ -49,6 +49,7 @@ class Mars(object):
         telemetry = {}
         self._telemetry = telemetry
         telemetry.setdefault('TotalDistance', 0)
+        telemetry.setdefault('IBeam', 0)
         telemetry.setdefault('IntervalDistance', 0)
         telemetry.setdefault('IntervalDisplacement', 0)
         telemetry.setdefault('TotalDisplacement', 0)

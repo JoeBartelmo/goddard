@@ -1,6 +1,6 @@
 {
   "name": "joes-commandline-util",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Utility for launching a stream dynamically for all connected video cameras",
   "main": "index.js",
   "scripts": {

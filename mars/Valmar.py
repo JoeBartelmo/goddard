@@ -16,36 +16,134 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import json
-import re
+import subprocess
+import logging
+import errno
+import os
+import struct
 
-class Valmar():
+logger = logging.getLogger('mars_logging')
 
-    def __init__(self, config, mars):
+class Valmar(object):
+    '''
+    Handles communication between the C++ Valmar program
+    and Mars
+    '''
+
+    def __init__(self, config):
         self._config = config
+        self._path = self._config.valmar.path
         self._commandPath = self._config.valmar.command_path
-        self._telemetryPath = self._config.valmar.telemetry_path
+        self._beamGapPipe = self._config.valmar.beam_gap_path
+        self._validCommands = {"enabled": {
+                                    "type": "boolean",
+                                    "parent": "command"
+                                },
+                                "refresh_frame_interval": {
+                                    "type": "int",
+                                    "parent": "command"
+                                },
+                                "gain": {
+                                    "type": "int",
+                                    "parent": "capture"
+                                },
+                                "sharpness": {
+                                    "type":"float",
+                                    "parent": "capture"
+                                },
+                                "threshold": {
+                                    "type":"int",
+                                    "parent": "processing"
+                                }
+        }
+        self._init = False
+        self._bufferSize = 4#always start by reading an integer
 
-        self._commands = {}
-        self._telemetry = {}
-        self._mars = mars
-
-
+    def refresh(self):
+        if self._init == True:
+            self.disable()
+        else:
+            #delete fifo
+            if os.path.exists(self._beamGapPipe):
+                os.unlink(self._beamGapPipe)
+            os.mkfifo(self._beamGapPipe)
+            while not os.path.exists(self._beamGapPipe):
+                time.sleep(1)
+            newCall = 'nohup ' + self._path + ' ' + self._commandPath + ' &'
+            logger.info('Launching Valmar with: ' + newCall)
+            subprocess.call([newCall], shell=True)
+            self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
+    
+    def swap32(self, x):
+        return (((x << 24) & 0xFF000000) |
+                ((x <<  8) & 0x00FF0000) |
+                ((x >>  8) & 0x0000FF00) |
+                ((x >> 24) & 0x000000FF))
+    
     def issueCommand(self, parameter, value):
-        with open(self._commandPath),'r' as commandFile:
-            self._commands = json.load(commandFile)
-            self._commands[parameter] = value
+        '''
+        Our Commands enable them to change settings in the JSON file
+        Valmar reads from this JSON every 100 frames
+        '''
+        if parameter in self._validCommands:
+            typeOf = self._validCommands[parameter]["type"]
+            try:
+                if 'int' in typeOf:
+                    var = int(value)
+                elif 'float' in typeOf:
+                    var = float(value)
+                elif 'boolean' in typeOf:
+                    var = bool(value)
+                else:
+                    raise ValueError
+            except ValueError:
+                logger.warning('Supplied value for ' + parameter + ' was not valid type');
+                return
+            with open(self._commandPath, 'r+') as commandFile:
+                commands = json.load(commandFile)
+                commands[self._validCommands[parameter]["parent"]][parameter] = value
+                commandFile.seek(0, 0)
+                commandFile.write(json.dumps(commands, indent=2, separators=(',', ': ')))
+                commandFile.truncate()
+        else:
+            logger.warning('Valmar setting "' + parameter + '" does not exist')
 
-        with open(self._commandPath, 'w') as commandFile:
-            commandFile.write(json.dumps(self._commands))
-
-
-    def updateTelemetry(self):
-        with open(self._telemetryPath, 'r') as telemFile:
-            self._telemetry = json.load(telemFile)
-        return self._telemetry
-
+    def getBeamGapData(self):
+        '''
+        Opens the FIFO and reads from it if possible
+        '''
+        try:
+            #first bit of data is an integer, which we convert to python land
+            dist_length = os.read(self._io, self._bufferSize)
+        except OSError as err:
+            if err.errno == errno.EAGAIN or err.errno == errno.EWOULDBLOCK:
+                dist_length = None
+            else:
+                raise
+        if dist_length is None:
+            return None
+        elif len(dist_length) == 4:
+            #data is piped through as an array, we need to parse to list.
+            buff = None
+            dist_length = struct.unpack('i', dist_length)[0]
+            logger.debug("Receiving Data from valmar...")
+            if dist_length == 0:
+                return None
+            while buff is None or len(buff) < 0:
+                try:
+                    #first bit of data is an integer, which we convert to python land
+                    buff = os.read(self._io, dist_length)
+                except OSError as err:
+                    if err.errno != errno.EAGAIN and err.errno != errno.EWOULDBLOCK:
+                        raise
+            logger.debug(buff)
+            return json.loads(buff)
+    
     def enable(self):
-        self.issueCommand("enable", True)
+        self.issueCommand("enabled", True)
+        self.refresh()
+        self._init = True
 
     def disable(self):
-        self.issueCommand("enable",False)
+        self.issueCommand("enabled", False)
+        self._init = False

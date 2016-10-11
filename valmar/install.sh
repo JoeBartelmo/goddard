@@ -15,9 +15,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-class MarsClientException(Exception):
-    '''
-    We want a method unique to our client to throw known possible
-    issues that could occur, hense a little inheritance
-    '''
-    pass
+#automatically takes care of everything for lazy people like us
+make
+cp command.json target/
+mkfifo beam.gap

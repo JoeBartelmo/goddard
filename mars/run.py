@@ -71,12 +71,12 @@ def initOutput(config, q = None, debugMode = False):
     return timestamp
 
 
-def run(json_string, q = None, watchDogQueue = None, marsRunningQueue = None, debugMode = False):
+def run(json_string, q = None, watchDogQueue = None, marsRunningQueue = None, debugMode = False, ipAddress = None):
     config = parseConfig(json_string)
 
     timestamp = initOutput(config, q, debugMode)
 
-    System(config, timestamp, q, watchDogQueue, marsRunningQueue)
+    System(config, timestamp, q, watchDogQueue, marsRunningQueue, ipAddress)
 
 def parseObject(jsonObject):
     with open(jsonObject) as f:
@@ -100,9 +100,9 @@ if __name__=='__main__':
     #TODO: Use python cli module eventually
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         debugEnabled = True
-    elif len(sys.argv) > 1:
+    elif len(sys.argv) > 1 or len(sys.argv) == 0:
         displayUsage()
-        sys.exit(1)      
+        sys.exit(1)
     json_config = sys.argv[0]
 
     if json_config.lower().endswith('.json'):
@@ -115,5 +115,5 @@ if __name__=='__main__':
     else:
         json_string = ''.join(sys.argv)
     
-    run(json_string, None, None, None, debugEnabled)
+    run(json_string, None, None, None, debugEnabled, None)
 

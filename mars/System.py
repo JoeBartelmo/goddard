@@ -32,7 +32,7 @@ logger = logging.getLogger('mars_logging')
 
 class System(object):
 
-    def __init__(self, config, timestamp, q = None, watchdogQueue = None, marsOnlineQueue = None):
+    def __init__(self, config, timestamp, q = None, watchdogQueue = None, marsOnlineQueue = None, ipAddress = None):
 
         #assign queues
         self._watchdogQueue = watchdogQueue
@@ -42,7 +42,7 @@ class System(object):
         self._devices = self.initDevices(config)
 
         #Prepare stream
-        self._devices['Stream'] = Stream(config, timestamp)
+        self._devices['Stream'] = Stream(config, timestamp, ipAddress)
 
         logger.info("Connecting Jetson")
         self._jetson = Jetson(self._devices, config, timestamp, q)
@@ -50,10 +50,13 @@ class System(object):
 
 
         logger.info("All devices connected")
-        logger.info("System initialized.")
-        
+        logger.info("System initialized.") 
         if q is None:
-            answer = raw_input("Would you like to start? Y/n: ")
+            try:
+                answer = raw_input("Would you like to start? Y/n: ")
+            except KeyboardInterrupt:
+                self._jetson.exit()
+                return
             if answer.lower() == 'n' or answer.lower() == 'no':
                 self._jetson.exit()
             else:
@@ -91,8 +94,8 @@ class System(object):
         myMotor = Motor()
         myMars = Mars(myArduino, config, myLED, myMotor, myPinHash, self._watchdogQueue, self._marsOnlineQueue)
         time.sleep(.5)
-        myValmar = Valmar(config, myMars)
-
+        myValmar = Valmar(config)
+        myValmar.enable()
 
         devices = {
                     'Motor': myMotor,

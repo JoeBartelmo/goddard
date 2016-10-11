@@ -58,7 +58,7 @@ class Motor(object):
     """
 
     def __init__(self):
-        self._motorCodes = ['enable brake', 'disable brake', 'enable motor', 'disable motor']
+        self._motorCodes = ['brake on', 'brake off', 'motor on', 'motor off']
         self._speed = 0
         self._lastCommand = 'M0000'
         self._direction = 0
@@ -74,9 +74,9 @@ class Motor(object):
         """
         self._arduino = arduino
 
-        if myCode in ('enable motor', 'disable motor'):
+        if myCode in ('motor on', 'motor off'):
             self.toggleMotor(myCode)
-        elif myCode in ('enable brake', 'disable brake'):
+        elif myCode in ('brake on', 'brake off'):
             self.toggleBrake(myCode)
 
 
@@ -86,13 +86,11 @@ class Motor(object):
         :param myCode:
         :return:
         """
-
         # uncomment if braking and enable check wanted
 #         if self._enabled == 0:
-#             return logger.info("Motor must be enabled before you can move! Use: enable motor")
+#            return logger.info("Motor must be enabled before you can move! Use: motor on")
 #         if self._brake == 1:
-#             return logger.info("Brake must be disabled to move! Use: disable brak")
-
+#            return logger.info("Brake must be disabled to move! Use: brake off")
         
         splitCodes = myCode.split(' ')
 
@@ -114,9 +112,9 @@ class Motor(object):
         :param myCode:
         :return:
         """
-        if myCode == 'enable motor':
+        if myCode == 'motor on':
             self._enabled = 1
-        elif myCode == 'disable motor':
+        elif myCode == 'motor off':
             self._enabled = 0
 
         self.write()
@@ -127,9 +125,9 @@ class Motor(object):
         :param myCode:
         :return:
         """
-        if myCode == 'enable brake':
+        if myCode == 'brake on':
             self._brake = 1
-        elif myCode == 'disable brake':
+        elif myCode == 'brake off':
             self._brake = 0
 
         self.write()
@@ -143,8 +141,6 @@ class Motor(object):
         self._direction = 0
         self._brake = 1
         self._speed = 0
-
-        logger.info("motor ready for commands")
 
         self.write()
 
