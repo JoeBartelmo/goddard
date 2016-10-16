@@ -36,10 +36,10 @@ class ListenerThread(threading.Thread):
     this handles deserialization of the logging object and pipes
     the data into a queue for the GUI to read.
     '''
-    def __init__(self, queue, serverAddr, port, logLevel, name = 'Thread', displayInConsole = True):
+    def __init__(self, queueArr, serverAddr, port, logLevel, name = 'Thread', displayInConsole = True):
         super(ListenerThread, self).__init__()
         self._stop = threading.Event()
-        self.q = queue
+        self.qArr = queueArr
         self._init = threading.Event()
         self.serverAddr = serverAddr
         self.port = port
@@ -87,8 +87,12 @@ class ListenerThread(threading.Thread):
                     record = logging.makeLogRecord(obj)
 
                     if record.levelno >= self.logLevel:
-                        if self.q is not None and record.msg not in self.lastLogEntry:
-                            self.q.put(record)
+                        if self.qArr is not None and record.msg not in self.lastLogEntry:
+                            if isinstance(self.qArr, list):
+                                for q in self.qArr:
+                                    q.put(record)
+                            else:
+                                self.q.put(record)
                             self.lastLogEntry = record.msg
                         if self.displayInConsole:
                             logger.log(record.levelno, record.msg + ' (' + record.filename + ':' + str(record.lineno) + ')')

@@ -44,7 +44,6 @@ class TelemetryWidget(tk.Frame):
         self.set_telemetry_ui()
 
         #start grabbing data
-        self.telem_queue = client_queue_in
         self.tthread = TelemetryThread(self, client_queue_in, client_queue_beam)
         self.update_telemetry_loop()
 

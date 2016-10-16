@@ -23,6 +23,7 @@ from TopMenu import TopMenu
 from BeamGapWidget import BeamGapWidget
 from constants import *#remember you should run through client.py, not through gui.py, this will throw import error otherwise
 import logging
+from ttk import Notebook
 
 logger = logging.getLogger('mars_logging')
 
@@ -38,19 +39,28 @@ class GUI(tk.Tk):
         @depricated
         server_ip: server IP address for rtp stream access
     """
-    def __init__(self, client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, destroyEvent, server_ip, **kwargs):
+    def __init__(self, client_queue_cmd, client_queue_log, client_queue_telem, client_queue_telem_debug, beam_gap_queue, destroyEvent, server_ip, **kwargs):
         tk.Tk.__init__(self, **kwargs)
         self.client_queue_cmd = client_queue_cmd
         self.client_queue_log = client_queue_log
         self.client_queue_telem = client_queue_telem
+        self.client_queue_telem_debug = client_queue_telem_debug
         self.beam_gap_queue = beam_gap_queue
         self.server_ip = server_ip
         self.destroyEvent = destroyEvent
 
     def init_ui(self):
+        #make resizable
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.notebook = Notebook(self)
+        self.notebook.grid(column = 0, row = 0, sticky = 'nsew')
+
         # define mainapp instance
-        self.mainApplication = MainApplication(self, self.client_queue_cmd, self.client_queue_log, self.client_queue_telem, self.beam_gap_queue, self.destroyEvent, self.server_ip) 
+        self.mainApplication = MainApplication(self.notebook, self.client_queue_cmd, self.client_queue_log, self.client_queue_telem, self.beam_gap_queue, self.destroyEvent, self.server_ip) 
         self.mainApplication.grid(column = 0, row = 0, sticky="nsew")
+        self.notebook.add(self.mainApplication, text = "Main")
         # menu
         self.menu_ = TopMenu(self, '../gui/operations.json', self.client_queue_cmd, 'Commands')
         ### Add custom commands here
@@ -87,6 +97,7 @@ class GUI(tk.Tk):
     def destroyClient(self):
         self.menu_.destroy() 
         self.mainApplication.close_()
+        self.notebook.destroy()
         self.destroy()
 
     def destroyCallback(self):

@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-<<<<<<< HEAD
-=======
 from matplotlib.backend.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
->>>>>>> master
 
 class MARS_PRIMARY(object):
     """
