@@ -21,68 +21,114 @@ import tkMessageBox
 from mainapp import MainApplication
 from TopMenu import TopMenu
 from BeamGapWidget import BeamGapWidget
-
+from constants import *#remember you should run through client.py, not through gui.py, this will throw import error otherwise
 import logging
 
-MARS_EXIT_COMMAND = 'exit'
+logger = logging.getLogger('mars_logging')
 
-def start(client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, server_ip):
+class GUI(tk.Tk):
     """
     Start graphical interface for client.
 
     Args:
-        client_queue_in: queue to get telemetry and logging info
-        client_queue_out: queue to communicate commands
+        client_queue_cmd: queue to send commands
+        client_queue_log: queue to get logging info
+        client_queue_telem: queue to get telemetry data
+        beam_gap_queue: queue to retrieve beam gap data (any queue will do, this is handled via the gui, through the telemetry queue)
+        @depricated
         server_ip: server IP address for rtp stream access
     """
-    logger = logging.getLogger('mars_logging')
-    logger.info('Creating GUI')
-    root = tk.Tk()   # get root window
-    
-    #kill command destroys mars too
-    def killMars():
-        client_queue_cmd.put(MARS_EXIT_COMMAND)
+    def __init__(self, client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, destroyEvent, server_ip, **kwargs):
+        tk.Tk.__init__(self, **kwargs)
+        self.client_queue_cmd = client_queue_cmd
+        self.client_queue_log = client_queue_log
+        self.client_queue_telem = client_queue_telem
+        self.beam_gap_queue = beam_gap_queue
+        self.server_ip = server_ip
+        self.destroyEvent = destroyEvent
 
-    #explicitly close each widget, then destroy root
-    def destroyCallback():
+    def init_ui(self):
+        # define mainapp instance
+        self.mainApplication = MainApplication(self, self.client_queue_cmd, self.client_queue_log, self.client_queue_telem, self.beam_gap_queue, self.destroyEvent, self.server_ip) 
+        self.mainApplication.grid(column = 0, row = 0, sticky="nsew")
+        # menu
+        self.menu_ = TopMenu(self, '../gui/operations.json', self.client_queue_cmd, 'Commands')
+        ### Add custom commands here
+        self.menu_.add_menu_item('Reconnect to Cameras', self.mainApplication.start_streams, "View")
+        self.menu_.add_menu_item('Left', self.mainApplication.focus_left, 'View/Camera Focus')
+        self.menu_.add_menu_item('Center', self.mainApplication.focus_center, 'View/Camera Focus')
+        self.menu_.add_menu_item('Right', self.mainApplication.focus_right, 'View/Camera Focus')
+        self.menu_.add_menu_item('IBeam Display', self.beamGapGraph, 'View/Windows')
+        ### 
+        self.menu_.finalize_menu_items()
+        self.config(menu=self.menu_)
+
+        # title and icon
+        self.wm_title('Hyperloop Imaging Team')
+        img = tk.PhotoImage('../gui/assets/rit_imaging_team.png')
+        self.tk.call('wm', 'iconphoto', self._w, img)
+        
+        #call destroyCallback on clicking X
+        self.protocol('WM_DELETE_WINDOW', self.destroyCallback)
+         
+        self.geometry("900x500")
+        self.update()
+
+    def killMars(self):
+        '''
+        Sends the kill command to Mars
+        '''
+        self.client_queue_cmd.put('exit')
+
+    def displayMarsDisconnected(self):
+        tkMessageBox.showerror('Lost connection to Mars', 'The client has lossed connection to mars, closing application.')
+        self.destroyClient()
+
+    def destroyClient(self):
+        self.menu_.destroy() 
+        self.mainApplication.close_()
+        self.destroy()
+
+    def destroyCallback(self):
+        '''
+        Function called when the window handle Destory is clicked (the x)
+        Opens up a small prompt asking if you wanna kill mars
+        '''
         logger.debug('GUI entering destroy callback...')
         result = tkMessageBox.askyesno('Leaving GUI, Should Mars be Disabled?', 'Leaving GUI, should Mars be Disabled?')
 
         if result:
-            killMars()
-        menu_.destroy() 
-        mainApplication.close_()
-        root.destroy()
-    def beamGapGraph():
-        top = BeamGapWidget(root, beam_gap_queue)
-        top.title("VALMAR Beam Gap")
-    # define mainapp instance
-    mainApplication = MainApplication(root, client_queue_cmd, client_queue_log, client_queue_telem, beam_gap_queue, server_ip) 
-    mainApplication.grid(column = 0, row = 0, sticky="nsew")
-    # menu
-    menu_ = TopMenu(root, '../gui/operations.json', client_queue_cmd, 'Commands')
-    ### Add custom commands here
-    menu_.add_menu_item('Refresh Streams', mainApplication.start_streams, None)
-    menu_.add_menu_item('Left Focus', mainApplication.focus_left, 'Camera')
-    menu_.add_menu_item('Center Focus', mainApplication.focus_center, 'Camera')
-    menu_.add_menu_item('Right Focus', mainApplication.focus_right, 'Camera')
-    menu_.add_menu_item('IBeam View', beamGapGraph, None)
-    ###
-    menu_.finalize_menu_items()
-    root.config(menu=menu_)
+            self.killMars()
+        self.destroyClient()
 
-    # title and icon
-    root.wm_title('Hyperloop Imaging Team')
-    img = tk.PhotoImage('../gui/assets/rit_imaging_team.png')
-    root.tk.call('wm', 'iconphoto', root._w, img)
-    
-    #call destroyCallback on clicking X
-    root.protocol('WM_DELETE_WINDOW', destroyCallback)
-     
-    root.update()
-    root.mainloop()
+    def beamGapGraph(self):
+        '''
+        Function that launches the Beam Gap Widget that displays the current beam distances
+        in readalbe form.
+        '''
+        if getattr(self, top, False) == False:
+            self.top = BeamGapWidget(self, self.beam_gap_queue)
+            self.top.title("VALMAR Beam Gap")
+        else:
+            if self.top['state'] != 'normal':
+                self.top = BeamGapWidget(self, self.beam_gap_queue)
+                self.top.title("VALMAR Beam Gap")
+
+    def start(self):
+        '''
+        Starts the root window
+        '''
+        
+        self.init_ui()
+        try:
+            self.mainloop()
+        except KeyboardInterrupt:
+            self.destroyClient()
 
 if __name__=='__main__':
+    print 'Please use goddard/client/client.py instead, this application requires client to function currently'
+'''
+The below is depricated and will need to be updated with a client test harness
     from Queue import Queue
     from ColorLogger import initializeLogger 
 
@@ -99,3 +145,5 @@ if __name__=='__main__':
 
     while not cmd_queue.empty():
         print cmd_queue.get()    
+'''
+

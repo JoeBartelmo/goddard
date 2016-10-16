@@ -50,10 +50,13 @@ class System(object):
 
 
         logger.info("All devices connected")
-        logger.info("System initialized.")
-        
+        logger.info("System initialized.") 
         if q is None:
-            answer = raw_input("Would you like to start? Y/n: ")
+            try:
+                answer = raw_input("Would you like to start? Y/n: ")
+            except KeyboardInterrupt:
+                self._jetson.exit()
+                return
             if answer.lower() == 'n' or answer.lower() == 'no':
                 self._jetson.exit()
             else:

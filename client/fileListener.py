@@ -26,6 +26,7 @@ from select import select
 import struct
 import errno
 from socket import error as socket_error
+from constants import *
 
 logger = logging.getLogger('mars_logging') 
 
@@ -46,26 +47,32 @@ class FileListenerThread(threading.Thread):
         self._stop = threading.Event()
         self.serverAddr = serverAddr
         self.port = port
-        self.socketTimeout = 3
+        self._init = threading.Event()
     
     def run(self):
         logger.debug('Client side FileListener Thread waiting for connectionn...')
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if self.serverAddr != 'localhost':
+        if self.serverAddr != 'localhost' and self.serverAddr != '127.0.0.1':
             listener.bind(('', self.port))
         else:
             listener.bind(('localhost', self.port))
         listener.listen(1)
 
-        listenerConnection, address = listener.accept()
-        listenerConnection.setblocking(0)
-        listenerConnection.settimeout(self.socketTimeout)
+        socketReady = select([listener], [],[], SOCKET_TIMEOUT)
+        if socketReady[0]:
+            listenerConnection, address = listener.accept()
+            listenerConnection.setblocking(0)
+            listenerConnection.settimeout(SOCKET_TIMEOUT)
+            #we need to notify somehow that we have a connection
+            self._init.set()
+            logger.warning('Client side "File Listener" Thread connected!')
+        else:
+            listenerConnection = None
+            self.stop()
 
-        logger.warning('Client side "File Listener" Thread connected!')
-        
-        while self.stopped() == False:
-            isReady = select([listenerConnection],[],[],self.socketTimeout)
+        while self.stopped() != True:
+            isReady = select([listenerConnection],[],[],SOCKET_TIMEOUT)
             if isReady[0]:
                 try:
                     fileNameLength = self.readIntFromSocket(listenerConnection)
@@ -90,11 +97,11 @@ class FileListenerThread(threading.Thread):
                         logger.critical('Was not able to connect to File Listener socket, closing app')
                         break
                     raise serr
-                    
+        if listenerConnection is not None:
+            listenerConnection.shutdown(2)
+            listenerConnection.close()
         logger.warning('Closing listener socket')
-        listenerConnection.shutdown(2)
         listener.shutdown(2)
-        listenerConnection.close()
         listener.close()
         logger.warning('Client Side "File Listener" Thread Stopped')
         
@@ -106,6 +113,9 @@ class FileListenerThread(threading.Thread):
             return -1
         return int(struct.unpack('I', data)[0])
     
+    def isInit(self):
+        return self._init.isSet()
+
     def stop(self):
         self._stop.set()
    

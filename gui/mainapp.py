@@ -40,7 +40,7 @@ class MainApplication(tk.Frame):
     '''
     Main application handle, contains the frame that contains all other widgets
     '''
-    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, client_queue_beam, server_ip):
+    def __init__(self, parent, client_queue_cmd, client_queue_log, client_queue_telem, client_queue_beam, destroy_event, server_ip):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         #this is now depricated, we no longer need the ip, but we may in the future so i'm leaving it here
@@ -50,8 +50,10 @@ class MainApplication(tk.Frame):
         self.client_queue_telem = client_queue_telem
         self.client_queue_beam = client_queue_beam
         #we found 720/640 to give the most aesthetic view
-        self.imageHeight  = 720 
+        self.imageHeight = 720 
         self.imageWidth = 640
+        
+        self.destroy_event = destroy_event
  
         #Left Camera, Center Camera, Right Camera
         self.streams = [None, None, None]
@@ -157,7 +159,7 @@ class MainApplication(tk.Frame):
             cv2.putText(big_frame, r_text, topright, font, 0.5, (255,0,0), 1)
 
         if self.stream_active.get() == 0:  # left focus
-            setText('Center', 'Lefta', 'Right')
+            setText('Center', 'Left', 'Right')
         #default
         elif self.stream_active.get() == 1:  # center focus
             setText('Left', 'Center', 'Right')
@@ -177,54 +179,62 @@ class MainApplication(tk.Frame):
         We then have to do some slight manipulation with a matrix to get it to fit
         properly. Then we slam it on the ImageTk window.
         '''
-        if self.runStreams == False:
-            self.runStreams = True
-            return
-
-        leftFrame, centerFrame, rightFrame = self.get_stream_order()
-        
         try:
-            l_frame = color_correct(self.streams[leftFrame]._queue.get(False))
-        except Empty:
-            l_frame = None
-        try:
-            c_frame = color_correct(self.streams[centerFrame]._queue.get(False))
-        except Empty:
-            c_frame = None
-        try:
-            r_frame = color_correct(self.streams[rightFrame]._queue.get(False))
-        except Empty:
-            r_frame = None
+            if self.destroy_event.isSet() == True:
+                self.runStreams = False
+                self.parent.displayMarsDisconnected()
+                return
 
-        thirdHeight = int(self.imageHeight / 3)
-        halfWidth = int(self.imageWidth / 2)
-        
-        if l_frame is not None:
-            l_frame = cv2.resize(l_frame, (halfWidth, thirdHeight))
-            self.displayed_image[:thirdHeight,:halfWidth,:] = l_frame
-        if c_frame is not None:    
-            c_frame = cv2.resize(c_frame, (self.imageWidth, self.imageHeight - thirdHeight))
-            self.displayed_image[thirdHeight:, :,:] = c_frame
-        if r_frame is not None:
-            r_frame = cv2.resize(r_frame, (self.imageWidth - halfWidth, thirdHeight))
-            self.displayed_image[:thirdHeight,halfWidth:self.imageWidth,:] = r_frame
-        
-        big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
+            if self.runStreams == False:
+                self.runStreams = True
+                return
 
-        self.addText(big_frame)
+            leftFrame, centerFrame, rightFrame = self.get_stream_order()
+            
+            try:
+                l_frame = color_correct(self.streams[leftFrame]._queue.get(False))
+            except Empty:
+                l_frame = None
+            try:
+                c_frame = color_correct(self.streams[centerFrame]._queue.get(False))
+            except Empty:
+                c_frame = None
+            try:
+                r_frame = color_correct(self.streams[rightFrame]._queue.get(False))
+            except Empty:
+                r_frame = None
 
-        imageFromArray = Image.fromarray(big_frame)
-        try:
-            tkImage = ImageTk.PhotoImage(image=imageFromArray)
-            self.image_label.configure(image=tkImage)
-        
-            self.image_label._image_cache = tkImage  # avoid garbage collection
+            thirdHeight = int(self.imageHeight / 3)
+            halfWidth = int(self.imageWidth / 2)
+            
+            if l_frame is not None:
+                l_frame = cv2.resize(l_frame, (halfWidth, thirdHeight))
+                self.displayed_image[:thirdHeight,:halfWidth,:] = l_frame
+            if c_frame is not None:    
+                c_frame = cv2.resize(c_frame, (self.imageWidth, self.imageHeight - thirdHeight))
+                self.displayed_image[thirdHeight:, :,:] = c_frame
+            if r_frame is not None:
+                r_frame = cv2.resize(r_frame, (self.imageWidth - halfWidth, thirdHeight))
+                self.displayed_image[:thirdHeight,halfWidth:self.imageWidth,:] = r_frame
+            
+            big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
 
-            self.update()
-        except RuntimeError:
-            logger.warning('Unable to update image frame. Assuming application has been killed unexpectidly.')
-            return
-        self.after(delay, self.display_streams, delay)
+            self.addText(big_frame)
+
+            imageFromArray = Image.fromarray(big_frame)
+            try:
+                tkImage = ImageTk.PhotoImage(image=imageFromArray)
+                self.image_label.configure(image=tkImage)
+            
+                self.image_label._image_cache = tkImage  # avoid garbage collection
+
+                self.update()
+            except RuntimeError:
+                logger.warning('Unable to update image frame. Assuming application has been killed unexpectidly.')
+                return
+            self.after(delay, self.display_streams, delay)
+        except KeyboardInterrupt:
+            self.close_()
 
     def start_streams(self):
         '''
@@ -258,19 +268,19 @@ class MainApplication(tk.Frame):
         self.telemetry_w.tthread.start()
 
     def close_(self):
-        logger.debug('GUI: Stopping all video streams...')
+        logger.info('GUI: Stopping all video streams...')
         self.runStreams = False 
         #stop the threads
         for stream in self.streams:
             stream.stop()
             if stream.is_alive():
                 stream.join()
-        logger.debug('GUI destroying widgets...')
+        logger.info('GUI destroying widgets...')
         #throw widgets in garbage
         self.telemetry_w.quit_()
         self.command_w.destroy()
 
-        logger.debug('GUI Destorying main application box...')
+        logger.info('GUI Destorying main application box...')
         self.destroy()
 
 if __name__ == '__main__':

@@ -14,17 +14,6 @@ MARS_PRIMARY = MARS_PRIMARY()
 #MARS_ELEC = MARS_ELEC()
 #MARS_CAM = MARS_CAM()
 
-"""
-
-1) RunClock,SystemVoltage
-2) RunCLock,BatteryRemaining
-3) RunClock,TotalDisplacement
-4) IBeam,TotalDisplacement
-5) SetSpeed,RPM
-6) RPM,Speed
- 
-"""
-
 class Monitor(object):
     def __init__(self, telemetrySrc, plotter=MARS_PRIMARY )
         self._telemetrySrc = telemetrySrc
@@ -49,14 +38,3 @@ class Monitor(object):
             y = updates[yKey]
 
             self._plotter.graph(key,x,y)
-            
-
-    def display(self):
-        window = Tk()
-        myLabel = Label(window, text="MARS STATUS")
-        myLabel.pack()
-
-
-
-
-

@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+<<<<<<< HEAD
+=======
+from matplotlib.backend.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+>>>>>>> master
 
 class MARS_PRIMARY(object):
     """
@@ -10,20 +14,22 @@ class MARS_PRIMARY(object):
     5) SetSpeed,RPM
     6) RPM,Speed
     """
-    def __init__(self, color='red'):
+    def __init__(self, valueColor = 'blue',theoColor='red'):
         self._shape = (3,2)
-        self._patch =  [patches.Patch(color=color,label='predicted curve')]
+        self._theoColor = theoColor
+        self._valueColor = valueColor
+        self._patch =  [patches.Patch(color=theoColor,label='predicted values')]
 
       
         #creating dictionary of lists 
         #each of which contains independent and dependent values
-        rc = str(self._shape[0],self._shape[1])
-        self._subplotIDs = {"RunClock:SystemVoltage":int(rc+"1"),
-                            "RunClock:BatteryRemaining":int(rc+"2"),
-                            "RunClock:TotalDisplacement":int(rc+"3"),
-                            "IBeam:TotalDisplacement":int(rc+"4"),
-                            "SetSpeed:RPM":int(rc+"4"),
-                            "RPM:Speed":int(rc+"5")
+        self._rc = str(self._shape[0],self._shape[1])
+        self._subplotIDs = {"RunClock:SystemVoltage":int(self._rc+"1"),
+                            "RunClock:BatteryRemaining":int(self._rc+"2"),
+                            "RunClock:TotalDisplacement":int(self._rc+"3"),
+                            "IBeam:TotalDisplacement":int(self._rc+"4"),
+                            "SetSpeed:RPM":int(self._rc+"4"),
+                            "RPM:Speed":int(self._rc+"5")
                            }
         self._values = {"RunClock:SystemVoltage":[ [],[] ],
                         "RunClock:BatteryRemaining":[ [],[] ],
@@ -40,6 +46,9 @@ class MARS_PRIMARY(object):
                              }
         self._numPlots = len(self._values)
         self._plt = setup_plot()
+        self._fig = self._plt.gcf()
+        self._canvas = FigureCanvasTkAgg(self.fig, master=self)
+
 
     def setup_plot(self)
         spID = self._subplotIDs
@@ -84,27 +93,25 @@ class MARS_PRIMARY(object):
 
     
     def graph(self,key,x,y):
-        sp = str(self._shape[0])+ str(self._shape[1]) + self._subplotIDs[key]
         self._values[key][0].append(x)
         self._values[key][1].append(y)
 
         xReal = self._values[key][0]
         yReal = self._values[key][1] 
         
-        self._plt.subplot( sp  )
-        clear()
-        self._plt.plot( self._subplotID[key] )
+        self._plt.subplot(subplotIDs[key])
+        self._plt.clear()
+        self._plt.plot( self._values[key], color = self._valueColor )
 
         if key in self._theoreticals:
             theo = calc_theoretical(key,x)
             self._theoreticals[key][0].append(x)
             self._theoreticals[key][1].append(theo)
-            self._plt.plot( self._theoreticals[key]
 
         return self._plt
-
+    
     def clear()
-        self._plt.clear()         
+        self._fig.clear()         
   
     def calc_theoretical(self,key,x):
         """
