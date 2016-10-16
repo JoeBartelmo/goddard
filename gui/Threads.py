@@ -106,11 +106,11 @@ class TelemetryThread(threading.Thread):
     So in this class I extract Valmar from the telemetry data and
     pipe it into a seperate queue.
     '''
-    def __init__(self, telem_widget, client_queue, beam_gap_queue):
+    def __init__(self, widget, client_queue, beam_gap_queue = None):
         super(TelemetryThread, self).__init__()
         self._queue = client_queue
         self._beam_gap_queue = beam_gap_queue
-        self._widget = telem_widget
+        self._widget = widget
         self._stop = threading.Event()
 
     def run(self):
@@ -121,7 +121,7 @@ class TelemetryThread(threading.Thread):
                 self._widget.set_telemetry_data(telemetryData)
 
                 #extract valmar data and pipe it into beamgapqueue
-                if telemetryData["Valmar"] is not None:
+                if telemetryData["Valmar"] is not None and self._beam_gap_queue is not None:
                     self._beam_gap_queue.put(telemetryData["Valmar"])
                     #literally only a warning so it stands out in log
                     logger.warning('Received Beam Gap Data!')

@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.backend.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+import matplotlib.patches as patches
 
 class MARS_PRIMARY(object):
     """
@@ -20,7 +19,7 @@ class MARS_PRIMARY(object):
       
         #creating dictionary of lists 
         #each of which contains independent and dependent values
-        self._rc = str(self._shape[0],self._shape[1])
+        self._rc = str(self._shape[0]) + str(self._shape[1])
         self._subplotIDs = {"RunClock:SystemVoltage":int(self._rc+"1"),
                             "RunClock:BatteryRemaining":int(self._rc+"2"),
                             "RunClock:TotalDisplacement":int(self._rc+"3"),
@@ -42,12 +41,11 @@ class MARS_PRIMARY(object):
                               "RPM:Speed":[ [],[] ] 
                              }
         self._numPlots = len(self._values)
-        self._plt = setup_plot()
+        self._plt = self.setup_plot()
         self._fig = self._plt.gcf()
-        self._canvas = FigureCanvasTkAgg(self.fig, master=self)
 
 
-    def setup_plot(self)
+    def setup_plot(self):
         spID = self._subplotIDs
         # 1) RunClock,SysVoltage
         plt.subplot(spID["RunClock:SystemVoltage"])
@@ -107,7 +105,7 @@ class MARS_PRIMARY(object):
 
         return self._plt
     
-    def clear()
+    def clear():
         self._fig.clear()         
   
     def calc_theoretical(self,key,x):
