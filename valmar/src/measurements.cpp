@@ -37,16 +37,16 @@ void displayAndSave(Mat image, String image_name){
 /*
 * Takes a matrix and detects the 2 lines in the ibeam gap
 */
-Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2, Mat erode_kernel, Mat dilate_kernel, Mat erode_kernel_post, Mat dilate_kernel_post) {
+Mat retrieveHorizontalEdges(const Mat src_image, string name, int threshold1 , int threshold2, Mat erode_kernel, Mat dilate_kernel, Mat erode_kernel_post, Mat dilate_kernel_post) {
     register Mat working_image = src_image;
 #if defined DEBUG
-    displayAndSave(src_image, "original.png");
+    displayAndSave(src_image, name + ".png");
 #endif
     //converting to grayscale if not already
     if (working_image.channels() == 3) {
         cvtColor(src_image, working_image, CV_BGR2GRAY);
 #if defined DEBUG
-        displayAndSave(working_image, "grayscale.png");     
+        //displayAndSave(working_image, "grayscale.png");     
         //cout << "converted to grayscale" << endl;
 #endif
     }
@@ -57,7 +57,7 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
   //  GaussianBlur( src_image, working_image, Size(3,3), 0, 0, BORDER_DEFAULT );
 //    Sobel( working_image, working_image, CV_16S, 0, 1, CV_SCHARR, 1, 0, BORDER_DEFAULT );
 #if defined DEBUG    
-    displayAndSave(working_image,"edge_detected.png");
+    //displayAndSave(working_image,"edge_detected.png");
     //cout << "detected edges" << endl;
 #endif
 
@@ -73,7 +73,7 @@ Mat retrieveHorizontalEdges(const Mat src_image, int threshold1 , int threshold2
     ROI.copyTo(working_image);
 
 #if defined DEBUG
-    displayAndSave(working_image, "cropped_final.png");
+    displayAndSave(working_image, name + "cropped_final.png");
     //cout << "morphed final" << endl;
 #endif
 
@@ -87,48 +87,28 @@ int findPoint(int *line, int col){
     return (((((float)line[3]-(float)line[1])/((float)line[2]-(float)line[0]))*((float)col-(float)line[0]))+(float)line[1]);
 }
 
-/*
-    Eventually two types should be implemented!
-    Type 0 
-        utilizes the probablistic Hough Line transform to generate the equations of two lines
-        distance between the two line is calculated by subracting the two
-        and multiplying by the pixel_displacement_ratio
-    Type 1
-        uses multiple for loops to go through the image row by row
-        and subtract distances left to right
-*/
-int calculateRawDistances(Mat src_image, vector<double> &distances, int max_line_break, double ratio) {
-    src_image.convertTo(src_image, CV_8UC3);
-    Mat line_image(src_image.rows,src_image.cols,CV_8UC3); //matrix specifically for lines, same shape as src
-
-
-    //lines in startX, startY, endX, endY order
-    int lines[2][4] = { {-1, -1, -1, -1}, {-1, -1, -1, -1}};
-
+void getStartIndicies(Mat src_image, int max_line_break, int lines[][4]) {
     //find starting coordinates
     //for this we iterate over only half the image so we don't get a false positive
     for (size_t c = 0; c < src_image.cols / 2 && (lines[0][0] == -1 || lines[1][0] == -1); c++ ){
         for(size_t r = 0; r < src_image.rows; r++ ){
-             if(src_image.at<uchar>(r,c) != 0) {
-                 if(lines[0][0] == -1){
-                     lines[0][0] = c;
-                     lines[0][1] = r;
-                 }
-                 //we do need to make sure they are a reasonable distance apart to deem them as lines.
-                 else if(abs(lines[0][1] - (int)r) >= max_line_break) {
-                    lines[1][0] = c;
-                    lines[1][1] = r;
-                    break;
-                 }
-             }
-         }
-     } 
+            if(src_image.at<uchar>(r,c) != 0) {
+                if(lines[0][0] == -1){
+                    lines[0][0] = c;
+                    lines[0][1] = r;
+                }
+                //we do need to make sure they are a reasonable distance apart to deem them as lines.
+                else if(abs(lines[0][1] - (int)r) >= max_line_break) {
+                   lines[1][0] = c;
+                   lines[1][1] = r;
+                   break;
+                }
+            }
+        }
+    } 
+}
 
-    if (lines[0][0] == -1 || lines[1][0] == -1) {
-        printf("Could not find 2 distinct lines\n");
-        return -1;
-    }
-
+void getEndIndicies(Mat src_image, int max_line_break, int lines[][4]) {
     /*
         So now that we have a start point, we need to keep track of potential endpoints
         We don't want our two lines to get switched, we also need to know which of the 
@@ -170,14 +150,18 @@ int calculateRawDistances(Mat src_image, vector<double> &distances, int max_line
            }
         }
     }
+}
 
+void calculateDistances(string name, Mat src_image, int lines[][4], vector<double>& distances, double ratio) {
     int start = lines[0][0] < lines[1][0] ? lines[1][0] : lines[0][0];
     int end = lines[0][2] < lines[1][2] ? lines[0][2] : lines[1][2];
-    if(!distances.empty()) {
-        distances.clear();
+ 
+    for(int col = 0; col < abs(end - start); col++){ // loops for the length of the first line 
+            int pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col));
+            distances.push_back((double)pixelDistance * ratio);
     }
 #if defined DEBUG
-    cout << "SIZE OF DISTANCES:" << distances.size() << endl;
+    cout << "SIZE OF DISTANCES " + name +":" << distances.size() << endl;
     cout << "Hough performed" << endl;
     //cout << "LINE1:" << lines[0] <<  endl;
     //cout << "LINE2:" << lines[1] <<  endl;
@@ -188,14 +172,48 @@ int calculateRawDistances(Mat src_image, vector<double> &distances, int max_line
     for(size_t i = 0; i < 2; i++ ){
         line(line_overlay_image, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,0,255), 3, CV_AA);
     }
-    displayAndSave(line_overlay_image,"image_with_lines.png");
+    displayAndSave(line_overlay_image, name + ".png");
 
 #endif 
- 
-    for(int col = 0; col < abs(end - start); col++){ // loops for the length of the first line 
-            int pixelDistance = abs(findPoint(lines[1],col) - findPoint(lines[0],col));
-            distances.push_back((double)pixelDistance * ratio);
+}
+
+/*
+    Eventually two types should be implemented!
+    Type 0 
+        utilizes the probablistic Hough Line transform to generate the equations of two lines
+        distance between the two line is calculated by subracting the two
+        and multiplying by the pixel_displacement_ratio
+    Type 1
+        uses multiple for loops to go through the image row by row
+        and subtract distances left to right
+*/
+int calculateRawDistances(Mat left_image, Mat right_image, vector<double> &distances, int max_line_break, double ratio) {
+    left_image.convertTo(left_image, CV_8UC3);
+    right_image.convertTo(right_image, CV_8UC3);
+
+    //lines in startX, startY, endX, endY order
+    int left_lines[2][4]  = { {-1, -1, -1, -1}, {-1, -1, -1, -1}};
+    int right_lines[2][4] = { {-1, -1, -1, -1}, {-1, -1, -1, -1}};
+    getStartIndicies(left_image,  max_line_break, left_lines);
+    getStartIndicies(right_image, max_line_break, right_lines);
+
+
+    if (left_lines[0][0] == -1 || left_lines[1][0] == -1 || 
+        right_lines[0][0] == -1 || right_lines[1][0] == -1)  {
+        printf("Could not find 2 distinct lines\n");
+        return -1;
     }
+
+    getEndIndicies(left_image, max_line_break, left_lines);
+    getEndIndicies(right_image, max_line_break, right_lines);
+
+    if(!distances.empty()) {
+        distances.clear();
+    }
+
+    calculateDistances("left", left_image, left_lines, distances, ratio);
+    calculateDistances("right", right_image, right_lines, distances, ratio);
+
     return 1;
 } 
 

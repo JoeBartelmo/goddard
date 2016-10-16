@@ -27,6 +27,8 @@ var knownCameras = require('./knownCameras.json');
 var _ = require('underscore');
 var q = require('q');
 
+var pidFile = '/do-not-delete-manually.hyperloop';
+
 function getSerialIDForCamera(camera) {
   var defer  = q.defer();
   exec('udevadm info --query=all --name='+camera+' | grep ID_SERIAL_SHORT', function (err, result) {
@@ -86,9 +88,8 @@ function killPID(pid) {
 
 //Manually reads in the pids file and deletes all pids
 function closeOpenStreams() {
-  var file = 'do-not-delete-manually.hyperloop';
-  if(fs.existsSync(file)) {
-    var pids = fs.readFileSync('do-not-delete-manually.hyperloop');
+  if(fs.existsSync(pidFile)) {
+    var pids = fs.readFileSync(pidFile);
     if(pids && pids.length > 1) {
       pids = pids.toString().split("\n");
       //cli.info('Manually Kiling the following pids: ' + pids);
@@ -97,7 +98,7 @@ function closeOpenStreams() {
       }
     }
     else {
-      cli.info('Could not read pids file (do-not-delete-manually)');
+      cli.info('Could not read pids file (' + pidFile + ')');
     } 
   }
 
@@ -106,11 +107,11 @@ function closeOpenStreams() {
 
 cli.parse({
   ip: ['i', 'IP address of the client to receive these streams', 'ip'],
-  width: ['w', 'Width of video to streams', 'int', 432],
-  height: ['h', 'Height of the video streams', 'int', 240],
+  width: ['w', 'Width of video to streams', 'int', 640],//432],
+  height: ['h', 'Height of the video streams', 'int', 360],//240],
   bitrate: ['b', 'Requested bitrate from streams', 'int', 1500000],
   filename: ['f', 'Filename base to write the streams (test#.mp4)', 'string', 'test'],
-  fps: ['fps', 'Frames per second that the camera should attempt to capture', 'int', 30],
+  fps: ['fps', 'Frames per second that the camera should attempt to capture', 'int', 24],
   port: ['p', 'Default starting port to broadcast over -- increments by 1 for each camera', 'int', 8554],
   verbose: [false, 'If on, will log out all of GStreamer\'s debug information', 'bool', false],
   close: [false, 'When a stream is launched the Processs ID is tracked, if there is an interrupt of communication between client and server, this will explicitly close any opened streams']
@@ -141,7 +142,7 @@ cli.main(function mainEntryPoint(args, options) {
       });
       cli.info('Found Cameras: ' + cameras);
       return generateGStreamCommands(options, cameras).then(function runCommands(commands) {
-        var toExecute = 'gst-launch-1.0 -e ';
+        var toExecute = 'sudo gst-launch-1.0 -e ';
         if (options.verbose === true) {
             toExecute += '-v ';
         }
@@ -154,7 +155,7 @@ cli.main(function mainEntryPoint(args, options) {
         exec(toExecute);
         cli.info(toExecute);
         //just use a pipe so i don't have to launch an fs writer
-        exec('pgrep -f gst-launch-1.0 > do-not-delete-manually.hyperloop', function(err, pids, stderr) {
+        exec('sudo pgrep -f gst-launch-1.0 > ' + pidFile, function(err, pids, stderr) {
           if(err) {
              cli.fatal('Could not obtain the GStreamer pids');
           }

@@ -15,11 +15,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-'''
-ark9719
-6/17/2016
-'''
-
 from GpioPin import GpioPin
 from Watchdog import Watchdog
 from Threads import TelemetryThread
@@ -58,7 +53,6 @@ class Jetson(object):
         self._q = q
         self.graphUtil = GraphUtility(config)
 
-        self._pauseTelemetry = False
         self._marsOnlineQueue = marsOnlineQueue
 
     def initDevices(self):
@@ -84,18 +78,21 @@ class Jetson(object):
         """
         self._sysCommands = {'system shutdown': self.systemShutdown,
                                 'system restart': self.systemRestart,
+                                'system hibernate': self.hibernate,
+                                'system wake': self.wake,
                                 'recall': self._watchdog.recall,
                                 'stream on': self._stream.open,
                                 'stream off': self._stream.close,
                                 'motor off': self._pinHash['motorRelay'].toggleOff,
                                 'motor on' : self._pinHash['motorRelay'].toggleOn,
+                                #@depricated
                                 #'laser off': self._pinHash['laserRelay'].toggleOff,
                                 #'laser on' : self._pinHash['laserRelay'].toggleOn,
                                 'led off': self._pinHash['ledRelay'].toggleOff,
                                 'led on' : self._pinHash['ledRelay'].toggleOn,
                                 'reset arduino': self._arduino.resetArduino,
-                                'hibernate': self.hibernate,
-                                'start': self.start,
+                                #@depricated
+                                #'start': self.start,
                                 'exit': self.exit,
                                 'list logs': self.listLogs,
                                 'watchdog off': self._watchdog.disable,
@@ -110,6 +107,8 @@ class Jetson(object):
     def listCommands(self):
         logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
                     "system restart:\t\tRestart M.A.R.S. Tk1\n" + \
+                    "system hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
+                    "syste wake:\t\tTurns on all components that could be hibernated\n" + \
                     "motor [on|off]:\t\tIff on, then speed can be adjusted on motor\n" + \
                     "forward [0-9]:\t\tAssigns a forward speed to M.A.R.S.\n" + \
                     "backward [0-9]:\t\tAssigns a backward speed to M.A.R.S.\n" + \
@@ -117,7 +116,6 @@ class Jetson(object):
                     "led [on|off]:\t\tIff on, then brightness of leds can be set\n" + \
                     "brightness [0-9]:\tSets brightness of leds (useful for valmar)\n" + \
                     "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
-                    "hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
                     "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
                     "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
                     "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
@@ -171,7 +169,6 @@ class Jetson(object):
         if controlCode in self._motor._motorCodes:
             return self._motor.issue(controlCode, self._arduino)
         elif "forward" in controlCode or "backward" in controlCode or "brake" in controlCode:
-            print 'motor operand'
             return self._motor.movement(controlCode)
         elif "brightness" in controlCode:
             return self._led.issue(self._arduino, controlCode)
@@ -197,26 +194,22 @@ class Jetson(object):
         """
         telemetry = None
 
-        if self._pauseTelemetry == False:
-            logger.debug("Generating Telemetry...")
-            telemetry = self._mars.generateTelemetry()
-    
-            if telemetry is not None:
-                #inject telemetry updates
-                telemetry.update(self._watchdog.watch(telemetry))
-                telemetry["Valmar"] = self._valmar.getBeamGapData()
-                if telemetry["Valmar"] is not None:
-                    logger.debug('Valmar hit next beam')
-                logger.debug("Displaying Telemetry...")
-                #the logger sends the data over tcp
-                telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
-                logger.debug("Saving telemetry...")
-                self.saveStats(self._mars._telemetry)
-    
-                #Set the integ time to the time of the last read for calculations
-            else:
-                self._arduino.flushBuffers()
-                pass
+        logger.debug("Generating Telemetry...")
+        telemetry = self._mars.generateTelemetry()
+
+        if telemetry is not None:
+            #inject telemetry updates
+            telemetry.update(self._watchdog.watch(telemetry))
+            telemetry["Valmar"] = self._valmar.getBeamGapData()
+            if telemetry["Valmar"] is not None:
+                logger.debug('Valmar hit next beam')
+            logger.debug("Displaying Telemetry...")
+            #the logger sends the data over tcp
+            telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
+            logger.debug("Saving telemetry...")
+            self.saveStats(self._mars._telemetry)
+
+            #Set the integ time to the time of the last read for calculations
             self._mars._integTime = time.time()
         else:
             i = 0
@@ -359,25 +352,35 @@ class Jetson(object):
 
     def hibernate(self):
         """
-        TODO: Hibernate function for Jetson
+        Hibernate function for Jetson
         :return:
         """
         self._pinHash['motorRelay'].toggleOff()
-        logger.warning("Motor circuit opened")
+        logger.warning("Toggle motorRelay off")
         self._pinHash['ledRelay'].toggleOff()
-        logger.warning("Led circuit opened")
+        logger.warning("Toggle ledRelay off")
+        #depricated
         self._pinHash['laserRelay'].toggleOff()
-        logger.warning("Laser circuit opened")
+        logger.warning("Toggle laser relay off")
         self._stream.close()
         logger.warning("Closing video stream")
         self._valmar.disable()
         logger.warning("Pausing VALMAR gap measurement system")
 
-        self._pauseTelemetry = True
-        logger.warning("Pausing telemetry")
+        logger.warning("Send the command \"wake\" to enable all disabled components")
 
-        logger.warning("System hibernating")
-
+    def wake(self):
+        """
+        Inverse hibration function for Jetson
+        :return:
+        """
+        self._pinHash['motorRelay'].toggleOn()
+        self._pinHash['ledRelay'].toggleOn()
+        #depricated
+        self._pinHash['laserRelay'].toggleOn()
+        self._stream.open()
+        self._valmar.enable()
+        logger.info("Toggled On all relays, started maven and valmar!")
 
     def resume(self):
         """
