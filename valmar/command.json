@@ -44,7 +44,7 @@
   },
   "command": {
     "refresh_frame_interval": 10,
-    "enabled": false
+    "enabled": true 
   },
   "ximea_cameras": {
     "right": "12531150",

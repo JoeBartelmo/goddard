@@ -102,7 +102,10 @@ class Motor(object):
             self.write()
             
         elif "brake" == splitCodes[0]:
-            self.brake()
+            if len(splitCodes) == 2:
+                self.toggleBrake(myCode)
+            else:
+                self.toggleBrake()
         else:
             return logger.warning("Speed must be 0-9. Direction must be forward or backward.")
 
@@ -119,7 +122,7 @@ class Motor(object):
 
         self.write()
 
-    def toggleBrake(self, myCode):
+    def toggleBrake(self, myCode = None):
         """
         Toggles the brake
         :param myCode:
@@ -129,6 +132,13 @@ class Motor(object):
             self._brake = 1
         elif myCode == 'brake off':
             self._brake = 0
+        elif myCode is None:
+            if self._brake == 0:
+                self._brake = 1
+            else
+                self._brake = 0
+        else:
+            return logger.warning("Invalid brake code. Should be 'brake on' or 'brake off'")
 
         self.write()
 
@@ -144,13 +154,13 @@ class Motor(object):
 
         self.write()
 
+    #@depricated
     def brake(self):
         """
         Hard brake setting
         :return:
         """
-        self._arduino.write("M0010")
-        logger.warning("Brake has been engaged")
+        toggleBrake()
 
     def write(self):
         """

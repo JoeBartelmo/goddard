@@ -33,6 +33,7 @@ mount -t ext4 /dev/sda1 /phobos
 #Adjust as needed
 pins=(57 160 161 162 163 164 165 166)
 cores=(0 1 2 3)
+serverDir="/phobos/goddard/server"
 
 #blows open permissions for all else
 chmod 777 -R "/sys/class/gpio"
@@ -54,5 +55,6 @@ for index in "${cores[@]}"; do
     echo "1" > "/sys/devices/system/cpu/cpu$index/online"
 done
 
+cd $serverDir; nohup python server.py >$serverDir/serverlog.txt &
 exit 0
 

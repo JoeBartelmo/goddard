@@ -53,9 +53,9 @@ int getScalarHistogram(const Mat& image, unsigned char upperRange) {
 }
 
 void writeToPipe(int pipe, vector<double> &array, double processingTime, int framesToProcess,
-        xiAPIplusCameraOcv *leftCam/*, xiAPIplusCameraOcv *rightCam*/, 
-        double displacementLeft/*, double displacementRight*/, int frameLeft
-        /*, int frameRight*/) {
+        xiAPIplusCameraOcv *leftCam, xiAPIplusCameraOcv *rightCam, 
+        double displacementLeft, double displacementRight, int frameLeft
+        , int frameRight) {
     json data;
     data["Enabled"] = settings.isEnabled();
     data["IbeamCounter"] = ++iBeamCounter;
@@ -71,7 +71,7 @@ void writeToPipe(int pipe, vector<double> &array, double processingTime, int fra
     data["Left"]["GammaY"] = (*leftCam).GetGammaLuminosity(); 
     data["Left"]["Gain"] = (*leftCam).GetGain();
     data["Left"]["PixelDisplacementRatio"] = displacementLeft;
-    /* 
+    
     data["Right"]["FrameNumber"] = frameRight;
     data["Right"]["Framerate"] = (*rightCam).GetFrameRate();
     data["Right"]["Exposure"] = (*rightCam).GetExposureTime(); 
@@ -79,7 +79,7 @@ void writeToPipe(int pipe, vector<double> &array, double processingTime, int fra
     data["Right"]["GammaY"] = (*rightCam).GetGammaLuminosity(); 
     data["Right"]["Gain"] = (*rightCam).GetGain();
     data["Right"]["PixelDisplacementRatio"] = displacementRight;
-    */
+    
     uint32_t length = (uint32_t)strlen(((string)data.dump()).c_str());
 #if !DEBUG
     write(pipe, (char*)(&length), sizeof(length));
@@ -88,6 +88,15 @@ void writeToPipe(int pipe, vector<double> &array, double processingTime, int fra
     printf("Size of %d would have been sent. along with: %s\n", (unsigned int)length, ((string)data.dump()).c_str());
 #endif
     array.clear();
+}
+
+void assignVariables(string loc, Mat &dist, Mat &camera, double *conversionFactor) {
+    FileStorage reader(loc, FileStorage::READ);
+    reader["distribution_coefficients"] >> dist;
+    reader["camera_matrix"] >> camera;
+    //reader["corners"] >> imagePoints;
+    reader["inches_conversion_factor"] >> *conversionFactor;
+    reader.release();
 }
 
 /**
@@ -128,22 +137,22 @@ int _tmain(int argc, _TCHAR* argv[]) {
 // ##################################
 // ############### CAPTURE CAMERAS #############
     xiAPIplusCameraOcv leftCam;
-    //xiAPIplusCameraOcv rightCam;
+    xiAPIplusCameraOcv rightCam;
 
     leftCam.OpenBySN(settings.getCamera(leftCamera));
-    //rightCam.OpenBySN(settings.getCamera(rightCamera));
+    rightCam.OpenBySN(settings.getCamera(rightCamera));
    
-    if (!checkFileExists(settings.getCoefficientLoc() + "left_calibration_coefficients.yml")/* || !checkFileExists(settings.getCoefficientLoc() + "right_calibration_coefficients.yml")*/) {
+    if (!checkFileExists(settings.getCoefficientLoc() + "left_calibration_coefficients.yml") || !checkFileExists(settings.getCoefficientLoc() + "right_calibration_coefficients.yml")) {
         printf("No camera calibration file found, run ./calibrate to generate calibration coefficients...\n");
         return EXIT_FAILURE;
     }
  
     //calculate maps for remapping
     assignSettings(settings, settingsFile, &leftCam);
+    assignSettings(settings, settingsFile, &rightCam);
     try {
-        printf("Starting acquisition...\n");
         leftCam.StartAcquisition();
-        //rightCam.startAcquisition();
+        rightCam.StartAcquisition();
     }
     catch(xiAPIplus_Exception& exp) {
         printf("Error occured on attempting to start acquisition\n");
@@ -157,32 +166,19 @@ int _tmain(int argc, _TCHAR* argv[]) {
     double leftConversionFactor, rightConversionFactor; 
     Rect leftCropRegion, rightCropRegion;
     
-    FileStorage reader(settings.getCoefficientLoc() + "left_calibration_coefficients.yml", FileStorage::READ);
-    reader["distribution_coefficients"] >> leftDistCoeffs;
-    reader["camera_matrix"] >> leftCameraMatrix;
-    //reader["corners"] >> imagePoints;
-    reader["inches_conversion_factor"] >> leftConversionFactor;
-    reader.release();
-
+    assignVariables(settings.getCoefficientLoc() + "left_calibration_coefficients.yml", leftDistCoeffs, leftCameraMatrix, &leftConversionFactor);
+    assignVariables(settings.getCoefficientLoc() + "right_calibration_coefficients.yml", rightDistCoeffs, rightCameraMatrix, &rightConversionFactor);
+    cout << leftDistCoeffs << endl << rightDistCoeffs << endl;
+    cout << leftCameraMatrix << endl << rightCameraMatrix << endl;
+    cout << leftConversionFactor << endl << rightConversionFactor << endl;
     //calculate maps for remapping
     initUndistortRectifyMap(leftCameraMatrix, leftDistCoeffs, Mat(),
             getOptimalNewCameraMatrix(leftCameraMatrix, leftDistCoeffs, imageSize, 1, imageSize, &leftCropRegion),
             imageSize, CV_16SC2, map1, map2);
 
-
-    /*uncomment when right camera hooked up
-    FileStorage reader(settings.getCoefficientLoc() + "right_calibration_coefficients.yml", FileStorage::READ);
-    reader["distribution_coefficients"] >> rightDistCoeffs;
-    reader["camera_matrix"] >> rightCameraMatrix;
-    //reader["corners"] >> imagePoints;
-    reader["inches_conversion_factor"] >> rightConversionFactor;
-    reader.release();
-
-    Mat right_correct_view, map3, map4;
     initUndistortRectifyMap(rightCameraMatrix, rightDistCoeffs, Mat(),
-            getOptimalNewCameraMatrix(leftCameraMatrix, rightDistCoeffs, imageSize, 1, imageSize, &rightCropRegion),
+            getOptimalNewCameraMatrix(rightCameraMatrix, rightDistCoeffs, imageSize, 1, imageSize, &rightCropRegion),
             imageSize, CV_16SC2, map3, map4);
-    */
 // ###############################################################
     int refresh_tick = 0;
     int hist;
@@ -190,7 +186,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
     vector<double> temp_distances = vector<double>();
     bool threshold_triggered = false;
 
-    register Mat leftFrame, horizontal_left, horizontal_right, ROI;//, rightFrame;
+    register Mat leftFrame, horizontal_left, horizontal_right, ROI, rightFrame;
     Mat undistortLeft, undistortRight;
     printf("Beginning valmar...\n");
 
@@ -203,9 +199,10 @@ int _tmain(int argc, _TCHAR* argv[]) {
         // getting image from camera
         try {
             leftFrame = leftCam.GetNextImageOcvMat();
-            //rightFrame = rightCam.getNextImageOcvMat();
+            rightFrame = rightCam.GetNextImageOcvMat();
             leftCount++;
             rightCount++;
+            //we only need to do histogram for one side
             hist = (getScalarHistogram(leftFrame, settings.getHistogramMax()));// + getScalarHistogram(rightFrame)) / 2;
             if (hist >= settings.getThreshold()) {
                 if (!threshold_triggered) {
@@ -216,17 +213,18 @@ int _tmain(int argc, _TCHAR* argv[]) {
                 printf("Histogram threshold of %d reached threshold of %d\n", hist, settings.getThreshold());
                 //undistortImages
                 remap(leftFrame, undistortLeft, map1, map2, INTER_LINEAR); // remap using previously calculated maps
-                
                 ROI = Mat(undistortLeft, leftCropRegion);
                 ROI.copyTo(undistortLeft);
-                //remap(rightFrame, undistortRight, map3, map4, INTER_LINEAR); // remap using previously calculated maps
 
-                //ROI(undistortLeft, leftCropRegion);
-                //ROI.copyTo(undistortLeft);
-                horizontal_left = retrieveHorizontalEdges(undistortLeft, settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
+                remap(rightFrame, undistortRight, map3, map4, INTER_LINEAR); // remap using previously calculated maps
+                ROI = Mat(undistortRight, rightCropRegion);
+                ROI.copyTo(undistortRight);
+
+                horizontal_left = retrieveHorizontalEdges(undistortLeft, "left", settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
                                         settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(1), settings.getDilationMat(1));
-                //horizontal_right = retrieveHorizontalEdges(undistortRight,255, settings.getHistogramMax() + 5);
-                if(calculateRawDistances(horizontal_left, temp_distances, settings.getHoughLineMaxGap(), leftConversionFactor)) {
+                horizontal_right = retrieveHorizontalEdges(undistortRight, "right", settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
+                                        settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(1), settings.getDilationMat(1));
+                if(calculateRawDistances(horizontal_left, horizontal_right, temp_distances, settings.getHoughLineMaxGap(), leftConversionFactor)) { 
                     //succesfully calculated distances
                     if (temp_distances.size() > distances.size()) {
                         distances = temp_distances;
@@ -240,9 +238,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
                 end = std::chrono::system_clock::now();
                 std::chrono::duration<double> elapsed_seconds = end-start;
                 writeToPipe(pipe, distances, elapsed_seconds.count(), totalFrames,
-                        &leftCam/*, &rightCam*/, 
-                        leftConversionFactor/*, rightConversionFactor*/, leftFrameNumber
-                        /*, rightFrameNumber*/);
+                        &leftCam, &rightCam, 
+                        leftConversionFactor, rightConversionFactor, leftFrameNumber
+                        , rightFrameNumber);
                 totalFrames = 0;
                 temp_distances.clear();
             }
@@ -254,6 +252,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
         }
         if (refresh_tick >= settings.getRefreshInterval()) {
             assignSettings(settings, settingsFile, &leftCam);
+            assignSettings(settings, settingsFile, &rightCam);
             refresh_tick = 0;
         }
         refresh_tick++;
@@ -261,9 +260,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
     
     printf("Detected enabled was set to false, stopping valmar.\n");
     leftCam.StopAcquisition();
-    //rightCam.StopAcquisition();
+    rightCam.StopAcquisition();
     leftCam.Close();
-    //rightCam.Close();
+    rightCam.Close();
     printf("Done\n");
 }
 

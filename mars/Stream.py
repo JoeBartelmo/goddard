@@ -41,7 +41,7 @@ class Stream (object):
         if (self._init):
             self.close()
         logger.info('re-initializing steam with new inputs')
-        newCall = 'nohup' + ' node '+ self._indexPath + ' -i ' + self._clientIp + ' -f ' + self._logPath + ' >/dev/null 2>&1 &'
+        newCall = 'nohup sudo ' + self._config.maven.node +  ' '+ self._indexPath + ' -i ' + self._clientIp + ' -f ' + self._logPath + ' >/dev/null 2>&1 &'
         logger.info('Launching Maven with: ' + newCall)
 
         subprocess.call([newCall], shell=True)
@@ -61,10 +61,9 @@ class Stream (object):
         """
         if (self._init):
             logger.info('closing stream')
-            subprocess.call(["node " + self._indexPath + " --close"], shell=True)
+            subprocess.call(['sudo ' + self._config.maven.node +  ' ' + self._indexPath + " --close"], shell=True)
             self._init = False
         else:
-            print("Stream not running")
             logger.info("Stream not running")
 
 def RepresentsInt(s):
