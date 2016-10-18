@@ -88,14 +88,13 @@ if __name__ == '__main__':
 
     #Queues responsible for communicating between GUI and this socket client
     guiTelemetryInput = Queue()
-    guiDebugTelemetryInput = Queue()
     guiLoggingInput = Queue()
     guiOutput = Queue()
     guiBeamGapInput = Queue()
     destroyGUI = threading.Event()
 
     #thread responsibel for handling telemetry from mars
-    telemThread = ListenerThread([guiTelemetryInput, guiDebugTelemetryInput], serverAddr, TELEMETRY_PORT, logMode, 'Telemetry Receive', displayInConsole = False)
+    telemThread = ListenerThread(guiTelemetryInput, serverAddr, TELEMETRY_PORT, logMode, 'Telemetry Receive', displayInConsole = False)
     #thread responsible for handling mars logging
     debugThread = ListenerThread(guiLoggingInput, serverAddr, DEBUG_PORT, logMode, 'Logging Receive')
     #thread responsible for handling files sent from mars
@@ -116,7 +115,7 @@ if __name__ == '__main__':
     if cliMode:
         manager = ThreadManager(threads)
     else:
-        myGUI = GUI(guiOutput, guiLoggingInput, guiTelemetryInput, guiDebugTelemetryInput, guiBeamGapInput, destroyGUI, serverAddr)
+        myGUI = GUI(guiOutput, guiLoggingInput, guiTelemetryInput, guiBeamGapInput, destroyGUI, serverAddr)
         manager = ThreadManager(threads, myGUI)
     try:    
         # Send configuration data

@@ -28,9 +28,8 @@ class TelemetryWidget(tk.Frame):
 
     Args:
         parent: parent window
-        client_queue_in: get info from the client
     """
-    def __init__(self, parent, client_queue_in, client_queue_beam):
+    def __init__(self, parent):
         tk.Frame.__init__(self, parent, bd=2, relief='groove')
         self.parent = parent
 
@@ -44,7 +43,6 @@ class TelemetryWidget(tk.Frame):
         self.set_telemetry_ui()
 
         #start grabbing data
-        self.tthread = TelemetryThread(self, client_queue_in, client_queue_beam)
         self.update_telemetry_loop()
 
     def set_telemetry_ui(self, json_object = None):
@@ -83,13 +81,6 @@ class TelemetryWidget(tk.Frame):
                 self.values[key]
                 self.values[key]['text'] = self.telemetry_data[key]
         self.after(500, self.update_telemetry_loop)
- 
-    def quit_(self):
-        """ Customized quit function to allow for safe closure of processes. """
-        self.tthread.stop()
-        if self.tthread.is_alive():
-            self.tthread.join()
-        self.destroy()
     
     def load_keys(self, config_file):
         with open(config_file) as f:

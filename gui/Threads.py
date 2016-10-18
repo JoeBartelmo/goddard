@@ -106,11 +106,11 @@ class TelemetryThread(threading.Thread):
     So in this class I extract Valmar from the telemetry data and
     pipe it into a seperate queue.
     '''
-    def __init__(self, widget, client_queue, beam_gap_queue = None):
+    def __init__(self, widgets, client_queue, beam_gap_queue = None):
         super(TelemetryThread, self).__init__()
         self._queue = client_queue
         self._beam_gap_queue = beam_gap_queue
-        self._widget = widget
+        self._widget = widgets
         self._stop = threading.Event()
 
     def run(self):
@@ -118,7 +118,11 @@ class TelemetryThread(threading.Thread):
             try:
                 record = self._queue.get(False)
                 telemetryData = json.loads(record.msg)
-                self._widget.set_telemetry_data(telemetryData)
+                if isinstance(self._widget, list):
+                    for widget in self._widget:
+                        widget.set_telemetry_data(telemetryData)
+                else:
+                    self._widget.set_telemetry_data(telemetryData)
 
                 #extract valmar data and pipe it into beamgapqueue
                 if telemetryData["Valmar"] is not None and self._beam_gap_queue is not None:

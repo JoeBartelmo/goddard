@@ -49,6 +49,7 @@ class MainApplication(tk.Frame):
         self.client_queue_log = client_queue_log
         self.client_queue_telem = client_queue_telem
         self.client_queue_beam = client_queue_beam
+        
         #we found 720/640 to give the most aesthetic view
         self.imageHeight = 720 
         self.imageWidth = 640
@@ -64,9 +65,6 @@ class MainApplication(tk.Frame):
         self.fast = cv2.FastFeatureDetector()
         
         self.runStreams = False
-        
-        self.start_streams()
-        self.start_telemetry()
 
     def image_resize(self, event):
         '''
@@ -90,7 +88,7 @@ class MainApplication(tk.Frame):
 
         logger.info('Launching telemetry widget')
         # telemetry display widget
-        self.telemetry_w = TelemetryWidget(self, self.client_queue_telem, self.client_queue_beam)
+        self.telemetry_w = TelemetryWidget(self)
         self.telemetry_w.grid(row=0, column=1, sticky='nsew')
 
         logger.info('Launching Control Widget')
@@ -263,10 +261,6 @@ class MainApplication(tk.Frame):
         
         self.after(100, self.display_streams)
 
-    def start_telemetry(self):
-        """ after 5 seconds, start telemtry updates. """
-        self.telemetry_w.tthread.start()
-
     def close_(self):
         logger.info('GUI: Stopping all video streams...')
         self.runStreams = False 
@@ -277,7 +271,7 @@ class MainApplication(tk.Frame):
                 stream.join()
         logger.info('GUI destroying widgets...')
         #throw widgets in garbage
-        self.telemetry_w.quit_()
+        self.telemetry_w.destroy()
         self.command_w.destroy()
 
         logger.info('GUI Destorying main application box...')

@@ -92,7 +92,7 @@ class ListenerThread(threading.Thread):
                                 for q in self.qArr:
                                     q.put(record)
                             else:
-                                self.q.put(record)
+                                self.qArr.put(record)
                             self.lastLogEntry = record.msg
                         if self.displayInConsole:
                             logger.log(record.levelno, record.msg + ' (' + record.filename + ':' + str(record.lineno) + ')')
