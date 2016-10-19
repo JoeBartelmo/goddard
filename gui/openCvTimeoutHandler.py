@@ -63,7 +63,7 @@ class OpenCvCapture(threading.Thread):
     '''
     This Thread launches an _openCvCapture Thread and controls the timeout
     '''
-    def __init__(self, name, rtspLocation,timeout = 3.5):
+    def __init__(self, name, rtspLocation,timeout = 55555.5):
         super(OpenCvCapture, self).__init__()
         self.captureThread = _openCvCapture(name, rtspLocation)
         self.timeout = timeout

@@ -38,8 +38,14 @@ class VideoThread(threading.Thread):
         self._queue = queue
         self._stop = threading.Event()
         self._name = name
+        self._enable = threading.Event()
+        self.enable_display()
 
-        self.transformFunction = None
+    def enable_display(self):
+        self._enable.set()
+
+    def disable_display(self):
+        self._enable.clear()
 
     def run(self):
         #wait until timeout has been met before we attempt to connect
@@ -56,8 +62,8 @@ class VideoThread(threading.Thread):
 
                 if not flag:
                     continue
-                
-                self._queue.put(frame)
+                if self._enable.isSet():
+                    self._queue.put(frame)
 
             logger.debug('Killing Video Thread')
             self._vidcap.release()
@@ -85,9 +91,6 @@ class VideoThread(threading.Thread):
     def stop(self):
         self._stop.set()
    
-    def transform(self, func):
-        self.transformFunction = func
-
     def stopped(self):
         return self._stop.isSet()
 

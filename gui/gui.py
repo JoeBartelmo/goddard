@@ -73,6 +73,8 @@ class GUI(tk.Tk):
         self.menu_.add_menu_item('Center', self.mainApplication.focus_center, 'View/Camera Focus')
         self.menu_.add_menu_item('Right', self.mainApplication.focus_right, 'View/Camera Focus')
         self.menu_.add_menu_item('IBeam Display', self.beamGapGraph, 'View/Windows')
+        self.menu_.add_menu_item('Toggle FOD Enabled', self.mainApplication.toggle_fod, 'View/Object Detection')
+        self.menu_.add_menu_item('Set Ideal Images', self.mainApplication.define_ideal_images, 'View/Object Detection')
         ### 
         self.menu_.finalize_menu_items()
         self.config(menu=self.menu_)
@@ -91,14 +93,23 @@ class GUI(tk.Tk):
         #self.iconbitmap('@rit_imaging_team.xbm')
         #call destroyCallback on clicking X
         self.protocol('WM_DELETE_WINDOW', self.destroyCallback)
-         
-        self.geometry("900x500")
+        
+
+        #assign dimensions and locatin on screen
+        width = 900
+        height = 500
+ 
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        
         self.update()
 
     def killMars(self):
         '''
         Sends the kill command to Mars
         '''
+        logger.debug('GUI Killing Mars...')
         self.client_queue_cmd.put('exit')
 
     def displayMarsDisconnected(self):
@@ -106,14 +117,20 @@ class GUI(tk.Tk):
         self.destroyClient()
 
     def destroyClient(self):
+        logger.debug('GUI Killing Main App...')
         self.menu_.destroy() 
         self.mainApplication.close_()
+        logger.debug('GUI Killing Monitor app...')
+        self.monitor.destroy()
         self.notebook.destroy()
-        self.destroy()
+        logger.debug('GUI Killing Self...')
         self.killTelemThread()
+        logger.debug('GUI Dead')
+        self.destroy()
  
     def killTelemThread(self):
         """ Customized quit function to allow for safe closure of processes. """
+        logger.debug('GUI Killing Telemetry...')
         self.tthread.stop()
         if self.tthread.is_alive():
             self.tthread.join()
@@ -135,7 +152,7 @@ class GUI(tk.Tk):
         Function that launches the Beam Gap Widget that displays the current beam distances
         in readalbe form.
         '''
-        if getattr(self, top, False) == False:
+        if getattr(self, 'top', False) == False:
             self.top = BeamGapWidget(self, self.beam_gap_queue)
             self.top.title("VALMAR Beam Gap")
         else:
