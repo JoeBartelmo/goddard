@@ -126,6 +126,7 @@ class GUI(tk.Tk):
         logger.debug('GUI Killing Self...')
         self.killTelemThread()
         logger.debug('GUI Dead')
+        self.quit()
         self.destroy()
  
     def killTelemThread(self):

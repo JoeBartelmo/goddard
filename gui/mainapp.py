@@ -27,6 +27,7 @@ from TelemetryWidget import TelemetryWidget
 from ControlWidget import ControlWidget
 from img_proc.misc import *
 from img_proc.GlobalSurveyor import GlobalSurveyor
+import tkMessageBox
 
 import logging
 logger = logging.getLogger('mars_logging')
@@ -124,6 +125,7 @@ class MainApplication(tk.Frame):
         logger.warning('Piping ideal images to modules...')
         self.pause_acquisition()
         self.call_surveyor = False 
+        tkMessageBox.showinfo('For each Image do the following:\n\n1) Left click to select a point, continue to left click until you form a simple polygon, these polygons will be highlighted when a fod enters them\n\n2) Repeat this process until the window disappears')
         self.surveyors[0] = GlobalSurveyor(self.parent, left)
         self.surveyors[1] = GlobalSurveyor(self.parent, center)
         self.surveyors[2] = GlobalSurveyor(self.parent, right)
@@ -210,7 +212,6 @@ class MainApplication(tk.Frame):
                 return
 
             if self.runStreams == False:
-                self.runStreams = True
                 return
 
             if self.call_surveyor == True:
@@ -272,6 +273,7 @@ class MainApplication(tk.Frame):
                     s.stop()
                     s.join()
                     s = None
+            self.runStreams = True
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
         for camera in range(0, len(CAMERAS)):
@@ -297,7 +299,7 @@ class MainApplication(tk.Frame):
         logger.info('GUI destroying widgets...')
         #throw widgets in garbage
         self.telemetry_w.destroy()
-        self.command_w.destroy()
+        self.command_w.quit_()
 
         logger.info('GUI Destorying main application box...')
         self.destroy()

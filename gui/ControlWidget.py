@@ -43,6 +43,7 @@ class ControlWidget(tk.Frame):
         self.cmd_queue = client_queue_cmd
         self.log_queue = client_queue_log
         self.cmd = tk.StringVar()
+        self.runLoop = True
 
         self.init_ui()
         self.log_loop()
@@ -104,6 +105,8 @@ class ControlWidget(tk.Frame):
             self.log_output.highlight_pattern(record.msg, "red")            
 
     def log_loop(self):
+        if not self.runLoop:
+            return
         try:
             record = self.log_queue.get(timeout=.01)
             #print record, ' obtained from queue'
@@ -118,6 +121,7 @@ class ControlWidget(tk.Frame):
         self.after(100, self.log_loop)
 
     def quit_(self):
+        self.runLoop = False
         self.destroy()
 
 if __name__=='__main__':

@@ -52,7 +52,7 @@ class VideoThread(threading.Thread):
         #to a camera that may or may not exist
         logger.info('Attempting to start Vidcap on ' + self._name)
         while (self._openCvCapture.is_alive()):
-            time.sleep(0.01)
+            time.sleep(0.1)
         
         if self._openCvCapture.isConnected():
             self._vidcap = self._openCvCapture.getVideoCapture()
