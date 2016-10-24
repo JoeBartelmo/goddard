@@ -47,13 +47,13 @@ class Mars(object):
         self._marsOnlineQueue = marsOnlineQueue
 
         telemetry = {}
-        self._telemetry = telemetry
         telemetry.setdefault('TotalDistance', 0)
         telemetry.setdefault('IBeam', 0)
         telemetry.setdefault('IntervalDistance', 0)
         telemetry.setdefault('IntervalDisplacement', 0)
         telemetry.setdefault('TotalDisplacement', 0)
         telemetry.setdefault('BatteryRemaining', self._config.user_input.current_battery)
+        self._telemetry = telemetry
 
     def generateTelemetry(self):
         """
@@ -89,6 +89,7 @@ class Mars(object):
         self._telemetry['RunClock'] = round(time.time() - self._arduino._timeInit, 4)
         self._telemetry['Ping'] = self.checkConnection()
 
+        #pulling telemetry from raw arduino log
         rpm = rawArray[0]
         self._telemetry['RPM'] = float(rpm)
         sysV = rawArray[1]
@@ -97,6 +98,10 @@ class Mars(object):
         self._telemetry['SystemCurrent'] = float(sysI)
         sensorDistance = rawArray[3]
         self._telemetry['SensorDistance'] = sensorDistance
+        arduinoLog = rawArray[4]
+        self._telemetry['ArduinoLog'] = sensorDistance
+        arduinoRunClock = rawArray[5]
+        self._telemetry["ArduinoRunClock"] = arduinoRunClock
 
         speed = self.estimatedSpeed() #speed in m/s
         self._telemetry['Speed'] = speed
@@ -123,6 +128,7 @@ class Mars(object):
         self._telemetry['LedCircuit'] =  self._pinHash['ledRelay']._state
         self._telemetry['LaserCircuit'] = self._pinHash['laserRelay']._state
         return self._telemetry
+
 
     def estimatedSpeed(self):
         """
