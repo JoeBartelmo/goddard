@@ -55,7 +55,8 @@ int realReference = 512;
 //Watchdog
 bool watchdogEnabled = false;
 unsigned long watchdogTimer;
-unsigned long timeoutTime = 30000;
+unsigned long recallTime = 30000;
+unsigned long shutdownTime = 1200000;
 String recallCode = "M1005";
 
 //Timing
@@ -63,6 +64,9 @@ unsigned long lastTime = 0;
 
 //Logging
 String logs = "marsduino initated";
+
+//Memcheck Mode
+bool memCheck = false;
 
 
 
@@ -150,7 +154,10 @@ String retrieve_code(){
 }
 
 void process_code(String input){
-  
+  /*
+   * Processes Input Control codes
+   */
+   
   char codeArray[8]; //input string turned into an array
   input.toCharArray(codeArray, 6);
 
@@ -159,7 +166,7 @@ void process_code(String input){
 
   switch (first) {
     //Motor code
-    case 'M': {
+    case 'M': { /*Motor codes*/
         char enable = codeArray[1] == '0' ? LOW : HIGH;
         char reverse = codeArray[2] == '0' ? LOW : HIGH;
         char brake = codeArray[3] == '0' ? LOW : HIGH;
@@ -178,8 +185,8 @@ void process_code(String input){
         logs = "motor code set to level to " + input.substring(1);
         break;
       }
-    //LED code
-    case 'L': {
+
+    case 'L': { /*LED codes*/
         char ledValue = codeArray[1];
         int ledDutyCycle = int(charToInt(ledValue) * 25.5);
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
@@ -187,33 +194,46 @@ void process_code(String input){
         break;
       }
 
-    case 'R': {
+    case 'R': {/*reference voltage reset*/
       useRef = true;
       realReference = input.substring(1).toInt();
       logs = "Voltage Reference set to " + input.substring(1);
       break;
     }
-    case 'E': {
+    case 'E': {/*reference voltage disabled*/
       useRef = false;
       logs = "Voltage Reference disabled";
     }
-    case 'W': {
+    case 'W': {/*watchdog timer reset*/
       watchdogEnabled = true;
       watchdogTimer = 0;
       logs = "Watchdog Timer Reset";
       break;
     }
-    case 'Q': {
+    case 'Q': {/*watchdog timer disabled*/
       watchdogEnabled = false;
       logs = "Watchdog Timer Disabled";
+    }
+    case 'C': { /*memory mode enabled*/
+      memCheck = true;
+      logs = "Memory Check enabled";
+      break;
+    }
+    case 'X':{ /*memory mode disabled*/
+      memCheck = false;
+      logs = "Memory Check disabled";
+      break;
     }
   }
 }
 
-/**
-   Generates a DaqTelemetry object
-*/
+
 DaqTelemetry* daq()
+  /*
+   * acquires values from sensors via input pins and dervies the values in standard units 
+   * 
+   */
+
 {
   daqTelemetry = new DaqTelemetry();
   int voltageOffset;
@@ -261,12 +281,11 @@ DaqTelemetry* daq()
   return daqTelemetry;
 }
 
-
-/**
-   Send daqTelemtry data over the serial
-*/
-
 String distance_to_string(double distance){
+  /*
+   * converts doubles to a string type
+   */
+  
   String outputDistance = (String)distance;
     
   if(outputDistance == "-1") {
@@ -277,6 +296,11 @@ String distance_to_string(double distance){
 
 
 void save_and_send(DaqTelemetry *daqTelemetry)
+  /*
+   * compiles all the daqTelemetry, logs and runclock and forwards it along
+   * to the controlling computer
+   * 
+   */
 {
   String outputDistance = distance_to_string(daqTelemetry->distance);
   
@@ -289,28 +313,65 @@ void save_and_send(DaqTelemetry *daqTelemetry)
   Serial.println(daqString);
 }
 
-int update_watchdog_timer(){
+unsigned long update_watchdog_timer(){
+  /*
+   * updates the watchdog timer 
+   */
   watchdogTimer = watchdogTimer + ( millis() - lastTime );
   lastTime = millis();
   return watchdogTimer;
 }
 
+void memory_check(){
+  /*
+   * This function just prints out the current amount of free memory possessed by the arduino
+   * used only in troubleshooting scenarios
+   * 
+   * running this method with Goddard will effectively break the MARS controller
+   */
+  
+  Serial.print("freeMemory()=");
+  Serial.println(freeMemory()); 
+}
+
+
+void emergency_shutdown(){
+  /*
+   * This function shuts down the watchdog and turns all pins off (to effectively disengage the motor)
+   * 
+   * only used in the event that that the arduino has recieved no contact from MARS
+   * for a long duration. the arduino assumes that something catastrophic has happened 
+   * and MARS is stuck in the tube without any controlling software.
+   * 
+   */
+  watchdogEnabled = false;
+  memCheck = false;
+  digitalWrite(enablePin, LOW);
+  digitalWrite(revPin, LOW);
+  digitalWrite(brakePin, LOW);
+  digitalWrite(speedPin,LOW);
+  digitalWrite(ledPin,LOW);
+}
+
 void loop() {
-  Serial.println(watchdogTimer);
-  if (Serial.available() > 0) {
+ if (Serial.available() > 0) {
     process_code( retrieve_code() );
-  }
-  daqTelemetry = daq();
-  save_and_send(daqTelemetry);
+ }
+ daqTelemetry = daq();
+ save_and_send(daqTelemetry);
   
  update_watchdog_timer();
   if(watchdogEnabled == true){
-    if(watchdogTimer > timeoutTime){
+    if(watchdogTimer > recallTime){
       process_code( recallCode );
     }
+    else if(watchdogTimer > shutdownTime){
+      emergency_shutdown();
+    }
   }
-  Serial.print("freeMemory()=");
-  Serial.println(freeMemory());
+  if(memCheck == true){
+    memory_check();
+  }
   logs = "Null";
   delete daqTelemetry;
 }
