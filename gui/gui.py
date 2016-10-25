@@ -54,11 +54,11 @@ class GUI(tk.Tk):
         # menu
         self.menu_ = TopMenu(self, '../gui/operations.json', self.client_queue_cmd, 'Commands')
         ### Add custom commands here
-        self.menu_.add_menu_item('Refresh Streams', self.mainApplication.start_streams, None)
-        self.menu_.add_menu_item('Left Focus', self.mainApplication.focus_left, 'Camera')
-        self.menu_.add_menu_item('Center Focus', self.mainApplication.focus_center, 'Camera')
-        self.menu_.add_menu_item('Right Focus', self.mainApplication.focus_right, 'Camera')
-        self.menu_.add_menu_item('IBeam View', self.beamGapGraph, None)
+        self.menu_.add_menu_item('Reconnect to Cameras', self.mainApplication.start_streams, "View")
+        self.menu_.add_menu_item('Left', self.mainApplication.focus_left, 'View/Camera Focus')
+        self.menu_.add_menu_item('Center', self.mainApplication.focus_center, 'View/Camera Focus')
+        self.menu_.add_menu_item('Right', self.mainApplication.focus_right, 'View/Camera Focus')
+        self.menu_.add_menu_item('IBeam Display', self.beamGapGraph, 'View/Windows')
         ### 
         self.menu_.finalize_menu_items()
         self.config(menu=self.menu_)
@@ -71,13 +71,14 @@ class GUI(tk.Tk):
         #call destroyCallback on clicking X
         self.protocol('WM_DELETE_WINDOW', self.destroyCallback)
          
+        self.geometry("900x500")
         self.update()
 
     def killMars(self):
         '''
         Sends the kill command to Mars
         '''
-        self.client_queue_cmd.put(MARS_EXIT_COMMAND)
+        self.client_queue_cmd.put('exit')
 
     def displayMarsDisconnected(self):
         tkMessageBox.showerror('Lost connection to Mars', 'The client has lossed connection to mars, closing application.')

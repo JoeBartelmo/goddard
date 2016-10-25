@@ -20,26 +20,30 @@
         "options": ["on", "off"]
     },
     "Motor" : {
-        "command": "motors",
+        "command": "motor",
         "options": ["on", "off"]
     },
-    "System Shutdown" : {
-        "command": "system shutdown",
-        "options": null
+    "Power" : {
+        "command": "system",
+        "options": ["shutdown", "restart", "hibernate", "wake"]
+    },
+    "Automation" : {
+        "command": "scan",
+        "options": ["on", "off"]
     },
     "Recall" : {
         "command": "recall",
         "options": null
     },
-    "Lasers" : {
-        "command": "lasers",
+    "IBeam Gap Measurements" : {
+        "command": "valmar",
         "options": ["on","off"]
     },
     "LED" : {
         "command": "led",
         "options": ["on","off"]
     },
-    "Brightness" : {
+    "LED Brightness" : {
         "command": "brightness",
         "options": ["0","1","2","3","4","5","6","7","8","9"]
     },
@@ -49,14 +53,6 @@
     },
     "Hibernate" : {
         "command": "hibernate",
-        "options": null
-    },
-    "Start" : {
-        "command": "start",
-        "options": null
-    },
-    "Disconnect From Mars": {
-        "command": "exit",
         "options": null
     },
     "Watchdog" : {

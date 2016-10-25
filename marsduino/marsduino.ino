@@ -20,14 +20,14 @@
 #include "MemoryFree.h"
 #include "DaqTelemetry.h"
 
-//Defined as a global for memory 
+//Telemetry
 DaqTelemetry *daqTelemetry;
 
 //Motor
 int enablePin = 13; //enable/disable motor
 int revPin = 11; //seting fwd/rev
 int brakePin = 12; //brake pin
-int speedPin = 6; //speedPin
+int speedPin = 5; //speedPin
 int voltagePin = A0; //ammeter voltage pin
 int currentPin = A1; //ammeter current pin
 int encoderPin = A5; //pin for motor controller
@@ -35,20 +35,40 @@ int referencePin = A2; //reference Pin to compare against current, voltage and e
 boolean directionOfTravel;
 
 //LEDS
-int ledPin = 10;
+int ledPin = 9;
 
 //IRdistance sensors
 int frontIrPin = A3;
 int backIrPin = A4;
 int numSamples = 10;
 
-
 //Conversions
 double rpmMultiplier = 666.6;
 double voltageMultiplier = 0.076982;
 double currentMultiplier = 0.135135;
 double scaleOffset = 2.5;
+
+//Voltage Reference
+bool useRef = true;
 int realReference = 512;
+
+//Watchdog
+bool watchdogEnabled = false;
+unsigned long watchdogTimer;
+unsigned long recallTime = 30000;
+unsigned long shutdownTime = 1200000;
+String recallCode = "M1005";
+
+//Timing
+unsigned long lastTime = 0;
+
+//Logging
+String logs = "marsduino initated";
+
+//Memcheck Mode
+bool memCheck = false;
+
+
 
 
 void setup() {
@@ -71,6 +91,7 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
+
   //enabling the serial connection
   Serial.begin(9600);
 }
@@ -80,9 +101,7 @@ void setup() {
 
    @param c: character to be encoded
 */
-int charToInt(char c) {
-  return c - '0';
-}
+
 
 /**
    Computes the distance from "WALL-E" (a distance sensor)
@@ -122,9 +141,23 @@ double ir_distance(int irPin, int voltageOffset)
    Reads a string from serial input and parses based off of our format
    specified in our documentation, then executes given command.
 */
-void control_input()
-{
+
+
+
+int charToInt(char c) {
+  return int(c - '0');
+}
+
+String retrieve_code(){
   String input = Serial.readString();
+  return input;
+}
+
+void process_code(String input){
+  /*
+   * Processes Input Control codes
+   */
+   
   char codeArray[8]; //input string turned into an array
   input.toCharArray(codeArray, 6);
 
@@ -133,10 +166,10 @@ void control_input()
 
   switch (first) {
     //Motor code
-    case 'M': {
+    case 'M': { /*Motor codes*/
         char enable = codeArray[1] == '0' ? LOW : HIGH;
         char reverse = codeArray[2] == '0' ? LOW : HIGH;
-        char brake = codeArray[3] == '1' ? LOW : HIGH;
+        char brake = codeArray[3] == '0' ? LOW : HIGH;
         char speedValue = codeArray[4];
 
         digitalWrite(enablePin, enable); //ENABLE PIN(13)
@@ -149,31 +182,74 @@ void control_input()
 
         //Changing the global direction for reference in the DAQ
         directionOfTravel = codeArray[2] == '0' ? 0 : 1; // one is forwards, zero is backwards
+        logs = "motor code set to level to " + input.substring(1);
         break;
       }
-    //LED code
-    case 'L': {
+
+    case 'L': { /*LED codes*/
         char ledValue = codeArray[1];
         int ledDutyCycle = int(charToInt(ledValue) * 25.5);
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
+        logs = "LEDs set to level to " + String(ledValue);
         break;
       }
+
+    case 'R': {/*reference voltage reset*/
+      useRef = true;
+      realReference = input.substring(1).toInt();
+      logs = "Voltage Reference set to " + String(input.substring(1));
+      break;
+    }
+    case 'E': {/*reference voltage disabled*/
+      useRef = false;
+      logs = "Voltage Reference disabled";
+      break;
+    }
+    case 'W': {/*watchdog timer reset*/
+      watchdogEnabled = true;
+      watchdogTimer = 0;
+      logs = "Watchdog Timer Reset";
+      break;
+    }
+    case 'Q': {/*watchdog timer disabled*/
+      watchdogEnabled = false;
+      logs = "Watchdog Timer Disabled";
+      break;
+    }
+    case 'C': { /*memory mode enabled*/
+      memCheck = true;
+      logs = "Memory Check enabled";
+      break;
+    }
+    case 'X':{ /*memory mode disabled*/
+      memCheck = false;
+      logs = "Memory Check disabled";
+      break;
+    }
   }
 }
 
-/**
-   Generates a DaqTelemetry object
-*/
+
 DaqTelemetry* daq()
+  /*
+   * acquires values from sensors via input pins and dervies the values in standard units 
+   * 
+   */
+
 {
   daqTelemetry = new DaqTelemetry();
-
-  //generating an offset based off of the reference voltage sent from motor controller
-  double referenceVoltage = analogRead(referencePin);
-  int voltageOffset = 0; //realReference - referenceVoltage;      //currently depreciated until we can get an accurate voltmeter
-    
+  int voltageOffset;
+  if(useRef == true){
+    //generating an offset based off of the reference voltage sent from motor controller
+    double referenceVoltage = analogRead(referencePin);
+    voltageOffset = int(realReference - referenceVoltage);
+  }  
+  else{
+    voltageOffset = 0;
+  }
+  
   //Motor Calculations
-  double encoderVoltage = (analogRead(encoderPin)+voltageOffset)*.0049; //.0049 convert to real voltage values
+  double encoderVoltage = ( analogRead(encoderPin) + voltageOffset ) * 0.0049; //.0049 convert to real voltage values
   double scaledVoltage = encoderVoltage - scaleOffset;
   double finalRpm = scaledVoltage * rpmMultiplier;
   
@@ -207,12 +283,11 @@ DaqTelemetry* daq()
   return daqTelemetry;
 }
 
-
-/**
-   Send daqTelemtry data over the serial
-*/
-
 String distance_to_string(double distance){
+  /*
+   * converts doubles to a string type
+   */
+  
   String outputDistance = (String)distance;
     
   if(outputDistance == "-1") {
@@ -223,30 +298,83 @@ String distance_to_string(double distance){
 
 
 void save_and_send(DaqTelemetry *daqTelemetry)
+  /*
+   * compiles all the daqTelemetry, logs and runclock and forwards it along
+   * to the controlling computer
+   * 
+   */
 {
   String outputDistance = distance_to_string(daqTelemetry->distance);
   
   String daqString = String(daqTelemetry->systemRpm) + "," +
                      String(daqTelemetry->systemVoltage) + "," +
                      String(daqTelemetry->systemCurrent) + "," +
-                     outputDistance;
+                     String(outputDistance) + "," +
+                     logs + "," +
+                     (millis() / 1000.0 );
   Serial.println(daqString);
 }
 
-/**
-   TBD
-*/
+unsigned long update_watchdog_timer(){
+  /*
+   * updates the watchdog timer 
+   */
+  watchdogTimer = watchdogTimer + ( millis() - lastTime );
+  lastTime = millis();
+  return watchdogTimer;
+}
 
+void memory_check(){
+  /*
+   * This function just prints out the current amount of free memory possessed by the arduino
+   * used only in troubleshooting scenarios
+   * 
+   * running this method with Goddard will effectively break the MARS controller
+   */
+  
+  Serial.print("freeMemory()=");
+  Serial.println(freeMemory()); 
+}
+
+
+void emergency_shutdown(){
+  /*
+   * This function shuts down the watchdog and turns all pins off (to effectively disengage the motor)
+   * 
+   * only used in the event that that the arduino has recieved no contact from MARS
+   * for a long duration. the arduino assumes that something catastrophic has happened 
+   * and MARS is stuck in the tube without any controlling software.
+   * 
+   */
+  watchdogEnabled = false;
+  memCheck = false;
+  digitalWrite(enablePin, LOW);
+  digitalWrite(revPin, LOW);
+  digitalWrite(brakePin, LOW);
+  digitalWrite(speedPin,LOW);
+  digitalWrite(ledPin,LOW);
+}
 
 void loop() {
-  if (Serial.available() > 0) {
-    control_input();
+ if (Serial.available() > 0) {
+    process_code( retrieve_code() );
+ }
+ daqTelemetry = daq();
+ save_and_send(daqTelemetry);
+  
+ update_watchdog_timer();
+  if(watchdogEnabled == true){
+    if(watchdogTimer > recallTime){
+      process_code( recallCode );
+    }
+    else if(watchdogTimer > shutdownTime){
+      emergency_shutdown();
+    }
   }
-  //Solve serial buffer problem
-  daqTelemetry = daq();
-  save_and_send(daqTelemetry);
+  if(memCheck == true){
+    memory_check();
+  }
+  logs = "Null";
   delete daqTelemetry;
-  //Serial.print("freeMemory()=");
-  //Serial.println(freeMemory());
 }
 

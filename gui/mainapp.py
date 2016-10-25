@@ -50,7 +50,7 @@ class MainApplication(tk.Frame):
         self.client_queue_telem = client_queue_telem
         self.client_queue_beam = client_queue_beam
         #we found 720/640 to give the most aesthetic view
-        self.imageHeight  = 720 
+        self.imageHeight = 720 
         self.imageWidth = 640
         
         self.destroy_event = destroy_event
@@ -159,7 +159,7 @@ class MainApplication(tk.Frame):
             cv2.putText(big_frame, r_text, topright, font, 0.5, (255,0,0), 1)
 
         if self.stream_active.get() == 0:  # left focus
-            setText('Center', 'Lefta', 'Right')
+            setText('Center', 'Left', 'Right')
         #default
         elif self.stream_active.get() == 1:  # center focus
             setText('Left', 'Center', 'Right')

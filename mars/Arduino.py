@@ -47,6 +47,8 @@ class Arduino(object):
         self._arduino_pin = GpioPin(57)
         self._arduinoPath = None
 
+        self._timeSinceLastWatchdogReset = 10
+
         try:
             logger.info("Attempting to connect Arduino")
             if self.attemptConnection() == False:
@@ -116,6 +118,46 @@ class Arduino(object):
         :return:
         """
         self._wrapFunctionRetryOnFail(self._controller.write, arg = controlCode)
+
+
+    def resetWatchdogTimer(self):
+    	"""
+		writes control code to the arduino that will reset the watchdog timer
+		"""
+		logger.info("reseting arduino watchdog timer")
+    	self.write("W")
+
+    def enableWatchdogTimer(self):
+    	"""
+    	enables the arduino watchdog timer -- same as reseting but included for redundency
+    	"""
+    	self.resetWatchdogTimer()
+
+    def disableWatchdogTimer(self):
+    	"""
+		writes control code to the arduino that will reset the watchdog timer
+		"""
+		logger.critical("disabling arduino watchdog timer")
+    	self.write("Q")
+
+    def updateReferenceVoltage(self,refV):
+    	"""
+    	writes the control code to the arduino that will update the default reference voltage
+    	"""
+    	refV = int(refV * 204.8)
+    	refV = 1024 if (refV > 1024) else refV
+
+    	refCode = "R{0}".format(refV)
+    	logger.warning("updating arduino reference voltage to {0} (1024 is 5Volts)".format(refV))
+    	self.write(refCode)
+
+    def disableReferenceVoltage(self):
+    	"""
+    	disables the arduino reference voltage -- ie arduino now assumes that the voltages
+    	it's reading are 100% correct
+    	"""
+    	logger.warning("disabling arduino reference voltage")
+    	self.write("Q")
 
     def inWaiting(self):
         """
