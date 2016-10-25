@@ -190,19 +190,20 @@ void process_code(String input){
         char ledValue = codeArray[1];
         int ledDutyCycle = int(charToInt(ledValue) * 25.5);
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
-        logs = "LEDs set to level to " + ledValue;
+        logs = "LEDs set to level to " + String(ledValue);
         break;
       }
 
     case 'R': {/*reference voltage reset*/
       useRef = true;
       realReference = input.substring(1).toInt();
-      logs = "Voltage Reference set to " + input.substring(1);
+      logs = "Voltage Reference set to " + String(input.substring(1));
       break;
     }
     case 'E': {/*reference voltage disabled*/
       useRef = false;
       logs = "Voltage Reference disabled";
+      break;
     }
     case 'W': {/*watchdog timer reset*/
       watchdogEnabled = true;
@@ -213,6 +214,7 @@ void process_code(String input){
     case 'Q': {/*watchdog timer disabled*/
       watchdogEnabled = false;
       logs = "Watchdog Timer Disabled";
+      break;
     }
     case 'C': { /*memory mode enabled*/
       memCheck = true;
