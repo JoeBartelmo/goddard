@@ -135,7 +135,7 @@ class Motor(object):
         elif myCode is None:
             if self._brake == 0:
                 self._brake = 1
-            else
+            else:
                 self._brake = 0
         else:
             return logger.warning("Invalid brake code. Should be 'brake on' or 'brake off'")
@@ -160,7 +160,7 @@ class Motor(object):
         Hard brake setting
         :return:
         """
-        toggleBrake()
+        self.toggleBrake('brake on')
 
     def write(self):
         """

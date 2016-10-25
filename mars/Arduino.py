@@ -60,6 +60,8 @@ class Arduino(object):
     def serial_readline(self):
         """
         This method manages pulling the raw data off the arduino.
+        
+        Update: This method also will send 'W' to the arduino so it knows the software has not failed.
         :return:
         """
         
@@ -72,13 +74,14 @@ class Arduino(object):
                 waitTime = time.time() - waitStart
             elif waitTime >= timeout:
                 logger.error("No data coming from arduino before timeout")
-                break;
+                break
         
         # added short delay just in case data was in transit
         time.sleep(.001)
 
         # read telemetry sent by Arduino
         serialData = self._wrapFunctionRetryOnFail(self._controller.readline)
+
         # flushing in case there was a buildup
         self.flushInput()
         return serialData
@@ -175,7 +178,7 @@ class Arduino(object):
                     if hasattr(err, '__module__') == False or err.__module__ != 'termios':
                         logger.warning('Unknown Error raised: ' + str(vars(err)));
                         raise err
-            if onFail != None:
+            if onFail is not None:
                 return onFail()
             elif self._init == False:
                 logger.error('Arduino Connection is not established')

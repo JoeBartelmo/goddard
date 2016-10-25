@@ -18,6 +18,7 @@
 import logging
 import threading
 import sys
+import time
 
 logger = logging.getLogger('mars_logging')
 
@@ -28,13 +29,33 @@ class TelemetryThread(threading.Thread):
         self._stop = threading.Event()
 
     def run(self):
-        while self.stopped() is False:
+        while self.stopped() == False:
             self._jetson.telemetryController()
         logger.info('Telemetry thread Stopped')
 
     def stop(self):
         self._stop.set()
    
+    def stopped(self):
+        return self._stop.isSet()
+
+class WatchdogUpdate(threading.Thread):
+    def __init__(self, arduino, interval = 9):
+        super(WatchdogUpdate, self).__init__()
+        self._jetson = jetson
+        self._stop = threading.Event()
+        self._interval = interval
+
+    def run(self):
+        while self.stopped == False:
+            #send w to arduino
+            logger.debug('Sending W to update arduino watchdog timer')
+            time.sleep(interval)
+        logger.info('Watchdog update thread Stopped')
+
+    def stop(self):
+        self._stop.set()
+
     def stopped(self):
         return self._stop.isSet()
 

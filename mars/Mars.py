@@ -206,8 +206,6 @@ class Mars(object):
 
         return intervalDisplacement,totalDisplacement
 
-
-
     def batteryRemaining(self,power=None, time = None):
         """
         battery_remaining(power *optional*, time *optional*)::
