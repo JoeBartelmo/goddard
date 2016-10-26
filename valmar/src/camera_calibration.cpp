@@ -100,34 +100,27 @@ static bool runCalibration( Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
     return ok;
 }
 
-double distance(Point2f point1, Point2f point2){
+double pix_distance(Point2f point1, Point2f point2){
 // return euclidean distance between two points
     return sqrt(pow((point2.x - point1.x), 2) + pow((point2.y - point1.y), 2));
 }
 
 double get_pixel_distance(vector<Point2f> imagePoints, Size boardSize) {
     double sum_pixel_dist = 0.0;
-    int samples = 0, index1, index2;
+    double samples = 0;
+    int index1, index2; 
 
     for (int i = 0; i < boardSize.height; ++i) {
-        for (int j = 0; j < boardSize.width - 1; ++j) {
-            index1 = i * boardSize.height + j;
-            index2 = i * boardSize.height + (j + 1);
-            sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
+        for (int j = 0; j < boardSize.width; ++j) {
+            index1 = j * boardSize.width + i;
+            index2 = (j + 1) * boardSize.width + i;
+            sum_pixel_dist += pix_distance(imagePoints[index1], imagePoints[index2]);
             samples++;
         }
     }
 
-    for (int k = 0; k < boardSize.height - 1; ++k) {
-        for (int l = 0; l < boardSize.width; ++l) {
-            index1 = k * boardSize.height + l;
-            index2 = (k + 1) * boardSize.height + l;
-            sum_pixel_dist += distance(imagePoints[index1], imagePoints[index2]);
-            samples++;
-        }
-    }
-
-    return sum_pixel_dist / samples;
+    double d = sum_pixel_dist / samples;
+    return d > 1000 ? -1 : d;
 }
 
 int main(int argc, char* argv[])
@@ -256,7 +249,7 @@ int main(int argc, char* argv[])
     //get corners
     vector<Point2f> rectified_points;
     double average_pixel_distance = 0.0;
-    int samples = 0;
+    double samples = 0;
     
     c = (char)waitKey(30);
     while(c != 'q' && c != 'Q') {   
@@ -270,21 +263,22 @@ int main(int argc, char* argv[])
             printf("Frame Grabbed\n");
             imageSize = rview.size();  // Format input image.
 
-            cout << boardSize << endl;
             bool found = findChessboardCorners( rview, boardSize, rectified_points,
                 CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
 
             if (found) {
                 printf("Chessboard Found\n");
-                for(int i=0; i<rectified_points.size(); ++i)
-                     std::cout << rectified_points[i] << " \n";
                 cornerSubPix( rview, rectified_points, Size(11,11),
                     Size(-1,-1), TermCriteria( CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 30, 0.1 ));
                 
                 //then calculate average pixel length of a side of the checkerboard
 
-                average_pixel_distance += get_pixel_distance(rectified_points, boardSize);
+                double pd = get_pixel_distance(rectified_points, boardSize);
+                //printf("Blah: %f\n", pd);
+                if ( pd > 0){
+                average_pixel_distance += pd;
                 samples++;
+                }
             }
         }  
         if (refresh_tick >= settings.getRefreshInterval()) {
@@ -293,7 +287,7 @@ int main(int argc, char* argv[])
         }
         refresh_tick++;
     }
-    average_pixel_distance = average_pixel_distance / (double)samples;
+    average_pixel_distance = average_pixel_distance / samples;
     printf("Average Pixel Distance: %f\n", average_pixel_distance);
 
     double real_side_length = settings.getPixelConversionFactor(); // in inches
