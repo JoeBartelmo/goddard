@@ -47,6 +47,11 @@
     "distance_warning": 10,
     "distance_critical": 5
   },
+  "arduino": {
+    "using_watchdog_timer":true,
+    "reference_voltage":2.50,
+    "update_time_s": 9
+  },
   "constants": {
     "baud_rate": 9600,
     "timeout": 10,

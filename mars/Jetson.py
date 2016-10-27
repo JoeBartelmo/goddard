@@ -17,7 +17,7 @@
 
 from GpioPin import GpioPin
 from Watchdog import Watchdog
-from Threads import TelemetryThread
+from Threads import *
 from Valmar import Valmar
 from GraphUtility import GraphUtility
 import logging
@@ -44,6 +44,8 @@ class Jetson(object):
         self._devices['Watchdog'] = Watchdog(config, self._devices['Arduino'], self._devices['Mars'], self._pinHash)
         self.initDevices()
         self._statsT = TelemetryThread(self)
+        if config.arduino.using_watchdog_timer == True:
+            self._watchdogT = WatchdogUpdate(self._arduino, config.arduino.update_time_s)
         self.initCommands()
 
         self._exit = False
@@ -101,8 +103,21 @@ class Jetson(object):
                                 'valmar on': self._valmar.enable,
                                 'scan on': self.scan,
                                 'scan off': self._watchdog.scanDisable,
+                                'watchdogtimer on': self.startWatchdogThread,
+                                'watchdogtimer off': self.stopWatchdogThread,
                                 'help': self.listCommands
                              }
+
+    def startWatchdogThread(self):
+        if hasattr(self, '_watchdogT', None) is None:
+            logger.info('Starting watchdog timer thread...')
+            self._watchdogT = WatchdogUpdate(self._arduino, self._config.arduino.update_time_s)
+            
+    def stopWatchdogThread(self):
+        if hasattr(self, '_watchdogT', None) is not None:
+            logger.info('Stopping watchdog timer thread...')
+            self._watchdogT.stop()
+            self._watchdogT = None
 
     def listCommands(self):
         logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
@@ -118,6 +133,7 @@ class Jetson(object):
                     "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
                     "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
                     "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
+                    "watchdogtimer [on|off]:\tIf on, will send repeated pulse every 10 seconds to arduino.\n" + \
                     "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
                     "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
                     "list logs:\t\tDisplay all logs for all teams\n" + \
@@ -259,6 +275,8 @@ class Jetson(object):
 
                 try:
                     self._statsT.start()
+                    if getattr(self, '_watchdogT', None) is not None:
+                        self._watchdogT.start()
                     self.inputLoop()
                 except Exception as e:
                     logger.error("error starting threads ({})".format(e))
@@ -266,6 +284,8 @@ class Jetson(object):
                 logger.info("Attempting to stop threads")
 
                 try:
+                    if getattr(self, '_watchdogT', None) is not None:
+                        self._watchdogT.stop()
                     self._statsT.stop()
                 except Exception as e:
                     logger.error("error stopping threads ({})".format(e))

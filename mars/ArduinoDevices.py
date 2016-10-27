@@ -16,7 +16,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import logging
-
+import re
 logger = logging.getLogger('mars_logging')
 
 class LED(object):
@@ -37,10 +37,11 @@ class LED(object):
         :return:
         """
         self._arduino = arduino
-        splitCode = controlCode.split(' ')
-
-        if len(splitCode) == 2 and 'brightness' == splitCode[0] and RepresentsInt(controlCode[1]):
-            self._brightness = controlCode[1] 
+        splitCode = re.split(" ",controlCode)
+        logger.info("preparing to issue LED command...")
+        if len(splitCode) == 2 and 'brightness' == splitCode[0] and RepresentsInt(splitCode[1]):
+            self._brightness = splitCode[1] 
+            logger.info("command issued to LEDs")
             self.write()
 
     def write(self):
@@ -51,6 +52,7 @@ class LED(object):
         command = 'L' + str(self._brightness)
         self._arduino.write('L' + str(self._brightness))
         self._lastCommand = command
+        logger.info('writing LED code {0} to arduino '.format(command))
 
 class Motor(object):
     """
@@ -73,7 +75,7 @@ class Motor(object):
         :return:
         """
         self._arduino = arduino
-
+        logger.info("preparing to issue motion command...")
         if myCode in ('motor on', 'motor off'):
             self.toggleMotor(myCode)
         elif myCode in ('brake on', 'brake off'):
@@ -129,7 +131,10 @@ class Motor(object):
         :return:
         """
         if myCode == 'brake on':
+            self._enabled = 0
+            self._direction = 0
             self._brake = 1
+            self._speed = 0
         elif myCode == 'brake off':
             self._brake = 0
         elif myCode is None:
@@ -174,7 +179,10 @@ class Motor(object):
 
 def RepresentsInt(s):
     try:
-        int(s)
-        return True
-    except ValueError:
+        integ = int(s)
+        if integ in range(10): 
+            return True
+    except Exception:
+        logger.warning("input not integer or out of range [usually between 0 and 9]")
         return False
+

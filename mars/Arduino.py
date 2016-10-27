@@ -122,9 +122,9 @@ class Arduino(object):
 
     def resetWatchdogTimer(self):
     	"""
-		writes control code to the arduino that will reset the watchdog timer
-		"""
-		logger.info("reseting arduino watchdog timer")
+        writes control code to the arduino that will reset the watchdog timer
+        """
+        logger.debug("reseting arduino watchdog timer")
     	self.write("W")
 
     def enableWatchdogTimer(self):
@@ -135,9 +135,9 @@ class Arduino(object):
 
     def disableWatchdogTimer(self):
     	"""
-		writes control code to the arduino that will reset the watchdog timer
-		"""
-		logger.critical("disabling arduino watchdog timer")
+        writes control code to the arduino that will reset the watchdog timer
+        """
+        logger.critical("disabling arduino watchdog timer")
     	self.write("Q")
 
     def updateReferenceVoltage(self,refV):

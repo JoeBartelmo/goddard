@@ -188,7 +188,7 @@ void process_code(String input){
 
     case 'L': { /*LED codes*/
         char ledValue = codeArray[1];
-        int ledDutyCycle = int(charToInt(ledValue) * 25.5);
+        int ledDutyCycle = int(charToInt(ledValue) * 25.5); //converts input ao a 0-255 scale
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
         logs = "LEDs set to level to " + String(ledValue);
         break;
