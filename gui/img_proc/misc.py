@@ -17,6 +17,29 @@
 import cv2
 import numpy
 
+def apply_equalization(image, clip = 2.0, roi = (8,8)): # image needs to be read in as cv2.imread(image, 1)
+    '''
+    Equalization helps with the visual output by increasing image contrast
+    in an adaptive way and improves keypoint detection in low contrast
+    scenarios.
+
+    image is array of uint8 type
+
+    clip is of type float
+        USAGE ::   value of 1.0 is subtle, value of 4.0 or 5.0 will be harsh
+
+    roi is a tuple containing two ints representing the roi to be operated on
+        USAGE ::   should be of form (n, m)
+    '''
+
+    clahe = cv2.createCLAHE(clipLimit = clip, tileGridSize = roi)
+
+    Lab = cv2.split(cv2.cvtColor(image, cv2.COLOR_BGR2LAB))
+    
+    Lab[0] = clahe.apply(Lab[0])
+
+    return cv2.cvtColor(cv2.merge((Lab[0], Lab[1], Lab[2])), cv2.COLOR_LAB2BGR)
+
 def demosaic(input_im):
     '''
     @depricated: Use color_correct instead.
