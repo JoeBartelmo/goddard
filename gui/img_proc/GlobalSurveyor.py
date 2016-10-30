@@ -18,16 +18,19 @@
 import Tkinter as tk
 from PIL import Image, ImageTk
 import cv2
+import sys
 import numpy
 import time
 import matplotlib.path as matpath
 
 class GlobalSurveyor(object):
-    def __init__(self, root, ideal_image,  number_polys = 2, threshold = 50, polys = None):
+    def __init__(self, root, ideal_image,  number_polys = 2, thresholds = (50, 200), polys = None):
         self.ideal_im = ideal_image
         self.parent = root
         self.done = False
         self.points = []
+        self.warningColor = (128, 128, 0)
+        self.errorColor = (255, 0, 0)
 
         self.number_polys = number_polys
         #self.number_sides = number_sides
@@ -36,7 +39,7 @@ class GlobalSurveyor(object):
         else:
             self.polys = polys
 
-        self.thresh = threshold
+        self.thresh = thresholds
         self.ideal_counts = []
         self.calibrates_polygons()
 
@@ -153,24 +156,26 @@ class GlobalSurveyor(object):
             # MATPLOTLIB PATH EXAMPLE GOES HERE
             bbPath = matpath.Path(poly)
             # sum boolean array to get number of kp within current poly
-
-            truth_vector = bbPath.contains_points(im_keys)   # check input for contains_points. might only like tuples
+            try:
+                truth_vector = bbPath.contains_points(im_keys)   # check input for contains_points. might only like tuples
+            except:
+                truth_vector = [1] * len(im_keys)
             counts.append(numpy.sum(truth_vector))
 
         return numpy.asarray(counts)
 
-    def threshold(self, counts):
+    def threshold(self, counts, thresh_tuple):
         # do the thresholding thing
         delta = abs(counts - self.ideal_counts)
 
-        threshed_polys = numpy.where(delta >= self.thresh)[0]   # ok to index like this because tuple represents vector
-
+        threshed_polys = numpy.where((delta >= thresh_tuple[0]) & (delta < thresh_tuple[1]))[0]   # ok to index like this because tuple represents vector
+        
         # save which polys get marked true out so these can be used as overlay in fillpolys
         # this can be done by indexing into polys with truth vector saved here
 
         return threshed_polys.astype(int)   # a true/false vector of length polys
 
-    def generate_output(self, image, threshed_polys, alpha = 0.5, colorWarning = (0,125,125)): #, colorAlert = (0,0,255)):
+    def generate_output(self, image, threshed_polys, color, alpha = 0.5): #, colorAlert = (0,0,255)):
         # use polyfill to blend im_in and overlay (which is just the polygons we want colored in)
         colored_polys = []
 
@@ -181,7 +186,7 @@ class GlobalSurveyor(object):
         im_out = image.copy()
 
         for cp in range(len(colored_polys)):
-            cv2.fillPoly(overlay, [colored_polys[cp]], colorWarning)
+            cv2.fillPoly(overlay, [colored_polys[cp]], color)
         
         cv2.addWeighted(overlay, alpha, im_out, 1 - alpha, 0, im_out)
 
@@ -195,10 +200,69 @@ class GlobalSurveyor(object):
 
         counts = self.keypoints_to_counts(im_keypoints = im_in_kp)
 
-        threshed_polys = self.threshold(counts)
+        warning_polys = self.threshold(counts, self.thresh)
+        error_polys = self.threshold(counts, (self.thresh[1], sys.maxint))
 
-        return self.generate_output(current_im, threshed_polys)
+        warning_overlay = self.generate_output(current_im, warning_polys, self.warningColor)
+        return self.generate_output(warning_overlay, error_polys, self.errorColor)
 
+def get_thresholds_widget(parent):
+    top = tk.Toplevel(parent)
+    top.title("Select your desired thresholds")
+    top.update_idletasks()
+
+    done = False
+    thresh1 = tk.IntVar()
+    thresh2 = tk.IntVar()
+    polys = tk.IntVar()
+
+    #3 labels and 3 textbox selectors
+    label1 = tk.Label(top, text = "Warning (Maybe an object)")
+    label1.grid(row = 1, column = 0, sticky ="nsew")
+    threshold1 = tk.Entry(top, textvariable=thresh1)
+    threshold1.grid(row = 1, column = 1, sticky ="nsew")
+    
+    label2 = tk.Label(top, text = "Error (Most defintely an object)")
+    label2.grid(row = 2, column = 0, sticky ="nsew")
+    threshold2 = tk.Entry(top, textvariable = thresh2)
+    threshold2.grid(row = 2, column = 1, sticky ="nsew")
+
+    label3 = tk.Label(top, text = "Number of Polygons")
+    label3.grid(row = 3, column = 0, sticky ="nsew")
+    threshold3 = tk.Entry(top, textvariable = polys)
+    threshold3.grid(row = 3, column = 1, sticky ="nsew")
+
+    def returnVars():
+        top.destroy()
+        global done
+        done = True
+    
+    button = tk.Button(top, text = "Set Values", command = returnVars)
+    button.grid(row = 4, column = 0, columnspan = 2, sticky ="nsew")
+
+    threshold1.delete(0, "end")
+    threshold1.insert(0, 50)
+    threshold2.delete(0, "end")
+    threshold2.insert(0, 200)
+    threshold3.delete(0, "end")
+    threshold3.insert(0, 2)
+
+    width = 300
+    height = 100
+    x = (top.winfo_screenwidth() // 2) - (width // 2)
+    y = (top.winfo_screenheight() // 2) - (height // 2)
+    top.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+    top.grid_columnconfigure(1, weight=1)
+    top.grid_rowconfigure(0, weight=1)
+    top.grid_rowconfigure(1, weight=1)
+    top.grid()
+    top.update()
+
+    while not done:
+        time.sleep(0.1)
+    return (int(thresh1), int(thresh2), int(polys))
+    
 if __name__=='__main__':
 
     import cv2

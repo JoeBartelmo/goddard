@@ -26,7 +26,7 @@ from Threads import VideoThread
 from TelemetryWidget import TelemetryWidget
 from ControlWidget import ControlWidget
 from img_proc.misc import *
-from img_proc.GlobalSurveyor import GlobalSurveyor
+from img_proc.GlobalSurveyor import * 
 import tkMessageBox
 
 import logging
@@ -124,11 +124,12 @@ class MainApplication(tk.Frame):
     def get_ideal_images(self, left, center, right):
         logger.warning('Piping ideal images to modules...')
         self.pause_acquisition()
-        self.call_surveyor = False 
-        tkMessageBox.showinfo('For each Image do the following:\n\n1) Left click to select a point, continue to left click until you form a simple polygon, these polygons will be highlighted when a fod enters them\n\n2) Repeat this process until the window disappears')
-        self.surveyors[0] = GlobalSurveyor(self.parent, left)
-        self.surveyors[1] = GlobalSurveyor(self.parent, center)
-        self.surveyors[2] = GlobalSurveyor(self.parent, right)
+        self.call_surveyor = False
+        thresh1, thresh2, polys = get_thresholds_widget(self.parent) 
+        tkMessageBox.showinfo('Ideal Image Set', 'For each Image do the following:\n\n1) Left click to select a point, continue to left click until you form a simple polygon, these polygons will be highlighted when a fod enters them\n\n2) Repeat this process until the window disappears')
+        self.surveyors[0] = GlobalSurveyor(self.parent, left, polys, (thresh1, thresh2))
+        self.surveyors[1] = GlobalSurveyor(self.parent, center, polys, (thresh1, thresh2))
+        self.surveyors[2] = GlobalSurveyor(self.parent, right, polys, (thresh1, thresh2))
         self.start_acquisition()
 
     def focus_left(self):
