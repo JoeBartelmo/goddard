@@ -37,19 +37,23 @@ int iBeamCounter = 0;
 JsonSettings* ptrSettings = new JsonSettings();
 JsonSettings settings = *ptrSettings;
 
-int getScalarHistogram(const Mat& image, unsigned char upperRange) {
-    int histSize[] = {256};    // bin size
+int getScalarHistogram(Mat& image) {
+    threshold(image, image, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    
+    /*int histSize[] = {256};    // bin size
     float range[] = { 0, (float)upperRange };
     const float *ranges[] = { range };
     int channels[] = {0};
     // Calculate histogram
     Mat hist;
     calcHist(&image, 1, channels, Mat(), hist, 1, histSize, ranges, true, false ); // # OF IMAGES SET TO 1, CAN CHANGE
-    double histSum= sum(hist)[0];
+    double histSum= sum(hist)[0];*/
+    double cvSum = (double)sum(image)[0] / ((double)image.rows * (double)image.cols);
+
 #if DEBUG
-    printf("Histogram: %f\n", histSum);
+    printf("Histogram: %f\n", cvSum);
 #endif
-    return (int)histSum;
+    return (int)cvSum;
 }
 
 void writeToPipe(int pipe, vector<double> &array, double processingTime, int framesToProcess,
@@ -203,8 +207,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
             leftCount++;
             rightCount++;
             //we only need to do histogram for one side
-            hist = (getScalarHistogram(leftFrame, settings.getHistogramMax()));// + getScalarHistogram(rightFrame)) / 2;
-            if (hist >= settings.getThreshold()) {
+            hist = (getScalarHistogram(leftFrame));// + getScalarHistogram(rightFrame)) / 2;
+            if (hist <= settings.getThreshold()) {
                 if (!threshold_triggered) {
                     threshold_triggered = true;
                     start = std::chrono::system_clock::now();

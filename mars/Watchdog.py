@@ -19,7 +19,7 @@ import logging
 import time
 import subprocess
 
-logger = logging.getLogger('mars_logger')
+logger = logging.getLogger('mars_logging')
 
 class Watchdog(object):
     def __init__(self, config, arduino, mars, pinHash):
@@ -51,13 +51,16 @@ class Watchdog(object):
         self._scan = False
 
     def systemShutdown(self):
-        logger.info("initiating safe shutdown")
-        ### add functionality to cut power to motor controller
-        logger.info("this connection will be lost")
-        self._pinHash['motorRelay'].toggleOff()
-        self._pinHash['laserRelay'].toggleOff()
-        self._pinHash['ledRelay'].toggleOff()       
-        subprocess.call(['sudo poweroff'], shell=True)
+        if self._config.watchdog.shutdown == True:
+            logger.info("initiating safe shutdown")
+            ### add functionality to cut power to motor controller
+            logger.info("this connection will be lost")
+            self._pinHash['motorRelay'].toggleOff()
+            self._pinHash['laserRelay'].toggleOff()
+            self._pinHash['ledRelay'].toggleOff()       
+            subprocess.call(['sudo poweroff'], shell=True)
+        else:
+            logger.critical('shutdown was not initiated b/c settings.json specified so')
 
     def watch(self, telemetry):
         self.sniff(telemetry)
@@ -211,9 +214,9 @@ class Watchdog(object):
         self._scan = False
  
     def barkAtDistance(self):
-        if self._distance <= self._levels.distance_alert and distance > self._levels.distance_warning:
+        if self._distance <= self._levels.distance_alert and self._distance > self._levels.distance_warning:
             logger.warning("Distance at alert level")
-        elif self._distance <= self._levels.distance_warning and distance > self._levels.distance_critical:
+        elif self._distance <= self._levels.distance_warning and self._distance > self._levels.distance_critical:
             logger.critical("Distance at warning level")
         elif self._distance <= self._levels.distance_critical:
             logger.critical("Distance at Critical Levels")
@@ -257,9 +260,12 @@ class Watchdog(object):
 
     def recall(self):
         # tell mars to head backwards toward operator
-        self._arduino.write(self._levels.recall_code)
-        logger.critical("recall initiated")
-        logger.critical("type 'watchdog off' to resume control")
+        if self._config.watchdog.recall_enabled == True:
+            self._arduino.write(self._levels.recall_code)
+            logger.critical("recall initiated")
+            logger.critical("type 'watchdog off' to resume control")
+        else:
+            logger.critical('recall was not initiated b/c settings.json specified so')
 
     def disable(self):
         if self._enableWatchdog == False:

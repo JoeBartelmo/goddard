@@ -7,17 +7,17 @@
     "gamma_y": 1.0
   },
   "calibration": {
+    "coefficient_location": "/phobos/goddard/valmar/",
     "write_location": "/phobos/goddard/mars/files/",
+    "conversion_factor": 0.1875,
     "checkerboard": {
       "width": 9,
       "height": 6
-    },
-    "conversion_factor": 0.1875,
-    "coefficient_location": "/phobos/goddard/valmar/"
+    }
   },
   "processing": {
     "erosion_kernel_size_post": {
-      "horizontal": 4,
+      "horizontal": 25,
       "vertical": 1
     },
     "vertical_edge_thresholds": {
@@ -26,13 +26,13 @@
     },
     "dilation_kernel_size": {
       "horizontal": 1,
-      "vertical": 4
+      "vertical": 5
     },
-    "histogram_max": 10,
+    "histogram_max": 100,
     "hough_line": {
-      "max_line_gap": 50
+      "max_line_gap": 20
     },
-    "threshold": 30000,
+    "threshold": 180,
     "dilation_kernel_size_post": {
       "horizontal": 1,
       "vertical": 1

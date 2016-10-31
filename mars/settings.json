@@ -21,7 +21,10 @@
     "path":"/phobos/goddard/maven/index.js"
   },
   "watchdog": {
-    "enable_watchdog":false,
+    "enable_watchdog": true,
+    "recall_enabled": false,
+    
+    "shutdown": false,
     "recall_code":"M1005",
     "display_log_timeout":10.0,
     "braking_distance":3.8,

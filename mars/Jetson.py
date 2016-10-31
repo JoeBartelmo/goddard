@@ -370,6 +370,7 @@ class Jetson(object):
         self._pinHash['laserRelay'].toggleOff()
         logger.info("Laser Circuit turned off")
 
+        self._arduino.resetArduino()
         self._exit = True
         if self._marsOnlineQueue is not None:
             self._marsOnlineQueue.put(0)
