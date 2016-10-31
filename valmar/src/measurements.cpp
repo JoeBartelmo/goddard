@@ -19,6 +19,8 @@
 */
 #include "includes.hpp"
 #include <math.h>
+#include <future>
+#include <thread>
 #if !defined(KERNAL_SIZE)
     #define KERNAL_SIZE 5 
 #endif
@@ -202,7 +204,8 @@ void calculateDistances(string name, Mat src_image, int lines[][4], vector<doubl
         uses multiple for loops to go through the image row by row
         and subtract distances left to right
 */
-int calculateRawDistances(Mat left_image, Mat right_image, vector<double> &distances, int max_line_break, double ratio) {
+vector<double> calculateRawDistances(Mat left_image, Mat right_image, int max_line_break, double ratio) {
+    vector<double> distances;
     left_image.convertTo(left_image, CV_8UC3);
     right_image.convertTo(right_image, CV_8UC3);
 
@@ -216,7 +219,7 @@ int calculateRawDistances(Mat left_image, Mat right_image, vector<double> &dista
     if (left_lines[0][0] == -1 || left_lines[1][0] == -1 || 
         right_lines[0][0] == -1 || right_lines[1][0] == -1)  {
         printf("Could not find 2 distinct lines\n");
-        return -1;
+        return distances;
     }
 
     getEndIndicies(left_image, max_line_break, left_lines);
@@ -229,10 +232,16 @@ int calculateRawDistances(Mat left_image, Mat right_image, vector<double> &dista
     calculateDistances("left", left_image, left_lines, distances, ratio);
     calculateDistances("right", right_image, right_lines, distances, ratio);
 
-    return 1;
+    return distances;
 } 
 
-
+vector<double> compoundCalcHorizontalDistances(Mat src_image, Mat src_image2, int threshold1 , int threshold2, 
+                        Mat erode_kernel, Mat dilate_kernel, Mat erode_kernel_post, Mat dilate_kernel_post,
+                        int max_line_break, double ratio) {
+    Mat left_edges = retrieveHorizontalEdges(src_image, "left", threshold1 , threshold2, erode_kernel, dilate_kernel, erode_kernel_post, dilate_kernel_post);
+    Mat right_edges = retrieveHorizontalEdges(src_image2, "right", threshold1 , threshold2, erode_kernel, dilate_kernel, erode_kernel_post, dilate_kernel_post);
+    return calculateRawDistances(left_edges, right_edges, max_line_break, ratio);
+}
 
 
 

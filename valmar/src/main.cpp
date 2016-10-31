@@ -20,8 +20,9 @@
 #include "includes.hpp"
 #include "measurements.cpp"
 #include "util.cpp"
+#include <future>
+#include <thread>
 #include <chrono>
-
 #if !defined(JSON_SETTINGS)
     #define JSON_SETTINGS
     #include "jsonHandler.hpp"
@@ -186,67 +187,67 @@ int _tmain(int argc, _TCHAR* argv[]) {
 // ###############################################################
     int refresh_tick = 0;
     int hist;
-    vector<double> distances = vector<double>();
-    vector<double> temp_distances = vector<double>();
     bool threshold_triggered = false;
+    int leftCount = 0, rightCount = 0, totalFrames = 0,  rightFrameNumber = 0, leftFrameNumber = 0;
 
-    register Mat leftFrame, horizontal_left, horizontal_right, ROI, rightFrame;
-    Mat undistortLeft, undistortRight;
     printf("Beginning valmar...\n");
 
     //stopwatch
     std::chrono::time_point<std::chrono::system_clock> start, end;
     //totalFrames
-    int totalFrames = 0, leftFrameNumber = 0, rightFrameNumber = 0, leftCount = 0, rightCount = 0;
+
+    int maxframes = 10;
+
+    vector<future<vector<double>>> promises_distances;
 
     while(settings.isEnabled()) {
         // getting image from camera
         try {
-            leftFrame = leftCam.GetNextImageOcvMat();
-            rightFrame = rightCam.GetNextImageOcvMat();
+            Mat leftFrame = leftCam.GetNextImageOcvMat();
+            Mat rightFrame = rightCam.GetNextImageOcvMat();
             leftCount++;
             rightCount++;
             //we only need to do histogram for one side
             hist = (getScalarHistogram(leftFrame));// + getScalarHistogram(rightFrame)) / 2;
-            if (hist <= settings.getThreshold()) {
+            if (hist <= settings.getThreshold() && totalFrames < maxframes) {
                 if (!threshold_triggered) {
                     threshold_triggered = true;
                     start = std::chrono::system_clock::now();
                 }
+                Mat undistortLeft, undistortRight;
                 totalFrames += 1;
                 printf("Histogram threshold of %d reached threshold of %d\n", hist, settings.getThreshold());
                 //undistortImages
                 remap(leftFrame, undistortLeft, map1, map2, INTER_LINEAR); // remap using previously calculated maps
-                ROI = Mat(undistortLeft, leftCropRegion);
+                Mat ROI = Mat(undistortLeft, leftCropRegion);
                 ROI.copyTo(undistortLeft);
 
                 remap(rightFrame, undistortRight, map3, map4, INTER_LINEAR); // remap using previously calculated maps
                 ROI = Mat(undistortRight, rightCropRegion);
                 ROI.copyTo(undistortRight);
-
-                horizontal_left = retrieveHorizontalEdges(undistortLeft, "left", settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
-                                        settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(1), settings.getDilationMat(1));
-                horizontal_right = retrieveHorizontalEdges(undistortRight, "right", settings.getCannyThreshold(1), settings.getCannyThreshold(2), 
-                                        settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(1), settings.getDilationMat(1));
-                if(calculateRawDistances(horizontal_left, horizontal_right, temp_distances, settings.getHoughLineMaxGap(), leftConversionFactor)) { 
-                    //succesfully calculated distances
-                    if (temp_distances.size() > distances.size()) {
-                        distances = temp_distances;
-                        leftFrameNumber = leftCount;
-                    }
-                    printf("Houghline success!\n");
-                }
+                
+                promises_distances.push_back(async(compoundCalcHorizontalDistances,undistortLeft, undistortRight, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(0), settings.getDilationMat(1), settings.getHoughLineMaxGap(), leftConversionFactor));
             }
             else if(threshold_triggered) {
                 threshold_triggered = false;
                 end = std::chrono::system_clock::now();
                 std::chrono::duration<double> elapsed_seconds = end-start;
+
+                vector<double> distances;
+                //among all we need to get largest size
+                for (int promise = 0; promise < promises_distances.size(); promise++) {
+                    vector<double> curPromise = promises_distances[promise].get();
+                    if (distances.size() < curPromise.size()) {
+                        distances = curPromise;
+                    }
+                }
+                promises_distances.clear();
+
                 writeToPipe(pipe, distances, elapsed_seconds.count(), totalFrames,
                         &leftCam, &rightCam, 
                         leftConversionFactor, rightConversionFactor, leftFrameNumber
                         , rightFrameNumber);
                 totalFrames = 0;
-                temp_distances.clear();
             }
         }
         catch(xiAPIplus_Exception& exp){
