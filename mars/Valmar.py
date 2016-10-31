@@ -59,6 +59,26 @@ class Valmar(object):
         self._init = False
         self._bufferSize = 4#always start by reading an integer
 
+    def help(self):
+        logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
+                    "system restart:\t\tRestart M.A.R.S. Tk1\n" + \
+                    "system hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
+                    "syste wake:\t\tTurns on all components that could be hibernated\n" + \
+                    "motor [on|off]:\t\tIff on, then speed can be adjusted on motor\n" + \
+                    "forward [0-9]:\t\tAssigns a forward speed to M.A.R.S.\n" + \
+                    "backward [0-9]:\t\tAssigns a backward speed to M.A.R.S.\n" + \
+                    "brake [on|off]:\t\tIff on, then motor cannot be enabled\n" + \
+                    "led [on|off]:\t\tIff on, then brightness of leds can be set\n" + \
+                    "brightness [0-9]:\tSets brightness of leds (useful for valmar)\n" + \
+                    "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
+                    "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
+                    "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
+                    "watchdogtimer [on|off]:\tIf on, will send repeated pulse every 10 seconds to arduino.\n" + \
+                    "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
+                    "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
+                    "list logs:\t\tDisplay all logs for all teams\n" + \
+                    "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
+
     def refresh(self):
         if self._init == True:
             self.disable()

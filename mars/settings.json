@@ -31,21 +31,21 @@
     "under_voltage_warning": 11.0,
     "under_voltage_critical": 10.5,
 
-    "over_voltage_alert": 36,
-    "over_voltage_warning": 40,
-    "over_voltage_critical": 45,
+    "over_voltage_alert": 36.0,
+    "over_voltage_warning": 40.0,
+    "over_voltage_critical": 45.0,
 
     "over_current_alert":12.0,
     "over_current_warning":15.0,
     "over_current_critical":18.0,
 
-    "batt_percent_alert":20,
-    "batt_percent_warning":15,
-    "batt_percent_critical":10,
+    "batt_percent_alert":20.0,
+    "batt_percent_warning":15.0,
+    "batt_percent_critical":10.0,
 
-    "distance_alert": 20,
-    "distance_warning": 10,
-    "distance_critical": 5
+    "distance_alert": 20.0,
+    "distance_warning": 10.0,
+    "distance_critical": 5.0
   },
   "arduino": {
     "using_watchdog_timer":true,

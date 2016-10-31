@@ -1,6 +1,6 @@
 {
   "capture": {
-    "exposure_us": 1000,
+    "exposure_us": 500,
     "framerate": 100,
     "gain": 2,
     "sharpness": 0.5,
@@ -17,34 +17,34 @@
   },
   "processing": {
     "erosion_kernel_size_post": {
-      "horizontal": 2,
-      "vertical": 13
+      "horizontal": 4,
+      "vertical": 1
     },
     "vertical_edge_thresholds": {
       "canny_2": 7000,
       "canny_1": 1000
     },
     "dilation_kernel_size": {
-      "horizontal": 2,
-      "vertical": 2
+      "horizontal": 1,
+      "vertical": 4
     },
-    "histogram_max": 120,
+    "histogram_max": 10,
     "hough_line": {
-      "max_line_gap": 30
+      "max_line_gap": 50
     },
     "threshold": 30000,
     "dilation_kernel_size_post": {
-      "horizontal": 30,
-      "vertical": 15
+      "horizontal": 1,
+      "vertical": 1
     },
     "erosion_kernel_size": {
       "horizontal": 5,
-      "vertical": 2
+      "vertical": 3
     }
   },
   "command": {
     "refresh_frame_interval": 10,
-    "enabled": true 
+    "enabled": true
   },
   "ximea_cameras": {
     "right": "12531150",

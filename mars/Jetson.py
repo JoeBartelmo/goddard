@@ -192,6 +192,10 @@ class Jetson(object):
             self._sysCommands[controlCode]()
         elif 'graph' in controlCode:
             self.graph(controlCode)
+        #tripped if not valmar on|off
+        elif 'valmar ' in controlCode and len(controlCode.split(' ')) == 3:
+            valmarCommand = controlCode.split(' ')
+            self._valmar.issueCommand(valmarCommand[1], valmarCommand[2])
         else:
             return logger.warning("Invalid control code. Check documentation for command syntax.")
 

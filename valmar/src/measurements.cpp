@@ -50,7 +50,10 @@ Mat retrieveHorizontalEdges(const Mat src_image, string name, int threshold1 , i
         //cout << "converted to grayscale" << endl;
 #endif
     }
-
+    threshold(working_image, working_image, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+#if defined DEBUG
+    displayAndSave(working_image, name + "otsu.png");
+#endif
     //Generating edge map
     Canny(working_image, working_image, threshold1, threshold2, KERNAL_SIZE);
     //applying a gaussian blue prior to sobel
@@ -87,12 +90,24 @@ int findPoint(int *line, int col){
     return (((((float)line[3]-(float)line[1])/((float)line[2]-(float)line[0]))*((float)col-(float)line[0]))+(float)line[1]);
 }
 
+bool checkFurtherOut(Mat src_image, int max_line_break, int col) {
+    //buffer of +- 5px
+    for (size_t c = col + max_line_break - 5; col < src_image.cols && col < col + max_line_break + 5; c++) {
+        for (size_t r = 0; r < src_image.rows; r++) {
+            if(src_image.at<uchar>(r,c) != 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void getStartIndicies(Mat src_image, int max_line_break, int lines[][4]) {
     //find starting coordinates
     //for this we iterate over only half the image so we don't get a false positive
-    for (size_t c = 0; c < src_image.cols / 2 && (lines[0][0] == -1 || lines[1][0] == -1); c++ ){
+    for (size_t c = 5; c < src_image.cols / 2 && (lines[0][0] == -1 || lines[1][0] == -1); c++ ){
         for(size_t r = 0; r < src_image.rows; r++ ){
-            if(src_image.at<uchar>(r,c) != 0) {
+            if(src_image.at<uchar>(r,c) != 0 && checkFurtherOut(src_image, max_line_break, c)) {
                 if(lines[0][0] == -1){
                     lines[0][0] = c;
                     lines[0][1] = r;
