@@ -101,6 +101,7 @@ class Jetson(object):
                                 'watchdog on': self._watchdog.enable,
                                 'valmar off': self._valmar.disable,
                                 'valmar on': self._valmar.enable,
+                                'valmar help': self._valmar.help,
                                 'scan on': self.scan,
                                 'scan off': self._watchdog.scanDisable,
                                 'watchdogtimer on': self.startWatchdogThread,
@@ -136,6 +137,7 @@ class Jetson(object):
                     "watchdogtimer [on|off]:\tIf on, will send repeated pulse every 10 seconds to arduino.\n" + \
                     "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
                     "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
+                    "valmar help:\t\tList all commands available for valmar\n" + \
                     "list logs:\t\tDisplay all logs for all teams\n" + \
                     "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
 

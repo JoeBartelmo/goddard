@@ -33,6 +33,7 @@ logger = logging.getLogger('mars_logging')
 class System(object):
 
     def __init__(self, config, timestamp, q = None, watchdogQueue = None, marsOnlineQueue = None, ipAddress = None):
+        self._timestamp = timestamp
 
         #assign queues
         self._watchdogQueue = watchdogQueue
@@ -42,10 +43,10 @@ class System(object):
         self._devices = self.initDevices(config)
 
         #Prepare stream
-        self._devices['Stream'] = Stream(config, timestamp, ipAddress)
+        self._devices['Stream'] = Stream(config, self._timestamp, ipAddress)
 
         logger.info("Connecting Jetson")
-        self._jetson = Jetson(self._devices, config, timestamp, q)
+        self._jetson = Jetson(self._devices, config, self._timestamp, q)
         time.sleep(.5)
 
 
@@ -94,7 +95,7 @@ class System(object):
         myMotor = Motor()
         myMars = Mars(myArduino, config, myLED, myMotor, myPinHash, self._watchdogQueue, self._marsOnlineQueue)
         time.sleep(.5)
-        myValmar = Valmar(config)
+        myValmar = Valmar(config, self._timestamp)
         myValmar.enable()
 
         devices = {

@@ -30,8 +30,10 @@ class Valmar(object):
     and Mars
     '''
 
-    def __init__(self, config):
+    def __init__(self, config, timestamp):
         self._config = config
+        #quick fix need to correct later, this is sloppy
+        self._timestamp = timestamp
         self._path = self._config.valmar.path
         self._commandPath = self._config.valmar.command_path
         self._beamGapPipe = self._config.valmar.beam_gap_path
@@ -51,34 +53,27 @@ class Valmar(object):
                                     "type":"float",
                                     "parent": "capture"
                                 },
-                                "threshold": {
+                                "sum_threshold": {
                                     "type":"int",
                                     "parent": "processing"
+                                },
+                                "beam_img_backup" : {
+                                    "type": "string"
                                 }
         }
         self._init = False
         self._bufferSize = 4#always start by reading an integer
 
     def help(self):
-        logger.info("\nsystem shutdown:\tShutdown M.A.R.S. Tk1\n" + \
-                    "system restart:\t\tRestart M.A.R.S. Tk1\n" + \
-                    "system hibernate:\t\tSuspends M.A.R.S. until reactivation\n" + \
-                    "syste wake:\t\tTurns on all components that could be hibernated\n" + \
-                    "motor [on|off]:\t\tIff on, then speed can be adjusted on motor\n" + \
-                    "forward [0-9]:\t\tAssigns a forward speed to M.A.R.S.\n" + \
-                    "backward [0-9]:\t\tAssigns a backward speed to M.A.R.S.\n" + \
-                    "brake [on|off]:\t\tIff on, then motor cannot be enabled\n" + \
-                    "led [on|off]:\t\tIff on, then brightness of leds can be set\n" + \
-                    "brightness [0-9]:\tSets brightness of leds (useful for valmar)\n" + \
-                    "reset arduino:\t\tWill attempt to restablish connection to the onboard arduino\n" + \
-                    "exit:\t\t\tDisables all processes and stops M.A.R.S, server still online.\n" + \
-                    "watchdog [on|off]:\tIf on, watchdog will recall or brake mars depending on scanmode when an issue is found.\n" + \
-                    "watchdogtimer [on|off]:\tIf on, will send repeated pulse every 10 seconds to arduino.\n" + \
-                    "scan [on|off]:\t\tWhen Toggled on, all of mars processes are automated\n" + \
-                    "valmar [on|off]:\tOn by default, valmar gets beam gap data\n" + \
-                    "list logs:\t\tDisplay all logs for all teams\n" + \
-                    "graph [log_name]:\tGenerates a PDF graph of M.A.R.S. data for a given log (curent by default if none is supplied)")
-
+        logger.info("\n" + \
+                    "valmar enabled [boolean]:            Turn valmar on or off\n" + \
+                    "valmar refresh_frame_interval [int]: Adjust amount of time it takes to load settings in valmar (ignore)\n" + \
+                    "valmar gain [int]:                   Adjust gain of the cameras\n" + \
+                    "valmar sharpness [float]:            Adjust sharpness of the cameras\n"  + \
+                    "valmar sum_threshold [int]:          Adjust threshold, lower is more sensitive to dark pixels\n"  + \
+                    "valmar beam_img_backup [string]:     Location to write images that appear to be a beam gap as determined by sum_threshold\n"  + \
+                    )
+                  
     def refresh(self):
         if self._init == True:
             self.disable()
@@ -94,12 +89,6 @@ class Valmar(object):
             subprocess.call([newCall], shell=True)
             self._io = os.open(self._beamGapPipe, os.O_RDONLY | os.O_NONBLOCK)
     
-    def swap32(self, x):
-        return (((x << 24) & 0xFF000000) |
-                ((x <<  8) & 0x00FF0000) |
-                ((x >>  8) & 0x0000FF00) |
-                ((x >> 24) & 0x000000FF))
-    
     def issueCommand(self, parameter, value):
         '''
         Our Commands enable them to change settings in the JSON file
@@ -114,6 +103,8 @@ class Valmar(object):
                     var = float(value)
                 elif 'boolean' in typeOf:
                     var = bool(value)
+                elif 'string' in typeOf:
+                    var = str(value)
                 else:
                     raise ValueError
             except ValueError:
@@ -121,7 +112,11 @@ class Valmar(object):
                 return
             with open(self._commandPath, 'r+') as commandFile:
                 commands = json.load(commandFile)
-                commands[self._validCommands[parameter]["parent"]][parameter] = value
+                command = self._validCommands[parameter]
+                if getattr(command, 'parent', None) is not None:
+                    commands[command["parent"]][parameter] = value
+                else:
+                    commands[parameter] = value
                 commandFile.seek(0, 0)
                 commandFile.write(json.dumps(commands, indent=2, separators=(',', ': ')))
                 commandFile.truncate()
@@ -160,6 +155,10 @@ class Valmar(object):
             return json.loads(buff)
     
     def enable(self):
+        path = self._config.logging.output_path + '/output/' + self._config.user_input.log_name + '-' + self._timestamp + '/ibeams'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.issueCommand("beam_img_backup", path)
         self.issueCommand("enabled", True)
         self.refresh()
         self._init = True
