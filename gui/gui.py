@@ -21,8 +21,12 @@ import tkMessageBox
 from mainapp import MainApplication
 from TopMenu import TopMenu
 from BeamGapWidget import BeamGapWidget
-from constants import *#remember you should run through client.py, not through gui.py, this will throw import error otherwise
 import logging
+from Monitor import Monitor
+from ttk import Notebook
+from Threads import TelemetryThread
+import VisualConstants
+#from PIL import ImageTk
 
 logger = logging.getLogger('mars_logging')
 
@@ -48,10 +52,20 @@ class GUI(tk.Tk):
         self.destroyEvent = destroyEvent
 
     def init_ui(self):
-        # define mainapp instance
+        #make resizable
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.notebook = Notebook(self)
+        # define mainapp instance -- also manages above telemetry thread
         self.mainApplication = MainApplication(self, self.client_queue_cmd, self.client_queue_log, self.client_queue_telem, self.beam_gap_queue, self.destroyEvent, self.server_ip) 
-        self.mainApplication.grid(column = 0, row = 0, sticky="nsew")
-        # menu
+        self.notebook.add(self.mainApplication, text = "Main")
+        # define telemetry widgets
+        self.monitor = Monitor(self, VisualConstants.MARS_PRIMARY(1))
+        self.notebook.add(self.monitor, text = 'Monitor')
+        self.notebook.grid(column = 0, row = 0, sticky = 'nsew')
+        
+        # menu -outside of notebook
         self.menu_ = TopMenu(self, '../gui/operations.json', self.client_queue_cmd, 'Commands')
         ### Add custom commands here
         self.menu_.add_menu_item('Reconnect to Cameras', self.mainApplication.start_streams, "View")
@@ -59,25 +73,43 @@ class GUI(tk.Tk):
         self.menu_.add_menu_item('Center', self.mainApplication.focus_center, 'View/Camera Focus')
         self.menu_.add_menu_item('Right', self.mainApplication.focus_right, 'View/Camera Focus')
         self.menu_.add_menu_item('IBeam Display', self.beamGapGraph, 'View/Windows')
+        self.menu_.add_menu_item('Toggle FOD Enabled', self.mainApplication.toggle_fod, 'View/Object Detection')
+        self.menu_.add_menu_item('Set Ideal Images', self.mainApplication.define_ideal_images, 'View/Object Detection')
         ### 
         self.menu_.finalize_menu_items()
         self.config(menu=self.menu_)
+        
+        # start all operations here so we don't cause a hissyfit between tkinter and threads
+        self.mainApplication.start_streams()
+        #define telemetryThread
+        self.tthread = TelemetryThread([self.mainApplication.telemetry_w, self.monitor], self.client_queue_telem, self.beam_gap_queue)
+        self.tthread.start()
 
         # title and icon
         self.wm_title('Hyperloop Imaging Team')
-        img = tk.PhotoImage('../gui/assets/rit_imaging_team.png')
-        self.tk.call('wm', 'iconphoto', self._w, img)
-        
+        #this is garbage, i hate tkinter
+        #self.img = ImageTk.PhotoImage(file='rit_imaging_team.xbm')
+        #self.tk.call('wm', 'iconphoto', self._w, self.img)
+        #self.iconbitmap('@rit_imaging_team.xbm')
         #call destroyCallback on clicking X
         self.protocol('WM_DELETE_WINDOW', self.destroyCallback)
-         
-        self.geometry("900x500")
+        
+
+        #assign dimensions and locatin on screen
+        width = 900
+        height = 500
+ 
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        
         self.update()
 
     def killMars(self):
         '''
         Sends the kill command to Mars
         '''
+        logger.debug('GUI Killing Mars...')
         self.client_queue_cmd.put('exit')
 
     def displayMarsDisconnected(self):
@@ -85,9 +117,24 @@ class GUI(tk.Tk):
         self.destroyClient()
 
     def destroyClient(self):
+        logger.debug('GUI Killing Main App...')
         self.menu_.destroy() 
         self.mainApplication.close_()
+        logger.debug('GUI Killing Monitor app...')
+        self.monitor.destroy()
+        self.notebook.destroy()
+        logger.debug('GUI Killing Self...')
+        self.killTelemThread()
+        logger.debug('GUI Dead')
+        self.quit()
         self.destroy()
+ 
+    def killTelemThread(self):
+        """ Customized quit function to allow for safe closure of processes. """
+        logger.debug('GUI Killing Telemetry...')
+        self.tthread.stop()
+        if self.tthread.is_alive():
+            self.tthread.join()
 
     def destroyCallback(self):
         '''
@@ -106,7 +153,7 @@ class GUI(tk.Tk):
         Function that launches the Beam Gap Widget that displays the current beam distances
         in readalbe form.
         '''
-        if getattr(self, top, False) == False:
+        if getattr(self, 'top', False) == False:
             self.top = BeamGapWidget(self, self.beam_gap_queue)
             self.top.title("VALMAR Beam Gap")
         else:
@@ -127,13 +174,16 @@ class GUI(tk.Tk):
 
 if __name__=='__main__':
     print 'Please use goddard/client/client.py instead, this application requires client to function currently'
-'''
-The below is depricated and will need to be updated with a client test harness
+    '''
+    The below is depricated and will need to be updated with a client test harness
+    '''
     from Queue import Queue
+    import sys
+    sys.path.insert(1, '../shared')
     from ColorLogger import initializeLogger 
+    import threading
 
     logger = initializeLogger('./', logging.DEBUG, 'mars_logging', sout = True, colors = True)
-    logger.debug('GUI is running independant of client, attempting to connect to server hyperlooptk1.student.rit.edu')
 
     cmd_queue = Queue()
     log_queue = Queue()
@@ -141,9 +191,5 @@ The below is depricated and will need to be updated with a client test harness
     beam_gap_queue = Queue()
     server_ip = 'hyperlooptk1.student.rit.edu'
 
-    start(cmd_queue, log_queue, telem_queue, beam_gap_queue, server_ip)
-
-    while not cmd_queue.empty():
-        print cmd_queue.get()    
-'''
-
+    myGui = GUI(Queue(), Queue(), Queue(), Queue(), threading.Event(), server_ip)
+    myGui.start()

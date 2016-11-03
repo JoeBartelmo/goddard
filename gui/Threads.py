@@ -38,15 +38,21 @@ class VideoThread(threading.Thread):
         self._queue = queue
         self._stop = threading.Event()
         self._name = name
+        self._enable = threading.Event()
+        self.enable_display()
 
-        self.transformFunction = None
+    def enable_display(self):
+        self._enable.set()
+
+    def disable_display(self):
+        self._enable.clear()
 
     def run(self):
         #wait until timeout has been met before we attempt to connect
         #to a camera that may or may not exist
         logger.info('Attempting to start Vidcap on ' + self._name)
         while (self._openCvCapture.is_alive()):
-            time.sleep(0.01)
+            time.sleep(0.1)
         
         if self._openCvCapture.isConnected():
             self._vidcap = self._openCvCapture.getVideoCapture()
@@ -56,8 +62,8 @@ class VideoThread(threading.Thread):
 
                 if not flag:
                     continue
-                
-                self._queue.put(frame)
+                if self._enable.isSet():
+                    self._queue.put(frame)
 
             logger.debug('Killing Video Thread')
             self._vidcap.release()
@@ -85,9 +91,6 @@ class VideoThread(threading.Thread):
     def stop(self):
         self._stop.set()
    
-    def transform(self, func):
-        self.transformFunction = func
-
     def stopped(self):
         return self._stop.isSet()
 
@@ -106,11 +109,11 @@ class TelemetryThread(threading.Thread):
     So in this class I extract Valmar from the telemetry data and
     pipe it into a seperate queue.
     '''
-    def __init__(self, telem_widget, client_queue, beam_gap_queue):
+    def __init__(self, widgets, client_queue, beam_gap_queue = None):
         super(TelemetryThread, self).__init__()
         self._queue = client_queue
         self._beam_gap_queue = beam_gap_queue
-        self._widget = telem_widget
+        self._widget = widgets
         self._stop = threading.Event()
 
     def run(self):
@@ -118,10 +121,14 @@ class TelemetryThread(threading.Thread):
             try:
                 record = self._queue.get(False)
                 telemetryData = json.loads(record.msg)
-                self._widget.set_telemetry_data(telemetryData)
+                if isinstance(self._widget, list):
+                    for widget in self._widget:
+                        widget.set_telemetry_data(telemetryData)
+                else:
+                    self._widget.set_telemetry_data(telemetryData)
 
                 #extract valmar data and pipe it into beamgapqueue
-                if telemetryData["Valmar"] is not None:
+                if telemetryData["Valmar"] is not None and self._beam_gap_queue is not None:
                     self._beam_gap_queue.put(telemetryData["Valmar"])
                     #literally only a warning so it stands out in log
                     logger.warning('Received Beam Gap Data!')
