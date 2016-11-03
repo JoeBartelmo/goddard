@@ -125,11 +125,12 @@ class MainApplication(tk.Frame):
         logger.warning('Piping ideal images to modules...')
         self.pause_acquisition()
         self.call_surveyor = False
-        thresh1, thresh2, polys = get_thresholds_widget(self.parent) 
+        values = []
+        get_thresholds_widget(self.parent, values) 
         tkMessageBox.showinfo('Ideal Image Set', 'For each Image do the following:\n\n1) Left click to select a point, continue to left click until you form a simple polygon, these polygons will be highlighted when a fod enters them\n\n2) Repeat this process until the window disappears')
-        self.surveyors[0] = GlobalSurveyor(self.parent, left, polys, (thresh1, thresh2))
-        self.surveyors[1] = GlobalSurveyor(self.parent, center, polys, (thresh1, thresh2))
-        self.surveyors[2] = GlobalSurveyor(self.parent, right, polys, (thresh1, thresh2))
+        self.surveyors[0] = GlobalSurveyor(self.parent, left, values[2], (values[0], values[1]))
+        self.surveyors[1] = GlobalSurveyor(self.parent, center, values[2], (values[0], values[1]))
+        self.surveyors[2] = GlobalSurveyor(self.parent, right, values[2], (values[0], values[1]))
         self.start_acquisition()
 
     def focus_left(self):
@@ -169,19 +170,31 @@ class MainApplication(tk.Frame):
 
         return big_frame
     
+    def apply_misc_img_proc(self, image, flip):
+        corrected = apply_equalization(color_correct(image))
+        if flip == True:
+            return mirror_vertical(corrected)
+        return corrected
+
     def grab_frames(self, order, blocking):
         if order is None:
             order = [0, 1, 2]
+
+        # Note, we don't do a simple check to see if it's empty because of the non-gaurenteeness of python empty function
+        # Our flip flag is order[0] == 1 because if the order is 1 then we are the center image, this is the only
+        # camera that is not upside down
+        
+        # additionally, we explicitely (without a for loop) do this because of the verboseness, it's better to be overly verbose than a clever programmer
         try:
-            l_frame = color_correct(self.streams[order[0]]._queue.get(blocking))
+            l_frame = self.apply_misc_img_proc(self.streams[order[0]]._queue.get(blocking), order[0] != 1)
         except Empty:
             l_frame = None
         try:
-            c_frame = color_correct(self.streams[order[1]]._queue.get(blocking))
+            c_frame = self.apply_misc_img_proc(self.streams[order[1]]._queue.get(blocking), order[1] != 1)
         except Empty:
             c_frame = None
         try:
-            r_frame = color_correct(self.streams[order[2]]._queue.get(blocking))
+            r_frame = self.apply_misc_img_proc(self.streams[order[2]]._queue.get(blocking), order[2] != 1)
         except Empty:
             r_frame = None
 
@@ -232,6 +245,7 @@ class MainApplication(tk.Frame):
             thirdHeight = int(self.imageHeight / 3)
             halfWidth = int(self.imageWidth / 2)
             
+            #put images in their correct spot
             if l_frame is not None:
                 l_frame = cv2.resize(l_frame, (halfWidth, thirdHeight))
                 self.displayed_image[:thirdHeight,:halfWidth,:] = l_frame
@@ -241,7 +255,7 @@ class MainApplication(tk.Frame):
             if r_frame is not None:
                 r_frame = cv2.resize(r_frame, (self.imageWidth - halfWidth, thirdHeight))
                 self.displayed_image[:thirdHeight,halfWidth:self.imageWidth,:] = r_frame
-            
+
             big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
 
             self.addText(big_frame)
@@ -264,7 +278,7 @@ class MainApplication(tk.Frame):
     def start_streams(self):
         '''
         1) If streams are open, close them
-        2) Attempt connection to each RTSP stream
+        2) Attempt connection to each RTP stream
         '''
         if self.runStreams:
             logger.info('Streams were already open on GUI, releasing and restarting capture')

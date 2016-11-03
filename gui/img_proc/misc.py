@@ -59,3 +59,8 @@ def color_correct(input_im):
     img = cv2.merge((r,g,b))
     return img
 
+def mirror_vertical(input_im):
+    '''
+    Will mirror the image (for cameras that are oriented upside down)
+    '''
+    return cv2.flip(input_im, 0)

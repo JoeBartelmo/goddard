@@ -206,12 +206,11 @@ class GlobalSurveyor(object):
         warning_overlay = self.generate_output(current_im, warning_polys, self.warningColor)
         return self.generate_output(warning_overlay, error_polys, self.errorColor)
 
-def get_thresholds_widget(parent):
+def get_thresholds_widget(parent, values_list):
     top = tk.Toplevel(parent)
     top.title("Select your desired thresholds")
     top.update_idletasks()
 
-    done = False
     thresh1 = tk.IntVar()
     thresh2 = tk.IntVar()
     polys = tk.IntVar()
@@ -234,18 +233,30 @@ def get_thresholds_widget(parent):
 
     def returnVars():
         top.destroy()
-        global done
-        done = True
+        if len(values_list) != 3:
+            values_list.append(thresh1.get())
+            values_list.append(thresh2.get())
+            values_list.append(polys.get())
+        else:
+            values_list[0] = thresh1.get()
+            values_list[1] = thresh2.get()
+            values_list[2] = polys.get()
     
     button = tk.Button(top, text = "Set Values", command = returnVars)
     button.grid(row = 4, column = 0, columnspan = 2, sticky ="nsew")
 
     threshold1.delete(0, "end")
-    threshold1.insert(0, 50)
     threshold2.delete(0, "end")
-    threshold2.insert(0, 200)
     threshold3.delete(0, "end")
-    threshold3.insert(0, 2)
+
+    if len(values_list) == 3:
+        threshold1.insert(0, values_list[0])
+        threshold2.insert(0, values_list[1])
+        threshold3.insert(0, values_list[2])
+    else:
+        threshold1.insert(0, 50)
+        threshold2.insert(0, 200)
+        threshold3.insert(0, 2)
 
     width = 300
     height = 100
@@ -258,54 +269,13 @@ def get_thresholds_widget(parent):
     top.grid_rowconfigure(1, weight=1)
     top.grid()
     top.update()
-
-    while not done:
-        time.sleep(0.1)
-    return (int(thresh1), int(thresh2), int(polys))
+    parent.wait_window(top)
     
 if __name__=='__main__':
-
-    import cv2
-    import os.path
-    import time
-
-    home = os.path.expanduser('~')
-    ideal = home + os.path.sep + 'Documents/HyperloopSoftwareDev/hidden_valley/rail_top_rough.png'
-    im_in = home + os.path.sep + 'Documents/HyperloopSoftwareDev/hidden_valley/rail_top_rough_messy.png'
-
-    im1 = cv2.imread(ideal, cv2.IMREAD_UNCHANGED)
-    im2 = cv2.imread(im_in, cv2.IMREAD_UNCHANGED)
-
-    # IDEAL INSTANCE
-
-    ideal = GlobalSurveyor(im1, 2)
-
-    # USE IDEAL IM TO CALCULATE POLYS (DONE ONCE)
-
-    polys = ideal.define_polygons()
-
-    # CALCULATE IDEAL KPs
-
-    ideal_kp = ideal.apply_fast()
-
-    # CALCULATE IDEAL COUNTS
-
-    ideal.keypoints_to_counts(im_keypoints = ideal_kp)
-
-    current = GlobalSurveyor(im2, polys = polys)
-
-    im_in_kp = current.apply_fast()
-
-    current.keypoints_to_counts(im_keypoints = im_in_kp)
-
-    threshed_polys = current.threshold(ideal.counts)
-
-    print threshed_polys
-
-    im_out = current.generate_output(threshed_polys)
-
-    cv2.imshow('ideal', im1)
-    cv2.waitKey(10000000)
-    
-    cv2.imshow('live', im_out)
-    cv2.waitKey(10000000)
+    root = tk.Tk()
+    vals = []
+    get_thresholds_widget(root, vals)
+    print 'obtained values', vals
+    get_thresholds_widget(root, vals)
+    print 'obtained values', vals
+    root.mainloop()

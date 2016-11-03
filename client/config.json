@@ -21,19 +21,19 @@
     "path":"/phobos/goddard/maven/index.js"
   },
   "watchdog": {
-    "enable_watchdog":false,
+    "enable_watchdog": true,
     "recall_code":"M1005",
     "display_log_timeout":10.0,
     "braking_distance":3.8,
     "connection_timeout":30.0,
 
-    "under_voltage_alert": 12.0,
-    "under_voltage_warning": 11.0,
-    "under_voltage_critical": 10.5,
+    "under_voltage_alert": 11.0,
+    "under_voltage_warning": 10.0,
+    "under_voltage_critical": 9.5,
 
-    "over_voltage_alert": 36, 
-    "over_voltage_warning": 40, 
-    "over_voltage_critical": 45, 
+    "over_voltage_alert": 18.0, 
+    "over_voltage_warning": 21.0, 
+    "over_voltage_critical": 45.0, 
 
     "over_current_alert":12.0,
     "over_current_warning":15.0,
