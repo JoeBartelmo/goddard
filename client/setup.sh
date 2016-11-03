@@ -16,15 +16,16 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 echo 'This script will install the following: '
-echo python-dev
-echo pip
-echo '---opencv2'
+echo "python-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev git python-pip python-tk python-opencv"
+echo \npip modules
 echo '---matplotlib'
+echo '---image (Pillow)'
 
 while true; do
     read -p "Do you wish to install these programs? [y/n]" yn
     case $yn in
-        [Yy]* ) apt-get install python-dev; pip install matplotlib -U; pip install opencv; break;;
+        [Yy]* ) apt-get install python-dev libtiff5-dev libjpeg8-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev git python-pip python-tk python-opencv
+pip i; pip install matplotlib -U; pip install image; break;;
         [Nn]* ) exit;;
         * ) echo "Please answer yes or no.";;
     esac

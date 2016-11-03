@@ -26,6 +26,8 @@ from Threads import VideoThread
 from TelemetryWidget import TelemetryWidget
 from ControlWidget import ControlWidget
 from img_proc.misc import *
+from img_proc.GlobalSurveyor import * 
+import tkMessageBox
 
 import logging
 logger = logging.getLogger('mars_logging')
@@ -49,8 +51,14 @@ class MainApplication(tk.Frame):
         self.client_queue_log = client_queue_log
         self.client_queue_telem = client_queue_telem
         self.client_queue_beam = client_queue_beam
+
+        #fod detection
+        self.surveyors = [None, None, None]
+        self.call_surveyor = False
+        self.fod_enabled = False
+
         #we found 720/640 to give the most aesthetic view
-        self.imageHeight = 720 
+        self.imageHeight = 720
         self.imageWidth = 640
         
         self.destroy_event = destroy_event
@@ -60,13 +68,8 @@ class MainApplication(tk.Frame):
         self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
         
         self.init_ui()
-
-        self.fast = cv2.FastFeatureDetector()
         
         self.runStreams = False
-        
-        self.start_streams()
-        self.start_telemetry()
 
     def image_resize(self, event):
         '''
@@ -90,7 +93,7 @@ class MainApplication(tk.Frame):
 
         logger.info('Launching telemetry widget')
         # telemetry display widget
-        self.telemetry_w = TelemetryWidget(self, self.client_queue_telem, self.client_queue_beam)
+        self.telemetry_w = TelemetryWidget(self)
         self.telemetry_w.grid(row=0, column=1, sticky='nsew')
 
         logger.info('Launching Control Widget')
@@ -112,24 +115,23 @@ class MainApplication(tk.Frame):
             self.grid_columnconfigure(i, weight=1)
             self.grid_rowconfigure(i, weight=1)
 
-    def toggle_pumpkin(self, event):
-        if self.pump.get() == 1:
-            def transfromFunc(frame):
-                # do pumpkin processing
+    def define_ideal_images(self):
+        self.call_surveyor = True
 
-                frame_kp = self.fast.detect(frame, None)
-                squash = stealth_pumpkin(frame, frame_kp)
+    def toggle_fod(self):
+        self.fod_enabled = not self.fod_enabled
 
-                pumpkins_indexes = sneaky_squash(ideal_image, squash)   # TODO fix ideal_image junk
-
-                return highlight.highlight(frame, pumpkins_indexes, color=(255,0,0))
-                
-            for idx, stream in enumerate(self.streams):
-                s.transform(transformFunc)
-
-        else:
-            for s in self.streams:
-                s.transform(None)
+    def get_ideal_images(self, left, center, right):
+        logger.warning('Piping ideal images to modules...')
+        self.pause_acquisition()
+        self.call_surveyor = False
+        values = []
+        get_thresholds_widget(self.parent, values) 
+        tkMessageBox.showinfo('Ideal Image Set', 'For each Image do the following:\n\n1) Left click to select a point, continue to left click until you form a simple polygon, these polygons will be highlighted when a fod enters them\n\n2) Repeat this process until the window disappears')
+        self.surveyors[0] = GlobalSurveyor(self.parent, left, values[2], (values[0], values[1]))
+        self.surveyors[1] = GlobalSurveyor(self.parent, center, values[2], (values[0], values[1]))
+        self.surveyors[2] = GlobalSurveyor(self.parent, right, values[2], (values[0], values[1]))
+        self.start_acquisition()
 
     def focus_left(self):
         self.stream_active.set(0)
@@ -167,6 +169,44 @@ class MainApplication(tk.Frame):
             setText('Left', 'Right', 'Center')
 
         return big_frame
+    
+    def apply_misc_img_proc(self, image, flip):
+        corrected = apply_equalization(color_correct(image))
+        if flip == True:
+            return mirror_vertical(corrected)
+        return corrected
+
+    def grab_frames(self, order, blocking):
+        if order is None:
+            order = [0, 1, 2]
+
+        # Note, we don't do a simple check to see if it's empty because of the non-gaurenteeness of python empty function
+        # Our flip flag is order[0] == 1 because if the order is 1 then we are the center image, this is the only
+        # camera that is not upside down
+        
+        # additionally, we explicitely (without a for loop) do this because of the verboseness, it's better to be overly verbose than a clever programmer
+        try:
+            l_frame = self.apply_misc_img_proc(self.streams[order[0]]._queue.get(blocking), order[0] != 1)
+        except Empty:
+            l_frame = None
+        try:
+            c_frame = self.apply_misc_img_proc(self.streams[order[1]]._queue.get(blocking), order[1] != 1)
+        except Empty:
+            c_frame = None
+        try:
+            r_frame = self.apply_misc_img_proc(self.streams[order[2]]._queue.get(blocking), order[2] != 1)
+        except Empty:
+            r_frame = None
+
+        return (l_frame, c_frame, r_frame)
+
+    def pause_acquisition(self):
+        for stream in self.streams:
+            stream.disable_display()
+
+    def start_acquisition(self):
+        for stream in self.streams:
+            stream.enable_display()
 
     def display_streams(self, delay=0):
         '''
@@ -186,27 +226,26 @@ class MainApplication(tk.Frame):
                 return
 
             if self.runStreams == False:
-                self.runStreams = True
                 return
 
-            leftFrame, centerFrame, rightFrame = self.get_stream_order()
+            if self.call_surveyor == True:
+                logger.warning('Setting Ideal Images...')
+                left, center, right = self.grab_frames(None, True) 
+                self.get_ideal_images(left, center, right)
+                
+            frameOrder = self.get_stream_order()
             
-            try:
-                l_frame = color_correct(self.streams[leftFrame]._queue.get(False))
-            except Empty:
-                l_frame = None
-            try:
-                c_frame = color_correct(self.streams[centerFrame]._queue.get(False))
-            except Empty:
-                c_frame = None
-            try:
-                r_frame = color_correct(self.streams[rightFrame]._queue.get(False))
-            except Empty:
-                r_frame = None
+            l_frame, c_frame, r_frame = self.grab_frames(frameOrder, False)
+
+            if self.fod_enabled and self.surveyors[0] is not None:
+                l_frame = self.surveyors[frameOrder[0]].run_basic_fod(l_frame)
+                c_frame = self.surveyors[frameOrder[1]].run_basic_fod(c_frame)
+                r_frame = self.surveyors[frameOrder[2]].run_basic_fod(r_frame)
 
             thirdHeight = int(self.imageHeight / 3)
             halfWidth = int(self.imageWidth / 2)
             
+            #put images in their correct spot
             if l_frame is not None:
                 l_frame = cv2.resize(l_frame, (halfWidth, thirdHeight))
                 self.displayed_image[:thirdHeight,:halfWidth,:] = l_frame
@@ -216,7 +255,7 @@ class MainApplication(tk.Frame):
             if r_frame is not None:
                 r_frame = cv2.resize(r_frame, (self.imageWidth - halfWidth, thirdHeight))
                 self.displayed_image[:thirdHeight,halfWidth:self.imageWidth,:] = r_frame
-            
+
             big_frame = numpy.asarray(self.displayed_image, dtype=numpy.uint8)
 
             self.addText(big_frame)
@@ -239,7 +278,7 @@ class MainApplication(tk.Frame):
     def start_streams(self):
         '''
         1) If streams are open, close them
-        2) Attempt connection to each RTSP stream
+        2) Attempt connection to each RTP stream
         '''
         if self.runStreams:
             logger.info('Streams were already open on GUI, releasing and restarting capture')
@@ -249,6 +288,7 @@ class MainApplication(tk.Frame):
                     s.stop()
                     s.join()
                     s = None
+            self.runStreams = True
             self.displayed_image = numpy.zeros((self.imageHeight,self.imageWidth,3))
 
         for camera in range(0, len(CAMERAS)):
@@ -263,10 +303,6 @@ class MainApplication(tk.Frame):
         
         self.after(100, self.display_streams)
 
-    def start_telemetry(self):
-        """ after 5 seconds, start telemtry updates. """
-        self.telemetry_w.tthread.start()
-
     def close_(self):
         logger.info('GUI: Stopping all video streams...')
         self.runStreams = False 
@@ -277,8 +313,8 @@ class MainApplication(tk.Frame):
                 stream.join()
         logger.info('GUI destroying widgets...')
         #throw widgets in garbage
-        self.telemetry_w.quit_()
-        self.command_w.destroy()
+        self.telemetry_w.destroy()
+        self.command_w.quit_()
 
         logger.info('GUI Destorying main application box...')
         self.destroy()

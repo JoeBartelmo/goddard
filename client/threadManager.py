@@ -56,7 +56,7 @@ class ThreadManager(threading.Thread):
                 if command == MARS_KILL_COMMAND:
                     break 
         else:
-           self._gui.start()
+            self._gui.start()
 
     def run(self):
         '''

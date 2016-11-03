@@ -1,7 +1,7 @@
 import struct
 
 #socket connection timeout or recv timeout
-SOCKET_TIMEOUT = 4.5 
+SOCKET_TIMEOUT = 5.5 
 #rate to ping the sender
 PING_RATE = .5
 #structure to pack and send to the server (probably should be localized to sender.py
