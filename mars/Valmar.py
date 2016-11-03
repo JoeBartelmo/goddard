@@ -71,8 +71,7 @@ class Valmar(object):
                     "valmar gain [int]:                   Adjust gain of the cameras\n" + \
                     "valmar sharpness [float]:            Adjust sharpness of the cameras\n"  + \
                     "valmar sum_threshold [int]:          Adjust threshold, lower is more sensitive to dark pixels\n"  + \
-                    "valmar beam_img_backup [string]:     Location to write images that appear to be a beam gap as determined by sum_threshold\n"  + \
-                    )
+                    "valmar beam_img_backup [string]:     Location to write images that appear to be a beam gap as determined by sum_threshold\n")
                   
     def refresh(self):
         if self._init == True:
