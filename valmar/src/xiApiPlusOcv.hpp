@@ -156,9 +156,12 @@ typedef enum
 #endif
 //#include <xiExt.h>
 #include <stdio.h>
+#if !defined(LOCAL)
 #include <opencv2/core.hpp> 
+#else
+#include <opencv2/core/core.hpp>
+#endif
 #include <opencv2/highgui/highgui.hpp>
-
 // debug support
 
 #define DBFIN  "xAPIp:"

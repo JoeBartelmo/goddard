@@ -16,8 +16,11 @@ CALIB=calibrate
 ALL=all
 
 $(PROGRAM): $(MAIN_SOURCES)
-	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib
+	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM) -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib 
 	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM)-debug -lm3api -std=c++11 -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG
+local: $(MAIN_SOURCES)
+	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM) -lm3api -std=c++11 -ldl -lpthread -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D LOCAL
+	$(CXX) $(HIST_SOURCES) -o target/$(PROGRAM)-debug -lm3api -std=c++11 -ldl -lpthread -lopencv_core -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_imgproc -L/usr/local/lib -D DEBUG -D LOCAL
 
 
 $(ALL): $(MAIN_SOURCES)

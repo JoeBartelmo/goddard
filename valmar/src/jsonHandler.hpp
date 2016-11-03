@@ -37,8 +37,7 @@ class JsonSettings {
         double getGammaLuminosity();
         double getSharpness();
 
-        int getHistogramMax();
-        int getThreshold();
+        int getSumThreshold();
         
         int getRefreshInterval();
         void refreshAllData(string filename);
@@ -47,11 +46,13 @@ class JsonSettings {
         int getCheckerboardHeight();
         double getPixelConversionFactor();
 
-        int getHoughLineMaxGap();
-        
+        int getLineMaxGap();
+        int getFramesToProcess();        
         int getCannyThreshold(int i);
         Mat getErosionMat(int mode);
         Mat getDilationMat(int mode);
+
+        string getBeamImgLoc();
 
         const char* getOutputFifoLoc();
         string getCoefficientLoc();

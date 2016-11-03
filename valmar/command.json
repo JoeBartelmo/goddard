@@ -16,6 +16,7 @@
     }
   },
   "processing": {
+    "frames_to_process": 10,
     "erosion_kernel_size_post": {
       "horizontal": 25,
       "vertical": 1
@@ -28,11 +29,10 @@
       "horizontal": 1,
       "vertical": 5
     },
-    "histogram_max": 100,
-    "hough_line": {
+    "greedy_line_algorithm": {
       "max_line_gap": 20
     },
-    "threshold": 180,
+    "sum_threshold": 180,
     "dilation_kernel_size_post": {
       "horizontal": 1,
       "vertical": 1
@@ -50,5 +50,6 @@
     "right": "12531150",
     "left": "15533850"
   },
-  "output": "/phobos/goddard/valmar/beam.gap"
+  "output": "/phobos/goddard/valmar/beam.gap",
+  "beam_img_backup": "/phobos/output/"
 }

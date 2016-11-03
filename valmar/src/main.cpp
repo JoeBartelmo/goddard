@@ -38,21 +38,13 @@ int iBeamCounter = 0;
 JsonSettings* ptrSettings = new JsonSettings();
 JsonSettings settings = *ptrSettings;
 
-int getScalarHistogram(Mat& image) {
+
+int getBinarySum(Mat& image) {
     threshold(image, image, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-    
-    /*int histSize[] = {256};    // bin size
-    float range[] = { 0, (float)upperRange };
-    const float *ranges[] = { range };
-    int channels[] = {0};
-    // Calculate histogram
-    Mat hist;
-    calcHist(&image, 1, channels, Mat(), hist, 1, histSize, ranges, true, false ); // # OF IMAGES SET TO 1, CAN CHANGE
-    double histSum= sum(hist)[0];*/
     double cvSum = (double)sum(image)[0] / ((double)image.rows * (double)image.cols);
 
 #if DEBUG
-    printf("Histogram: %f\n", cvSum);
+    printf("Image Sum: %f\n", cvSum);
 #endif
     return (int)cvSum;
 }
@@ -60,12 +52,12 @@ int getScalarHistogram(Mat& image) {
 void writeToPipe(int pipe, vector<double> &array, double processingTime, int framesToProcess,
         xiAPIplusCameraOcv *leftCam, xiAPIplusCameraOcv *rightCam, 
         double displacementLeft, double displacementRight, int frameLeft
-        , int frameRight) {
+        , int frameRight, string write_loc, std::array<Mat, 2> gap_image) {
     json data;
     data["Enabled"] = settings.isEnabled();
     data["IbeamCounter"] = ++iBeamCounter;
     data["BeamGap"] = array;
-    data["HistogramThreshold"] = settings.getHistogramMax();
+    data["HistogramThreshold"] = settings.getSumThreshold();
     data["AvgProcessingTime"] = processingTime;
     data["FramesToProcess"] = framesToProcess;
 
@@ -92,6 +84,10 @@ void writeToPipe(int pipe, vector<double> &array, double processingTime, int fra
 #else
     printf("Size of %d would have been sent. along with: %s\n", (unsigned int)length, ((string)data.dump()).c_str());
 #endif
+
+    //we dont want to concatenate the two images because we want to unload
+    imwrite(write_loc + to_string(iBeamCounter) + "_left", gap_image[0]);
+    imwrite(write_loc + to_string(iBeamCounter) + "_right", gap_image[1]);
     array.clear();
 }
 
@@ -108,7 +104,7 @@ void assignVariables(string loc, Mat &dist, Mat &camera, double *conversionFacto
 * Loads in distortion coefficients
 * Connects to Fifo
 * while valmar is enabled
-*       Finds histogram
+*       Finds image sum
 *               if threshold is met
 *                       run hough line transform
 *                       find distances, and report to fifo
@@ -165,7 +161,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
         return EXIT_FAILURE;
     }
 
-// #################DISTORTION###################################
+// #################DISTORTION + CALIBRATION RATIO###################################
     Mat leftCameraMatrix, rightCameraMatrix, leftDistCoeffs, rightDistCoeffs, map1, map2, map3, map4;
     Size imageSize = leftCam.GetNextImageOcvMat().size();
     double leftConversionFactor, rightConversionFactor; 
@@ -185,10 +181,9 @@ int _tmain(int argc, _TCHAR* argv[]) {
             getOptimalNewCameraMatrix(rightCameraMatrix, rightDistCoeffs, imageSize, 1, imageSize, &rightCropRegion),
             imageSize, CV_16SC2, map3, map4);
 // ###############################################################
-    int refresh_tick = 0;
-    int hist;
+    int refresh_tick = 0, imgSum,
+        leftCount = 0, rightCount = 0, totalFrames = 0,  rightFrameNumber = 0, leftFrameNumber = 0;
     bool threshold_triggered = false;
-    int leftCount = 0, rightCount = 0, totalFrames = 0,  rightFrameNumber = 0, leftFrameNumber = 0;
 
     printf("Beginning valmar...\n");
 
@@ -196,9 +191,8 @@ int _tmain(int argc, _TCHAR* argv[]) {
     std::chrono::time_point<std::chrono::system_clock> start, end;
     //totalFrames
 
-    int maxframes = 10;
-
     vector<future<vector<double>>> promises_distances;
+    vector<array<Mat, 2>> gap_images;
 
     while(settings.isEnabled()) {
         // getting image from camera
@@ -208,16 +202,17 @@ int _tmain(int argc, _TCHAR* argv[]) {
             leftCount++;
             rightCount++;
             //we only need to do histogram for one side
-            hist = (getScalarHistogram(leftFrame));// + getScalarHistogram(rightFrame)) / 2;
-            if (hist <= settings.getThreshold() && totalFrames < maxframes) {
+            imgSum = getBinarySum(leftFrame);
+            if (imgSum <= settings.getSumThreshold() && totalFrames < settings.getFramesToProcess()) {
+                //start our capturing subroutine
                 if (!threshold_triggered) {
                     threshold_triggered = true;
                     start = std::chrono::system_clock::now();
                 }
                 Mat undistortLeft, undistortRight;
                 totalFrames += 1;
-                printf("Histogram threshold of %d reached threshold of %d\n", hist, settings.getThreshold());
-                //undistortImages
+                printf("Sum threshold of %d reached threshold of %d\n", imgSum, settings.getSumThreshold());
+                //undistortImages, we do it here as a time save (even if negligible, we want to be safe)
                 remap(leftFrame, undistortLeft, map1, map2, INTER_LINEAR); // remap using previously calculated maps
                 Mat ROI = Mat(undistortLeft, leftCropRegion);
                 ROI.copyTo(undistortLeft);
@@ -226,19 +221,28 @@ int _tmain(int argc, _TCHAR* argv[]) {
                 ROI = Mat(undistortRight, rightCropRegion);
                 ROI.copyTo(undistortRight);
                 
-                promises_distances.push_back(async(compoundCalcHorizontalDistances,undistortLeft, undistortRight, settings.getCannyThreshold(1), settings.getCannyThreshold(2), settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(0), settings.getDilationMat(1), settings.getHoughLineMaxGap(), leftConversionFactor));
+                //push our caluclation into a promise so we can keep capturing frames of the gap
+                promises_distances.push_back(async(compoundCalcHorizontalDistances,undistortLeft, undistortRight, settings.getCannyThreshold(1), 
+                    settings.getCannyThreshold(2), settings.getErosionMat(0), settings.getDilationMat(0), settings.getErosionMat(0), 
+                    settings.getDilationMat(1), settings.getLineMaxGap(), leftConversionFactor));
+
+                //as a backup incase valmar cant get correct data, we save the images
+		//gap_images.push_back([undistortLeft, undistortRight])
             }
-            else if(threshold_triggered) {
+            else if(imgSum > settings.getSumThreshold() && threshold_triggered) {
+                //end capturing subroutine
                 threshold_triggered = false;
                 end = std::chrono::system_clock::now();
                 std::chrono::duration<double> elapsed_seconds = end-start;
 
                 vector<double> distances;
-                //among all we need to get largest size
+                int railIndex;
+                //among all we need to get largest size, painful if none of the promises have started
                 for (int promise = 0; promise < promises_distances.size(); promise++) {
                     vector<double> curPromise = promises_distances[promise].get();
                     if (distances.size() < curPromise.size()) {
                         distances = curPromise;
+                        railIndex = promise;
                     }
                 }
                 promises_distances.clear();
@@ -246,15 +250,19 @@ int _tmain(int argc, _TCHAR* argv[]) {
                 writeToPipe(pipe, distances, elapsed_seconds.count(), totalFrames,
                         &leftCam, &rightCam, 
                         leftConversionFactor, rightConversionFactor, leftFrameNumber
-                        , rightFrameNumber);
+                        , rightFrameNumber, settings.getBeamImgLoc(), gap_images[railIndex]);
                 totalFrames = 0;
+                gap_images.clear();
             }
+	//we are still looking at the gap, but we have already capped our max number of frames to get from the gap
+	//if this were the case, we really just do nothing, because we probably already have our data
         }
         catch(xiAPIplus_Exception& exp){
             printf("Error:\n");
             exp.PrintError();
             cvWaitKey(200);
         }
+        //update settings every x ticks
         if (refresh_tick >= settings.getRefreshInterval()) {
             assignSettings(settings, settingsFile, &leftCam);
             assignSettings(settings, settingsFile, &rightCam);

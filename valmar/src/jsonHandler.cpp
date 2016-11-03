@@ -47,14 +47,6 @@ double JsonSettings::getSharpness() {
     return settings["capture"]["sharpness"];
 }
 
-int JsonSettings::getThreshold() {
-    return settings["processing"]["threshold"];
-}
-
-int JsonSettings::getHistogramMax() {
-    return settings["processing"]["histogram_max"];
-}
-
 int JsonSettings::getRefreshInterval() {
     return settings["command"]["refresh_frame_interval"];
 }
@@ -71,8 +63,16 @@ double JsonSettings::getPixelConversionFactor() {
     return (double)settings["calibration"]["conversion_factor"];
 }
 
-int JsonSettings::getHoughLineMaxGap() {
-    return settings["processing"]["hough_line"]["max_line_gap"];
+int JsonSettings::getFramesToProcess() {
+    return settings["processing"]["greedy_line_algorithm"]["frames_to_process"];
+}
+
+int JsonSettings::getLineMaxGap() {
+    return settings["processing"]["greedy_line_algorithm"]["max_line_gap"];
+}
+
+int JsonSettings::getSumThreshold() {
+    return settings["processing"]["sum_threshold"];
 }
 
 int JsonSettings::getCannyThreshold(int i) {
@@ -116,6 +116,11 @@ Mat JsonSettings::getDilationMat(int mode) {
 const char* JsonSettings::getOutputFifoLoc() {
     string s = settings["output"];
     return s.c_str();
+}
+
+string JsonSettings::getBeamImgLoc() {
+    string s = settings["beam_img_backup"];
+    return s;
 }
 
 string JsonSettings::getCoefficientLoc() {
