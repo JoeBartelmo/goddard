@@ -15,7 +15,6 @@
 * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 #include "MemoryFree.h"
 #include "DaqTelemetry.h"
@@ -23,33 +22,46 @@
 //Telemetry
 DaqTelemetry *daqTelemetry;
 
+//Timing
+unsigned long lastTime = 0;
+unsigned long clockCorrection = 64;
+int clockCorrectionInt = 64;
+
 //Motor
 int enablePin = 13; //enable/disable motor
 int revPin = 11; //seting fwd/rev
 int brakePin = 12; //brake pin
 int speedPin = 5; //speedPin
-int voltagePin = A0; //ammeter voltage pin
-int currentPin = A1; //ammeter current pin
 int encoderPin = A5; //pin for motor controller
-int referencePin = A2; //reference Pin to compare against current, voltage and encoder pin
+int referencePin = A4; //reference Pin to compare against current, voltage and encoder pin
 boolean directionOfTravel;
+double rpmOffset = -30;
 
 //LEDS
 int ledPin = 9;
 
+//Ammeter
+int voltagePin = A0; //ammeter voltage pin
+int currentPin = A4; //ammeter current pin
+double currentOffset = 1.0;
+
 //IRdistance sensors
-int frontIrPin = A3;
-int backIrPin = A4;
+int frontIrPin = A2;
+int backIrPin = A3;
 int numSamples = 10;
+int irDelayTime = clockCorrectionInt * 60;
 
 //Conversions
-double rpmMultiplier = 666.6;
+double rpmMultiplier = 800;
 double voltageMultiplier = 0.076982;
-double currentMultiplier = 0.135135;
-double scaleOffset = 2.5;
+double currentMultiplier = .135;
+double currentDivisor = 7.4;
+double scaleOffset = 512;
+double maxRpm = 1200;
+double minRpm = -1200;
 
 //Voltage Reference
-bool useRef = true;
+bool useRef = false;
 int realReference = 512;
 
 //Watchdog
@@ -58,9 +70,6 @@ unsigned long watchdogTimer;
 unsigned long recallTime = 30000;
 unsigned long shutdownTime = 1200000;
 String recallCode = "M1005";
-
-//Timing
-unsigned long lastTime = 0;
 
 //Logging
 String logs = "marsduino initated";
@@ -74,6 +83,7 @@ bool memCheck = false;
 void setup() {
   //modifies registries to increase PWM frequency
   TCCR1B = (TCCR1B & 0b11111000) | 0x01;
+  TCCR0B = (TCCR0B & 0b11111000) | 0x01;
 
   //enabling pins & setting status to LOW
 
@@ -98,14 +108,12 @@ void setup() {
 
 /**
    Quick conversion that relies on the offset of the character '0'
-
    @param c: character to be encoded
 */
 
 
 /**
    Computes the distance from "WALL-E" (a distance sensor)
-
    @param irPin: The pin at which to access the distance sensor
 */
 double ir_distance(int irPin, int voltageOffset)
@@ -116,13 +124,12 @@ double ir_distance(int irPin, int voltageOffset)
   {
     int distanceVoltage = analogRead(irPin) + voltageOffset;
     sampleSum += distanceVoltage;
-    delay(60);
+    delay(irDelayTime);
   }
 
   // average divided by numSamples to average, then divided by 205 to convert to voltage
-  float avgVoltage = ((float) sampleSum / (float) numSamples) / 205.0;
+  double avgVoltage = ((double) sampleSum / (double) numSamples) / 205.0;
   double distance = -1;
-
   if (avgVoltage > 2.5) {
     distance = 0;
   }
@@ -166,7 +173,7 @@ void process_code(String input){
 
   switch (first) {
     //Motor code
-    case 'M': { /*Motor codes*/
+    case 'M': { /*Motor codes*/ 
         char enable = codeArray[1] == '0' ? LOW : HIGH;
         char reverse = codeArray[2] == '0' ? LOW : HIGH;
         char brake = codeArray[3] == '0' ? LOW : HIGH;
@@ -177,32 +184,49 @@ void process_code(String input){
         digitalWrite(brakePin, brake); //NOTE BRAKE IS AN ACTIVE HIGH BRAKE PIN(12)
 
         //SPEED PIN(5)
-        int speedDutyCycle = int(charToInt(speedValue) * 25.5); //converts input ao a 0-255 scale
+        int speedDutyCycle = int(charToInt(speedValue) * 25.5); //converts input A0 a 0-255 scale
         analogWrite(speedPin, speedDutyCycle); //sets up PWM on the speedPin
 
         //Changing the global direction for reference in the DAQ
-        directionOfTravel = codeArray[2] == '0' ? 0 : 1; // one is forwards, zero is backwards
+        directionOfTravel = reverse; // one is forwards, zero is backwards
         logs = "motor code set to level to " + input.substring(1);
         break;
       }
 
     case 'L': { /*LED codes*/
         char ledValue = codeArray[1];
-        int ledDutyCycle = int(charToInt(ledValue) * 25.5); //converts input ao a 0-255 scale
+        int ledDutyCycle = int(charToInt(ledValue) * 25.5);
         analogWrite(ledPin, ledDutyCycle); //sets up PWM on the speedPin
         logs = "LEDs set to level to " + String(ledValue);
         break;
       }
-
-    case 'R': {/*reference voltage reset*/
-      useRef = true;
+    case 'D': {
+//      useRef = true;
       realReference = input.substring(1).toInt();
-      logs = "Voltage Reference set to " + String(input.substring(1));
+      logs = "Voltage Reference set to " + input.substring(1);
       break;
     }
-    case 'E': {/*reference voltage disabled*/
+    case 'S': {
       useRef = false;
       logs = "Voltage Reference disabled";
+      break;
+    }
+    case 'R': {/*setting RPM multiplier*/
+      String inputRpm = input.substring(1);
+      rpmMultiplier = inputRpm.toDouble();
+      logs = "RPM multiplier set to " + String(rpmMultiplier);
+      break;
+    }
+    case 'V': {/*setting Voltage Multiplier*/
+      String inputVoltage = input.substring(1);
+      voltageMultiplier = inputVoltage.toDouble();
+      logs = "Voltage Multiplier set to " + String(voltageMultiplier);
+      break;
+    }
+    case 'I': { /* setting Current Multiplier */
+      String inputCurrent = input.substring(1);
+      currentMultiplier = inputCurrent.toDouble();
+      logs = "Current Multiplier set to " + String(currentMultiplier);
       break;
     }
     case 'W': {/*watchdog timer reset*/
@@ -242,36 +266,50 @@ DaqTelemetry* daq()
   if(useRef == true){
     //generating an offset based off of the reference voltage sent from motor controller
     double referenceVoltage = analogRead(referencePin);
-    voltageOffset = int(realReference - referenceVoltage);
+    voltageOffset = int(referenceVoltage-realReference);
   }  
   else{
     voltageOffset = 0;
   }
   
   //Motor Calculations
-  double encoderVoltage = ( analogRead(encoderPin) + voltageOffset ) * 0.0049; //.0049 convert to real voltage values
-  double scaledVoltage = encoderVoltage - scaleOffset;
-  double finalRpm = scaledVoltage * rpmMultiplier;
-  
+  double encoderVoltage = ( analogRead(encoderPin) + voltageOffset ); //.0049 convert to real voltage values
+  double scaledVoltage = (encoderVoltage - scaleOffset) * .0049;
+  double finalRpm = scaledVoltage * rpmMultiplier + rpmOffset;
+
   if((scaledVoltage < -1.5) && (scaledVoltage > -2.0)){  
-    finalRpm = -1000.0;  }
+    finalRpm = minRpm;  }
   else if (scaledVoltage < -2.0){
+    finalRpm = 0.0; }
+  else if (scaledVoltage > 1.5){
+    finalRpm = maxRpm;  }
+  
+  if(abs(finalRpm) < (maxRpm / 10.0) ){
     finalRpm = 0.0;
   }
-  else if (scaledVoltage > 1.5){
-    finalRpm = 1000;  }
     
   //System Voltage Calculations
   double inputV = analogRead(voltagePin) + voltageOffset;
-  double finalV = inputV * voltageMultiplier;
+  double finalV = (double)inputV * (double)voltageMultiplier;
   
   //System Current Calculations
-  double inputI = analogRead(currentPin) + voltageOffset;
-  double finalI = inputI * currentMultiplier;
+  double inputI = (double)analogRead(currentPin) + (double)voltageOffset;
+  double finalI =  (double)inputI * (double)currentMultiplier;
+//  Serial.println(finalI);
+  if(finalI < 5.0){
+    finalI = 5.0;
+  }
+    
 
   //Distance Calculations
-  int irPin = directionOfTravel == '0' ? backIrPin : frontIrPin;
-  double distance = ir_distance(irPin, voltageOffset);
+  double distance;
+  if(directionOfTravel == 1){
+    distance = ir_distance(backIrPin, voltageOffset);  
+  }
+  else {
+    distance = ir_distance(frontIrPin, voltageOffset);  
+  }
+  
 
 
  //assigning values to daqTelemetry object  
@@ -311,7 +349,7 @@ void save_and_send(DaqTelemetry *daqTelemetry)
                      String(daqTelemetry->systemCurrent) + "," +
                      String(outputDistance) + "," +
                      logs + "," +
-                     (millis() / 1000.0 );
+                     ( (millis() / clockCorrection) / 1000.0 );
   Serial.println(daqString);
 }
 
@@ -319,8 +357,8 @@ unsigned long update_watchdog_timer(){
   /*
    * updates the watchdog timer 
    */
-  watchdogTimer = watchdogTimer + ( millis() - lastTime );
-  lastTime = millis();
+  watchdogTimer = watchdogTimer + ( ( millis() / clockCorrection ) - lastTime );
+  lastTime = millis() / clockCorrection;
   return watchdogTimer;
 }
 
@@ -377,4 +415,3 @@ void loop() {
   logs = "Null";
   delete daqTelemetry;
 }
-
