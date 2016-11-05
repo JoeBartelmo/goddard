@@ -112,9 +112,9 @@ class Watchdog(object):
 
         if sysV > critical:
             self._electricStats['overVoltageLevel'] = 3  # overVoltage is at critical level
-        elif betweenRange(sysV,warning,critical):
+        elif self.betweenRange(sysV,warning,critical):
             self._electricStats['overVoltageLevel'] = 2  # overVoltage is at warning level
-        elif betweenRange(sysV,alert,warning):
+        elif self.betweenRange(sysV,alert,warning):
             self._electricStats['overVoltageLevel'] = 1  # overVoltage is at alert level
         elif sysV < alert:
             self._electricStats['overVoltageLevel'] = 0
@@ -127,9 +127,9 @@ class Watchdog(object):
 
         if sysV < critical:
             self._electricStats['underVoltageLevel'] = 3  # underVoltage is at critical level
-        elif betweenRange(sysV,critical,warning):
+        elif self.betweenRange(sysV,critical,warning):
             self._electricStats['underVoltageLevel'] = 2  # underVoltage is at warning level
-        elif betweenRange(sysV,warning,alert):
+        elif self.betweenRange(sysV,warning,alert):
             self._electricStats['underVoltageLevel'] = 1  # underVoltage is at alert level
         elif sysV > alert:
             self._electricStats['underVoltageLevel'] = 0
