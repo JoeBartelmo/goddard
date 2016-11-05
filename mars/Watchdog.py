@@ -30,18 +30,19 @@ class Watchdog(object):
         self._levels = self._config.watchdog
         self._enableWatchdog = self._levels.enable_watchdog
         self._displayLogTimeout = self._levels.display_log_timeout
+        self._lastDisplayTime = {"underVoltage":time.time() - self._config.watchdog.display_log_timeout,
+                                    "overVoltage":time.time() - self._config.watchdog.display_log_timeout,
+                                    "overCurrent":time.time() - self._config.watchdog.display_log_timeout,
+                                    "batteryPercentage":time.time() - self._config.watchdog.display_log_timeout,
+                                    "distanceAlert":time.time() - self._config.watchdog.display_log_timeout
+                                    }
         self._connectionDownTime = 0
         self._lastConnection = time.time()
         self._distance = 0
 
-        self._shouldBrake = 0
+        self._shouldBrake = self._config.watchdog.brake
         self._loggerTime = 0
 
-        self._shouldDisplay = {"underVoltage":True,
-                               "overVoltage":True,
-                               "batteryPercentage":True,
-                               "overCurrent":True
-                               }
         self._electricStats = {'underVoltageLevel': 0,
                                     'overVoltageLevel': 0,
                                     'overCurrentLevel': 0,
@@ -60,29 +61,39 @@ class Watchdog(object):
             self._pinHash['ledRelay'].toggleOff()       
             subprocess.call(['sudo poweroff'], shell=True)
         else:
-            logger.critical('shutdown was not initiated b/c settings.json specified so')
+            logger.critical('shutdown functionality was disabled in settings')
 
     def watch(self, telemetry):
-        self.sniff(telemetry)
-
+        self.check(telemetry)
         if self._enableWatchdog == True:
-            waitTime = time.time() - self._loggerTime
-            if waitTime > self._displayLogTimeout:
-                self._shouldDisplay = self._shouldDisplay.fromkeys(self._shouldDisplay.iterkeys(), True)
-                self._loggerTime = time.time()
             self.bark()
-        return self._electricStats
 
-    def sniff(self, telemetry):
+        return self._electricStats
+    
+    def shouldDisplay(self,key):
+        if ( time.time() - self._lastDisplayTime[key] ) > self._config.watchdog.display_log_timeout:
+            self._lastDisplayTime[key] = time.time()
+            return True
+        else:
+            return False
+
+    def betweenRange(self,value,lower,upper):
+        if value > lower and value < upper:
+            return True
+        else:
+            return False
+
+
+    def check(self, telemetry):
         sysV = telemetry['SystemVoltage']
         sysI = telemetry['SystemCurrent']
         sensorDistance = telemetry['SensorDistance']
         connectionStatus = telemetry['Ping']
-        self.sniffOverCurrent(sysI)
-        self.sniffOverVoltage(sysV)
-        self.sniffUnderVoltage(sysV)
-        self.sniffDistance(sensorDistance)
-        self.sniffConnection(connectionStatus)
+        self.checkOverCurrent(sysI)
+        self.checkOverVoltage(sysV)
+        self.checkUnderVoltage(sysV)
+        self.checkDistance(sensorDistance)
+        self.checkConnection(connectionStatus)
 
     def bark(self):
         self.barkAtOverVoltage()
@@ -93,29 +104,42 @@ class Watchdog(object):
         if all(value == 0 for value in self._electricStats.values()) == True:
             self._pinHash['warningLED'].toggleOff() # turning off warning LED if all values == 0
 
-    def sniffOverVoltage(self, sysV):
+    def checkOverVoltage(self, sysV):
         # testing for overVoltage
-        if sysV > self._levels.over_voltage_critical:
+        alert = self._levels.over_voltage_alert
+        warning = self._levels.over_voltage_warning
+        critical = self._levels.over_voltage_critical
+
+        if sysV > critical:
             self._electricStats['overVoltageLevel'] = 3  # overVoltage is at critical level
-        elif sysV > self._levels.over_voltage_warning and sysV < self._levels.over_voltage_critical:
+        elif betweenRange(sysV,warning,critical):
             self._electricStats['overVoltageLevel'] = 2  # overVoltage is at warning level
-        elif sysV > self._levels.over_voltage_alert and sysV < self._levels.over_voltage_warning:
+        elif betweenRange(sysV,alert,warning):
             self._electricStats['overVoltageLevel'] = 1  # overVoltage is at alert level
-        elif sysV < self._levels.over_voltage_alert:
+        elif sysV < alert:
             self._electricStats['overVoltageLevel'] = 0
 
-    def sniffUnderVoltage(self, sysV):
+    def checkUnderVoltage(self, sysV):
         # testing for underVoltage
-        if sysV < self._levels.under_voltage_critical:
-            self._electricStats['underVoltageLevel'] = 3  # underVoltage is at critical level
-        elif sysV < self._levels.under_voltage_warning and sysV > self._levels.under_voltage_critical:
-            self._electricStats['underVoltageLevel'] = 2  # underVoltage is at warning level
-        elif sysV < self._levels.under_voltage_alert and sysV > self._levels.under_voltage_warning:
-            self._electricStats['underVoltageLevel'] = 1  # underVoltage is at alert level
-        elif sysV > self._levels.under_voltage_alert:
-            self._electricStats['underVoltageLevel'] = 0
+        alert = self._levels.under_voltage_alert
+        warning = self._levels.under_voltage_warning
+        critical = self._levels.under_voltage_critical
 
-    def sniffOverCurrent(self, sysI):
+        if sysV < critical:
+            self._electricStats['underVoltageLevel'] = 3  # underVoltage is at critical level
+        elif betweenRange(sysV,critical,warning):
+            self._electricStats['underVoltageLevel'] = 2  # underVoltage is at warning level
+        elif betweenRange(sysV,warning,alert):
+            self._electricStats['underVoltageLevel'] = 1  # underVoltage is at alert level
+        elif sysV > alert:
+            self._electricStats['underVoltageLevel'] = 0
+            
+        #<crit
+        #<warn,>crit
+        #<alert,>warn
+        #>alert
+
+    def checkOverCurrent(self, sysI):
         # testing for overCurrent
         if sysI > self._levels.over_current_critical:
             self._electricStats['overCurrentLevel'] = 3  # overCurrent is at critical level
@@ -126,7 +150,7 @@ class Watchdog(object):
         elif sysI < self._levels.over_current_alert:
             self._electricStats['overCurrentLevel'] = 0
 
-    def sniffBatteryPercentage(self, batt):
+    def checkBatteryPercentage(self, batt):
         # testing for batteryPercentage
         if batt < self._levels.batt_percent_critical:
             self._electricStats['batteryPercentageLevel'] = 3  # batteryPercentage is at critical level
@@ -137,14 +161,14 @@ class Watchdog(object):
         elif batt > self._levels.batt_percent_alert:
             self._electricStats['batteryPercentageLevel'] = 0
 
-    def sniffDistance(self, sensorDistance):
+    def checkDistance(self, sensorDistance):
         formatDistance = sensorDistance.replace('\r', '').replace('\n', '')
-        if formatDistance == 'out of range' or float(formatDistance) < 0:
-            self._distance = self._levels.distance_alert + 5
+        if formatDistance == 'out of range' or float(formatDistance) < 0.0:
+            self._distance = self._levels.distance_alert
         else:
             self._distance = float(formatDistance)
 
-    def sniffConnection(self, connectionStatus):
+    def checkConnection(self, connectionStatus):
         if connectionStatus != -1:
             self._connectionDownTime = 0
             self._lastConnection = time.time()
@@ -154,58 +178,69 @@ class Watchdog(object):
 
     def barkAtBattPercent(self):
         value = self._electricStats['batteryPercentageLevel']
-        display = self._shouldDisplay["batteryPercentage"]
+        shouldDisplay = self.shouldDisplay("batteryPercentage")
 
         if value in (1, 2, 3):
             self._pinHash['batteryLED'].toggleOn()
-            if display == True:
+            if shouldDisplay:
                 logger.critical("battery level at warning level" + str(value))
 
         if value == 3:
-           logger.critical("recommend initiating recall")
+            if shouldDisplay:
+                logger.critical("recommend initiating recall")
 
         elif value == 2:
-            logger.critical("recommend ending run soon")
+            if shouldDisplay:
+                logger.critical("recommend ending run soon")
 
         elif value == 1:
-            logger.warning("battery level at warning level 1")
+            if shouldDisplay:
+                logger.warning("battery level at warning level 1")
 
 
     def barkAtOverCurrent(self):
         value = self._electricStats['overCurrentLevel']
-        display = self._shouldDisplay["overCurrent"]
+        shouldDisplay = self.shouldDisplay("batteryPercentage")
 
         if value in (1, 2, 3):
             self._pinHash['warningLED'].toggleOn()
-            if display == True:
+            if shouldDisplay:
                 logger.critical("overCurrent at warning level " + str(value))
 
         if value == 2:
-            logger.critical("current draw is much higher than expected")
+            if shouldDisplay:
+                logger.critical("current draw is much higher than expected")
 
         elif value == 3:
-            logger.critical("too much current detected! Recommend SHUTDOWN")
+            if shouldDisplay:
+                logger.critical("too much current detected! Recommend SHUTDOWN")
 
     def barkAtUnderVoltage(self):
         value = self._electricStats['underVoltageLevel']
+        shouldDisplay = self.shouldDisplay("underVoltage")
+
         if value in (1, 2, 3):
             self._pinHash['warningLED'].toggleOn()
             self._pinHash['batteryLED'].toggleOn()
-            if self._shouldDisplay["underVoltage"] == True:
+            if shouldDisplay == True:
                 logger.critical("underVoltage warning at level " + str(value))
-                self._shouldDisplay['underVoltage'] = False
 
         if value == 3:
-            logger.critical("initiating emergency shutdown")
-            self.systemShutdown()
+            if shouldDisplay:
+                logger.critical("battery Voltage too low -- reccomend emergency shutdown")
+            if self._config.watchdog.shutdown == True:
+                logger.critical("initiating emergency shutdown")
+                self.systemShutdown()
 
         elif value == 2:
-            logger.critical('battery may be near death!')
-            logger.critical('initating recall!')
+            if shouldDisplay:
+                logger.critical('battery may be near death!')
+                logger.critical('initating recall!')
             self.recall()
 
         elif value == 1:
-            logger.warning("battery may be close to dying, please check")
+            if shouldDisplay:
+                logger.warning("battery may be close to dying, please check")
 
     def scanEnable(self):
         self._scan = True
@@ -214,22 +249,34 @@ class Watchdog(object):
         self._scan = False
  
     def barkAtDistance(self):
-        if self._distance <= self._levels.distance_alert and self._distance > self._levels.distance_warning:
-            logger.warning("Distance at alert level")
-        elif self._distance <= self._levels.distance_warning and self._distance > self._levels.distance_critical:
-            logger.critical("Distance at warning level")
-        elif self._distance <= self._levels.distance_critical:
-            logger.critical("Distance at Critical Levels")
-            if self._scan == True:
-                #recall instead
-                logger.critical("Scan enabled, recalling mars")
-                self.recall()
-            else:
-                self._arduino.write("M0010")
-                logger.warning("Brake has been enabled")
+        shouldDisplay = self.shouldDisplay("distanceAlert")
+        if self._distance < 0.0:
+            self._distance = "out of range"
+
+        if isinstance(self._distance,str) == False: #distance check only occurs if distance is in range (not a string == "out of range")
+            if self._distance <= self._levels.distance_alert and self._distance > self._levels.distance_warning:
+                if shouldDisplay:
+                    logger.warning("Distance at alert level")
+            elif self._distance <= self._levels.distance_warning and self._distance > self._levels.distance_critical:
+                if shouldDisplay:
+                    logger.critical("Distance at warning level")
+            elif self._distance <= self._levels.distance_critical:
+                if shouldDisplay:
+                    logger.critical("Distance at Critical Levels")
+                if self._scan == True:
+                    #recall instead
+                    if shouldDisplay:
+                        logger.critical("Scan enabled, recalling mars")
+                    self.recall()
+                else:
+                    self.brake()
+                    if shouldDisplay:
+                        logger.warning("Brake has been enabled")
 
     def barkAtOverVoltage(self):
         value = self._electricStats['overVoltageLevel']
+        shouldDisplay = self.shouldDisplay("overVoltage")
+        
         # OVERVOLTAGE
         if value == 3:
             self._pinHash['warningLED'].toggleOn()
@@ -238,19 +285,21 @@ class Watchdog(object):
             self._pinHash['laserRelay'].toggleOff()
             self._pinHash['relay4'].toggleOff()
 
-            if self._shouldDisplay['overVoltage'] == True:
+            if shouldDisplay == True:
                 logger.critical("overVoltage warning at level 3")
                 logger.critical("motor, LEDs, and laser circuits turned off")
                 logger.critical("recommend disabling watchdog and recalling mars")
+
         elif value == 2:
             self.recall()
             self._pinHash['warningLED'].toggleOn()
-            if self._shouldDisplay['overVoltage'] == True:
+            if shouldDisplay == True:
                 logger.critical("overVoltage at warning level 2")
                 logger.critical("recommend enabling a recall")
+
         elif value == 1:
             self._pinHash['warningLED'].toggleOn()
-            if self._shouldDisplay['overVoltage'] == True:
+            if shouldDisplay == True:
                 logger.warning("overVoltage at warning level 1")
                 logger.warning("recommend checking power supply")
 
@@ -265,7 +314,13 @@ class Watchdog(object):
             logger.critical("recall initiated")
             logger.critical("type 'watchdog off' to resume control")
         else:
-            logger.critical('recall was not initiated b/c settings.json specified so')
+            if shouldDisplay:
+                logger.critical('recall was not initiated b/c settings.json specified so')
+
+
+    def brake(self):
+        if self._config.watchdog.brake == True:
+            self._arduino.write(self._config.watchdog.brake_code)
 
     def disable(self):
         if self._enableWatchdog == False:
