@@ -305,7 +305,11 @@ class Watchdog(object):
 
     def barkAtConnection(self):
         if self._connectionDownTime >= self._levels.connection_timeout:
+            self._pinHash["connectionLED"].toggleOn()
             self.recall()
+        else:
+            self._pinHash["connectionLED"].toggleOff()
+
 
     def recall(self):
         # tell mars to head backwards toward operator
