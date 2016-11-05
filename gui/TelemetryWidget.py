@@ -53,7 +53,7 @@ class TelemetryWidget(tk.Frame):
             if val['display']:
                 if key not in self.labels:
                     #update label row
-                    self.labels[key] = tk.Label(self, text=val['friendly_name'], padx=5, pady=5, bd=2, justify='left', relief='ridge', width=18)
+                    self.labels[key] = tk.Label(self, text=val['friendly_name']+ ' (' + val['unit'] + ')', padx=5, pady=5, bd=2, justify='left', relief='ridge', width=18)
                     self.labels[key].grid(row=val['display_order'], column=0, sticky='nsew')
                     #update value column
                     self.values[key] = tk.Label(self, padx=5, pady=5, width=18, anchor='w')
