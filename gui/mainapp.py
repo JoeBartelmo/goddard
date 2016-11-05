@@ -171,7 +171,7 @@ class MainApplication(tk.Frame):
         return big_frame
     
     def apply_misc_img_proc(self, image, flip):
-        corrected = apply_equalization(color_correct(image))
+        corrected = color_correct(image)
         if flip == True:
             return mirror_vertical(corrected)
         return corrected
