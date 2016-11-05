@@ -45,6 +45,7 @@ class Mars(object):
         self._recallOverride = False
         self._watchdogQueue = watchdogQueue
         self._marsOnlineQueue = marsOnlineQueue
+        self._marsIbeamCounter = 0
 
         telemetry = {}
         telemetry.setdefault('TotalDistance', 0)

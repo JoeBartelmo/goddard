@@ -222,7 +222,9 @@ class Jetson(object):
             telemetry.update(self._watchdog.watch(telemetry))
             telemetry["Valmar"] = self._valmar.getBeamGapData()
             if telemetry["Valmar"] is not None:
+                self._mars._marsIbeamCounter += 1
                 logger.debug('Valmar hit next beam')
+            telemetry["IBeam"] = self._mars._marsIbeamCounter
             logger.debug("Displaying Telemetry...")
             #the logger sends the data over tcp
             telemetryLogger.info(self.displayTelemetry(self._mars._telemetry))
@@ -326,12 +328,17 @@ class Jetson(object):
         Start command for the program. Start all the relays, the motor, stream, and threads
         :return:
         """
+
+        #all of below is depricated since we got rid of the relays
         self._pinHash['motorRelay'].toggleOff()
         logger.info("Motor circuit closed")
         self._pinHash['ledRelay'].toggleOff()
         logger.info("LED circuit closed")
         self._pinHash['laserRelay'].toggleOff()
         logger.info("Laser circuit closed")
+        #end depricated
+
+        self.recieveInput('brightness 9')
 
         logger.info("Starting motor...")
         self._motor.start()
