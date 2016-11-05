@@ -24,6 +24,7 @@
     "enable_watchdog": true,
     "recall_enabled": false,
     "shutdown": false,
+    "brake": true,
 
     "recall_code":"M1005",
     "display_log_timeout":10.0,

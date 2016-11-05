@@ -22,9 +22,11 @@
   },
   "watchdog": {
     "enable_watchdog": true,
+
     "recall_enabled": false,
-    
     "shutdown": false,
+    "brake": true,
+
     "recall_code":"M1005",
     "display_log_timeout":10.0,
     "braking_distance":3.8,
@@ -46,9 +48,9 @@
     "batt_percent_warning":15.0,
     "batt_percent_critical":10.0,
 
-    "distance_alert": 20.0,
-    "distance_warning": 10.0,
-    "distance_critical": 5.0
+    "distance_alert": 0,
+    "distance_warning": 0,
+    "distance_critical":0 
   },
   "arduino": {
     "using_watchdog_timer":true,
