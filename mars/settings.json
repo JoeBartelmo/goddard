@@ -22,19 +22,19 @@
   },
   "watchdog": {
     "enable_watchdog": true,
-
-    "recall_enabled": false,
+    "recall_enabled": false,    
     "shutdown": false,
-    "brake": true,
+    "brake":true,
 
     "recall_code":"M1005",
+    "brake_code":"M0010",
     "display_log_timeout":10.0,
     "braking_distance":3.8,
     "connection_timeout":30.0,
 
     "under_voltage_alert": 11.0,
-    "under_voltage_warning": 10.0,
-    "under_voltage_critical": 9.5,
+    "under_voltage_warning": 10.5,
+    "under_voltage_critical": 10,
 
     "over_voltage_alert": 18.0,
     "over_voltage_warning": 21.0,
@@ -48,9 +48,9 @@
     "batt_percent_warning":15.0,
     "batt_percent_critical":10.0,
 
-    "distance_alert": 0,
-    "distance_warning": 0,
-    "distance_critical":0 
+    "distance_alert": 20.0,
+    "distance_warning": 10.0,
+    "distance_critical": 5.0
   },
   "arduino": {
     "using_watchdog_timer":true,
